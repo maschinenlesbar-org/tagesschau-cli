@@ -103,7 +103,19 @@ export const nodeHttpTransport: Transport = (request) =>
 
     req.on("error", (err) => {
       // A timeout destroy already passes an TagesschauNetworkError; don't double-wrap.
-      reject(err instanceof TagesschauNetworkError ? err : new TagesschauNetworkError(err.message, { cause: err }));
+      if (err instanceof TagesschauNetworkError) {
+        reject(err);
+        return;
+      }
+      // Wrap raw Node socket errors (ECONNREFUSED, ENOTFOUND, ECONNRESET, ...) in
+      // a clearer, branded network-failure message that names the target host
+      // instead of surfacing the opaque `connect ECONNREFUSED 127.0.0.1:1`.
+      const code = (err as NodeJS.ErrnoException).code;
+      const target = `${request.method} ${url.origin}`;
+      const message = code
+        ? `Network error (${code}) connecting to ${target}: ${err.message}`
+        : `Network error connecting to ${target}: ${err.message}`;
+      reject(new TagesschauNetworkError(message, { cause: err }));
     });
 
     if (request.body !== undefined) req.write(request.body);

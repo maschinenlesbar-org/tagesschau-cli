@@ -25,6 +25,14 @@ export async function run(argv: string[], deps: CliDeps = defaultDeps): Promise<
   const program = buildProgram(deps);
   configureTree(program, deps);
 
+  // A bare invocation (no command, no flags) prints help to stdout and exits 0,
+  // matching `--help` and the common CLI convention. Without this, commander
+  // treats "no command given" as a usage error (help on stderr, exit 1).
+  if (argv.length === 0) {
+    deps.io.out(program.helpInformation().replace(/\n$/, ""));
+    return 0;
+  }
+
   try {
     await program.parseAsync(argv, { from: "user" });
     return 0;

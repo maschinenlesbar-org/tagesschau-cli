@@ -6,6 +6,7 @@ import { nodeHttpTransport, type Transport } from "./http.js";
 import { buildQueryString, type QueryParams } from "./query.js";
 import {
   TagesschauApiError,
+  TagesschauError,
   TagesschauNetworkError,
   TagesschauParseError,
 } from "./errors.js";
@@ -79,9 +80,17 @@ export class RequestEngine {
   private readonly sleep: (ms: number) => Promise<void>;
 
   constructor(options: EngineOptions = {}) {
+    if (options.baseUrl !== undefined && options.baseUrl.trim() === "") {
+      throw new TagesschauError("Base URL must not be empty.");
+    }
     this.baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
     this.transport = options.transport ?? nodeHttpTransport;
-    this.userAgent = options.userAgent ?? DEFAULT_USER_AGENT;
+    // An empty User-Agent would send a blank header (rejected by some hosts);
+    // treat it like an unset value and fall back to the default.
+    this.userAgent =
+      options.userAgent !== undefined && options.userAgent !== ""
+        ? options.userAgent
+        : DEFAULT_USER_AGENT;
     this.timeoutMs = options.timeoutMs ?? 30_000;
     this.maxRetries = options.maxRetries ?? 2;
     this.retryDelayMs = options.retryDelayMs ?? 200;

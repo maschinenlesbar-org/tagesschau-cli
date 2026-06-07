@@ -7,11 +7,34 @@ import type { CliDeps } from "./io.js";
 import { TagesschauError } from "../client/errors.js";
 import type { EngineOptions } from "../client/engine.js";
 
-/** commander value-parser: a non-negative integer. */
+/**
+ * commander value-parser: a non-negative integer in plain decimal notation.
+ *
+ * Only digit strings are accepted. Bare `Number()` would silently coerce
+ * empty/whitespace ("" -> 0, " 5 " -> 5), hexadecimal ("0x10" -> 16),
+ * exponent ("1e3" -> 1000) and unsafe-magnitude values (precision loss), so we
+ * validate the literal text first and bound the result to a safe integer.
+ */
 export function parseIntArg(value: string): number {
+  if (!/^[0-9]+$/.test(value)) {
+    throw new InvalidArgumentError("Expected a non-negative integer in decimal notation.");
+  }
   const n = Number(value);
-  if (!Number.isInteger(n) || n < 0) {
-    throw new InvalidArgumentError("Expected a non-negative integer.");
+  if (!Number.isSafeInteger(n)) {
+    throw new InvalidArgumentError("Value is too large; expected a safe non-negative integer.");
+  }
+  return n;
+}
+
+/**
+ * commander value-parser for 1-based paging arguments (--page-size,
+ * --result-page). Builds on parseIntArg but additionally rejects 0, since the
+ * Tagesschau paging parameters are 1-based and a 0 page is meaningless.
+ */
+export function parsePagingArg(value: string): number {
+  const n = parseIntArg(value);
+  if (n < 1) {
+    throw new InvalidArgumentError("Expected an integer >= 1.");
   }
   return n;
 }
