@@ -11,6 +11,10 @@ and **full-text search**.
 - **Well tested** — unit tests on Node's built-in test runner (`node --test`), every HTTP response mocked.
 - **Read-only, no auth** — the Tagesschau API needs no key; this client only reads.
 
+New to the Tagesschau API, or terms like *Ressort* and the numeric *Bundesland*
+region ids? See **[GLOSSARY.md](GLOSSARY.md)** for the domain concepts and the
+project's own vocabulary.
+
 ## Requirements
 
 - Node.js **>= 20** (uses the stable built-in test runner, ESM and top-level `await`).
@@ -84,7 +88,7 @@ Exit codes: `0` success, `4` on a `404` from the API, `1` for any other error, n
 ## Library usage
 
 ```ts
-import { TagesschauClient, TagesschauApiError } from "tagesschau-cli";
+import { TagesschauClient, TagesschauApiError } from "@maschinenlesbar.org/tagesschau-cli";
 
 const client = new TagesschauClient(); // defaults to https://www.tagesschau.de
 
