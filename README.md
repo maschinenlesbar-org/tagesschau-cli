@@ -1,5 +1,10 @@
 # tagesschau-cli
 
+[![CI](https://github.com/maschinenlesbar-org/tagesschau-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/maschinenlesbar-org/tagesschau-cli/actions/workflows/ci.yml)
+[![Release](https://github.com/maschinenlesbar-org/tagesschau-cli/actions/workflows/release.yml/badge.svg)](https://github.com/maschinenlesbar-org/tagesschau-cli/actions/workflows/release.yml)
+[![GitHub release](https://img.shields.io/github/v/release/maschinenlesbar-org/tagesschau-cli)](https://github.com/maschinenlesbar-org/tagesschau-cli/releases/latest)
+[![npm](https://img.shields.io/npm/v/@maschinenlesbar.org/tagesschau-cli)](https://www.npmjs.com/package/@maschinenlesbar.org/tagesschau-cli)
+
 Read German news from your terminal — `tagesschau` is a command-line tool for
 ARD-aktuell's open [Tagesschau API](https://tagesschau.api.bund.dev/)
 (`tagesschau.de`): browse the curated front page, filter the news feed by topic
