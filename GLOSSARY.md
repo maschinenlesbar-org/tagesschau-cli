@@ -108,38 +108,15 @@ from a hostile or buggy endpoint.
 
 ---
 
-## Project / technical terms
+## Exit codes
 
-**API client.** [`TagesschauClient`](src/client/client.ts) — the typed wrapper
-over the API (`homepage()`, `news()`, `channels()`, `search()`). Usable as a
-library independently of the CLI.
+**Exit codes.** The CLI maps outcomes to process exit codes: `0` success;
+`4` on a `404` from the API; `1` for any other error (API error, network failure,
+unexpected); and a non-zero commander code for usage / argument-validation errors.
+`--help`/`--version` return `0`.
 
-**Transport.** A single function `(HttpRequest) => Promise<HttpResponse>`
-([`http.ts`](src/client/http.ts)). The default uses Node's built-in
-`http`/`https`; tests inject a mock. This is the only HTTP seam.
+---
 
-**Request engine.** [`RequestEngine`](src/client/engine.ts) — builds URLs,
-serialises queries, applies retry/backoff, follows redirects, decodes JSON and
-maps errors. Sits between the client's methods and the transport.
-
-**Query-string builder.** [`query.ts`](src/client/query.ts) — a dependency-free
-serialiser: `undefined`/`null` values are omitted, arrays become repeated keys,
-booleans become `"true"`/`"false"`, `Date`s become ISO-8601, spaces are encoded
-as `%20`.
-
-**CliDeps / CliIO.** The dependency-injection seam for the CLI
-([`io.ts`](src/cli/io.ts)): a client factory plus an I/O object (`out`/`err`).
-Lets the whole CLI run in tests with a mocked client and captured output — no
-subprocess.
-
-**Error types.** [`errors.ts`](src/client/errors.ts): `TagesschauApiError`
-(non-2xx, carries `status`/`detail`/`url`/`method`/`body` and an `isRetryable`
-flag), `TagesschauNetworkError` (transport failure/timeout),
-`TagesschauParseError` (bad JSON), all extending `TagesschauError`. The CLI maps
-a `404` to exit code `4`, other errors to `1`.
-
-**Exit codes.** `0` success, `4` on a `404` from the API, `1` for any other
-error, and commander's own non-zero codes for usage errors.
-
-**Rendering (`--compact`).** Every command prints JSON to stdout — pretty-printed
-by default, on a single line with `--compact`.
+> **Library & internals.** Terms for the TypeScript client and its internals —
+> `TagesschauClient`, the request engine, transport, retry/backoff, error types,
+> query builder — live in **[DEVELOPING.md](DEVELOPING.md)**.

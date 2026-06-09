@@ -1,185 +1,184 @@
 # tagesschau-cli
 
-A TypeScript **API client** and **command-line interface** for the open
-[Tagesschau API](https://tagesschau.api.bund.dev/) (`tagesschau.de`) — ARD-aktuell's
-structured German news feed: **homepage**, **news by region/Ressort**, **channels**
-and **full-text search**.
+Read German news from your terminal — `tagesschau` is a command-line tool for
+ARD-aktuell's open [Tagesschau API](https://tagesschau.api.bund.dev/)
+(`tagesschau.de`): browse the curated front page, filter the news feed by topic
+or Bundesland, list broadcast channels, and run full-text searches — all as clean
+JSON you can pipe straight into [`jq`](https://jqlang.github.io/jq/).
 
-- **Zero runtime HTTP dependencies** — built on Node's built-in `http`/`https` (no axios, no fetch polyfill).
-- **One small dependency** for the CLI: [`commander`](https://github.com/tj/commander.js).
-- **Strongly typed** — typed client surface, response envelopes and the Ressort/region enums.
-- **Well tested** — unit tests on Node's built-in test runner (`node --test`), every HTTP response mocked.
-- **Read-only, no auth** — the Tagesschau API needs no key; this client only reads.
+- **Works out of the box** — no account, no API key, no configuration. Install and read.
+- **Clean JSON output** — pretty-printed by default, `--compact` for one-line/scripting.
+- **Four commands** — `homepage`, `news`, `channels`, `search`.
+- **Read-only** — every call is a plain GET; nothing is written, nothing is sent except the query.
 
-New to the Tagesschau API, or terms like *Ressort* and the numeric *Bundesland*
-region ids? See **[GLOSSARY.md](GLOSSARY.md)** for the domain concepts and the
-project's own vocabulary.
-
-## Requirements
-
-- Node.js **>= 20** (uses the stable built-in test runner, ESM and top-level `await`).
+> Want to use this as a TypeScript library or understand how it's built?
+> See **[DEVELOPING.md](DEVELOPING.md)**.
 
 ## Install
 
 ```bash
-npm install
-npm run build        # compiles TypeScript to dist/
+npm i -g @maschinenlesbar.org/tagesschau-cli
 ```
 
-Run the CLI without a global install:
+This installs the **`tagesschau`** command. Requires **Node.js 20+**.
+
+Check it works:
 
 ```bash
-node dist/src/cli/index.js --help
-# or, after `npm link` / global install:
 tagesschau --help
 ```
 
----
+## Quickstart
 
-## CLI usage
-
-Every command prints pretty JSON to stdout (`--compact` for a single line).
-
-### Global options
-
-| Option | Description |
-| --- | --- |
-| `--base-url <url>` | API base URL (default `https://www.tagesschau.de`) |
-| `--timeout <ms>` | Per-request timeout (default `30000`; `0` disables the timeout) |
-| `--user-agent <ua>` | `User-Agent` header value |
-| `--max-retries <n>` | Retries for transient `429`/`503` responses (default `2`) |
-| `--max-redirects <n>` | Max HTTP redirects to follow (default `5`). Same-origin redirects are followed transparently; on a cross-origin hop credential headers (`Authorization`, `X-API-Key`, `Cookie`) are stripped before the next request. Exhausting the limit raises a clear "too many redirects" error. |
-| `--max-response-bytes <n>` | Cap response body size in bytes (`0` = unlimited; default 100 MiB) |
-| `--compact` | Print JSON on a single line |
-
-Global options go **before** the command, e.g. `tagesschau --compact homepage`.
-
-### Commands
-
-```text
-homepage                         curated homepage feed (top + regional)
-news [--ressort <r>] [--region <id> ...]    news feed
-     ressort: inland | ausland | wirtschaft | sport | video | investigativ | wissen
-     region:  Bundesland id 1..16 (repeatable)
-channels                         live/broadcast channels
-search <text> [--page-size <n>] [--result-page <n>]   full-text search
-```
-
-### Examples
+No setup needed — the API is fully open. Your first command:
 
 ```bash
-# Top stories
 tagesschau homepage
+```
+
+Pull out just the headlines with `jq`:
+
+```bash
+tagesschau homepage | jq -r '.news[].title'
+```
+
+## Commands
+
+```text
+homepage                                     curated front-page feed (top + regional)
+news     [--ressort <r>] [--region <id>…]   news feed, optionally filtered
+channels                                     live/broadcast channels
+search   <text> [--page-size <n>] [--result-page <n>]   full-text search
+```
+
+### `homepage`
+
+No arguments. Returns a JSON object with a `news` array (top stories) and a
+`regional` array.
+
+### `news` filters
+
+| Flag | Meaning |
+| --- | --- |
+| `--ressort <ressort>` | topic: `inland` \| `ausland` \| `wirtschaft` \| `sport` \| `video` \| `investigativ` \| `wissen` |
+| `--region <id>` | Bundesland id `1`–`16` (repeatable — pass multiple times to combine) |
+
+Both filters are optional and combinable. The
+**[Glossary](GLOSSARY.md)** decodes every term.
+
+### `channels`
+
+No arguments. Returns a `channels` array; each entry carries `title`, `streams`
+and image metadata.
+
+### `search` options
+
+| Flag | Meaning |
+| --- | --- |
+| `--page-size <n>` | results per page (`>= 1`) |
+| `--result-page <n>` | page number (`>= 1`, 1-based) |
+
+The positional `<text>` argument is required and must not be empty (rejected
+before any request).
+
+## Common tasks
+
+A few recipes to get going — see **[Usage.md](Usage.md)** for the full,
+use-case-driven set.
+
+```bash
+# Curated front page, headlines only
+tagesschau homepage | jq -r '.news[].title'
 
 # Economy news
 tagesschau news --ressort wirtschaft
 
-# Regional news for Bayern (9) and Berlin (5)
-tagesschau news --region 9 --region 5
+# Regional news for Bayern (9)
+tagesschau news --region 9
 
-# Search
-tagesschau search "Bundestag" --result-page 1
+# Several Bundesländer at once — Berlin (5) and Bayern (9)
+tagesschau news --region 5 --region 9
+
+# Full-text search
+tagesschau search "Bundestag"
+
+# Page through search results (1-based)
+tagesschau search "Wahl" --page-size 20 --result-page 2
+
+# List live channel titles
+tagesschau channels | jq -r '.channels[].title'
 ```
 
-Exit codes: `0` success, `4` on a `404` from the API, `1` for any other error, non-zero for usage errors.
+## Output & scripting
 
----
-
-## Library usage
-
-```ts
-import { TagesschauClient, TagesschauApiError } from "@maschinenlesbar.org/tagesschau-cli";
-
-const client = new TagesschauClient(); // defaults to https://www.tagesschau.de
-
-const home = await client.homepage();
-const econ = await client.news({ ressort: "wirtschaft" });
-const hits = await client.search({ searchText: "Wahl", resultPage: 1 });
-
-try {
-  // An empty searchText is sent to the API as-is (not rejected client-side); the
-  // API may answer with a non-2xx, which surfaces as a TagesschauApiError.
-  await client.search({ searchText: "" });
-} catch (err) {
-  if (err instanceof TagesschauApiError) console.error(err.status, err.detail);
-}
-```
-
-### Client options
-
-```ts
-new TagesschauClient({
-  baseUrl: "https://www.tagesschau.de",
-  timeoutMs: 15_000,          // 0 disables the per-request timeout
-  maxRetries: 3,              // 429 / 503 are retried with linear backoff
-  maxRedirects: 5,            // follow up to N redirects; credential headers are
-                              // dropped on cross-origin hops
-  maxResponseBytes: 50 << 20, // abort responses larger than 50 MiB (0 = unlimited)
-  userAgent: "my-app/1.0",
-  transport: customTransport, // inject your own HTTP transport
-});
-```
-
-### Methods
-
-`client.homepage()`, `client.news({ regions?, ressort? })`, `client.channels()`,
-`client.search({ searchText?, pageSize?, resultPage? })`. `RessortValues` and
-`RegionValues` are exported for reference.
-
----
-
-## Architecture
-
-```
-src/
-  client/
-    enums.ts     # Ressort + region (1..16) value sets (runtime + type)
-    types.ts     # response envelopes (items exposed as raw JsonObject)
-    query.ts     # dependency-free query-string builder
-    http.ts      # the Transport interface + default node:http/https transport
-    engine.ts    # URL building, retry/backoff, JSON/raw decoding, error mapping
-    errors.ts    # TagesschauError / *ApiError / *NetworkError / *ParseError
-    client.ts    # TagesschauClient — the news surface over the engine
-  cli/
-    io.ts        # injectable I/O seam (stdout/stderr/file)
-    shared.ts    # option parsers, global-option resolver, JSON renderer
-    commands/    # homepage / news / channels / search
-    program.ts   # assembles the commander program from injectable deps
-    run.ts       # parses argv -> exit code (no process.exit; testable)
-    index.ts     # #! bin shim
-```
-
-**Design notes**
-
-- The HTTP layer is a single `Transport` function (`(req) => Promise<HttpResponse>`). The default
-  uses `node:http`/`node:https`; tests inject a mock. This keeps the client free of any HTTP framework.
-- The CLI is built around injectable `CliDeps` (client factory + I/O), so the whole program can be
-  driven in-process by tests with a mocked client and captured output — no subprocesses.
-- News items are deeply nested and vary by type, so they are returned as faithful raw `JsonObject`s
-  rather than partially-guessed types.
-
----
-
-## Testing
+Every command prints **pretty JSON to stdout**. Errors and diagnostics go to
+stderr, so piping stdout into `jq` stays clean.
 
 ```bash
-npm test          # builds, then runs `node --test` over dist/test
+# Date + topic + title digest from the front page
+tagesschau homepage | jq -r '.news[] | "\(.date[0:10])  [\(.ressort)]  \(.title)"'
+
+# Count search hits
+tagesschau search "Bundestag" | jq '.totalItemCount'
+
+# Titles from a search
+tagesschau search "Bundestag" | jq -r '.searchResults[].title'
 ```
 
-- **`query.test.ts`** — query-string serialisation.
-- **`http.test.ts`** — the default transport against a real loopback `http.createServer`.
-- **`engine.test.ts`** — URL building, JSON decoding, error mapping, 429/503 retry — mocked transport.
-- **`client.test.ts`** — every endpoint's method/URL/query mapping — mocked transport.
-- **`cli.test.ts`** — end-to-end command parsing, validation and exit codes — mocked client.
+Use `--compact` for single-line JSON in pipelines and logs:
 
-## Continuous integration
+```bash
+tagesschau --compact homepage | jq -c '.news'
+```
 
-GitHub Actions workflows under `.github/workflows/`:
+`--compact` is a global option and works **before or after** the command name.
 
-- **ci.yml** — type-check, build and test on Node 20/22/24 for every push and PR.
-- **release.yml** — on a `v*` tag: verify the tag matches `package.json`, test, `npm pack`, and create a GitHub Release with the tarball.
-- **publish.yml** — manual dispatch: publish to npm via OIDC **Trusted Publishing** (no stored `NPM_TOKEN`) with provenance.
-- **docs.yml** — build TypeDoc API docs and deploy to GitHub Pages on each `v*` tag.
+**Exit codes** make the CLI easy to use in scripts:
+
+| Code | Meaning |
+| --- | --- |
+| `0` | success (also `--help` / `--version`) |
+| `4` | resource not found (`404`) |
+| `1` | any other error (API error, network failure, unexpected) |
+| non-zero | usage / invalid argument (commander parse error) |
+
+## Troubleshooting
+
+- **`command not found: tagesschau`** — the global npm bin directory isn't on
+  your `PATH`. Run `npm bin -g` to find it and add it, or run via
+  `npx @maschinenlesbar.org/tagesschau-cli …`.
+- **Exit `4` / "not found"** — the API returned a `404`. Check that any region
+  id is in the range `1`–`16` and that the search text isn't empty.
+- **Network error / timeout** — connectivity or a timeout. Try again, or raise
+  the limit with `--timeout 60000`.
+- **No results / empty arrays** — the query matched nothing; broaden the search
+  text, drop `--ressort`/`--region` filters, or try a different keyword.
+- **Invalid ressort** — must be one of `inland`, `ausland`, `wirtschaft`,
+  `sport`, `video`, `investigativ`, `wissen` (exact lowercase string).
+- **`--page-size` / `--result-page` rejected** — both must be integers `>= 1`;
+  the API's paging is 1-based and does not accept `0`.
+
+## Global options
+
+These apply to every command and may be given **before or after** the command name:
+
+| Option | Description |
+| --- | --- |
+| `-V, --version` | Print the version number |
+| `-h, --help` | Show help for the program or a command |
+| `--compact` | Print JSON on a single line instead of pretty-printed |
+| `--base-url <url>` | API base URL (default `https://www.tagesschau.de`) |
+| `--timeout <ms>` | Per-request timeout in milliseconds (default `30000`; `0` disables) |
+| `--user-agent <ua>` | `User-Agent` header value |
+| `--max-retries <n>` | Retries for transient `429`/`503` responses (default `2`) |
+| `--max-redirects <n>` | Max HTTP redirects to follow (default `5`) |
+| `--max-response-bytes <n>` | Cap response body size in bytes (`0` = unlimited; default 100 MiB) |
+
+## Learn more
+
+- **[Usage.md](Usage.md)** — full use-case-driven cookbook.
+- **[GLOSSARY.md](GLOSSARY.md)** — every command, flag and domain term explained.
+- **[DEVELOPING.md](DEVELOPING.md)** — TypeScript library usage, architecture, testing, CI.
 
 ## License
 
