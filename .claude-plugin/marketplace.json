@@ -1,0 +1,38 @@
+{
+  "name": "tagesschau-skills",
+  "owner": {
+    "name": "Sebastian Schürmann",
+    "email": "sebs@2xs.org"
+  },
+  "metadata": {
+    "description": "German news intelligence skills powered by the tagesschau-cli (ARD-aktuell Tagesschau API)"
+  },
+  "plugins": [
+    {
+      "name": "tagesschau",
+      "source": "./",
+      "description": "Briefings of current German headlines, regional news by Bundesland, full-text topic tracking, and live stream links — all over the open, key-free Tagesschau API via the tagesschau-cli.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Sebastian Schürmann",
+        "email": "sebs@2xs.org"
+      },
+      "license": "AGPL-3.0-or-later",
+      "repository": "https://github.com/maschinenlesbar-org/tagesschau-cli",
+      "homepage": "https://github.com/maschinenlesbar-org/tagesschau-cli#readme",
+      "category": "news",
+      "keywords": [
+        "tagesschau",
+        "ard",
+        "news",
+        "nachrichten",
+        "regional",
+        "bundesland",
+        "search",
+        "livestream",
+        "germany",
+        "bund.dev"
+      ]
+    }
+  ]
+}
