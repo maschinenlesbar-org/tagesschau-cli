@@ -5,7 +5,7 @@
 [![npm](https://img.shields.io/npm/v/@maschinenlesbar.org/tagesschau-cli)](https://www.npmjs.com/package/@maschinenlesbar.org/tagesschau-cli)
 
 Read German news from your terminal — `tagesschau` is a command-line tool for
-ARD-aktuell's open [Tagesschau API](https://tagesschau.api.bund.dev/)
+ARD-aktuell's keyless [Tagesschau API](https://tagesschau.api.bund.dev/)
 (`tagesschau.de`): browse the curated front page, filter the news feed by topic
 or Bundesland, list broadcast channels, and run full-text searches — all as clean
 JSON you can pipe straight into [`jq`](https://jqlang.github.io/jq/).
@@ -34,7 +34,9 @@ tagesschau --help
 
 ## Quickstart
 
-No setup needed — the API is fully open. Your first command:
+No setup needed — the API needs no key. (Access is keyless, but the content is
+copyrighted editorial material, not open data — see [Data license](#data-license).)
+Your first command:
 
 ```bash
 tagesschau homepage
@@ -185,6 +187,17 @@ These apply to every command and may be given **before or after** the command na
 - **[DEVELOPING.md](DEVELOPING.md)** — TypeScript library usage, architecture, testing, CI.
 - **[SKILLS.md](SKILLS.md)** — Claude Code Agent Skills bundled with this repo (news
   briefing, regional news, topic tracker, live streams), installable as a plugin.
+
+## Data license
+
+This CLI is a **client** — it accesses data it does not own or redistribute. The
+upstream data is © its provider and licensed **separately from this tool's code**.
+See **[DATA_LICENSE.md](DATA_LICENSE.md)**.
+
+> [!CAUTION]
+> **Not open data — copyrighted editorial content** (ARD-aktuell / NDR). Private,
+> non-commercial use only; **do not republish or redistribute**. Rate limit
+> 60 requests/hour.
 
 ## License
 
