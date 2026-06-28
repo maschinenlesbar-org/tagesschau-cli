@@ -3,8 +3,8 @@ name: tagesschau-topic-tracker
 description: >
   Track how much and how recently Tagesschau is covering a topic, person, or
   keyword using the tagesschau-cli full-text search. Trigger when the user asks
-  "what is Tagesschau saying about <X>?", "how much coverage does <topic> get?",
-  "latest news on <person/event>", "search Tagesschau for <keyword>", "is <X> in
+  "what is Tagesschau saying about a topic?", "how much coverage does a topic get?",
+  "latest news on a person or event", "search Tagesschau for a keyword", "is a topic in
   the news?", or wants a timeline of coverage. Runs paged search, reports the
   total hit count, sorts results newest-first, and separates articles from video.
 version: 1.0.0
