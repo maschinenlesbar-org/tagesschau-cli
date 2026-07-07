@@ -147,6 +147,29 @@ test("exhausting the redirect cap throws a clear TagesschauNetworkError", async 
   assert.equal(mt.calls.length, 3);
 });
 
+test("a redirect to a non-http(s) scheme is refused in the engine (TGS-01)", async () => {
+  // Even against a custom transport with no scheme guard of its own, the engine
+  // must reject a hostile Location: file:/// before handing it to the transport.
+  const mt = makeMockTransport((req) => {
+    if (req.url.startsWith("https://example.test")) {
+      return {
+        status: 302,
+        headers: { location: "file:///etc/passwd" },
+        body: Buffer.from(""),
+      };
+    }
+    return jsonResponse({ ok: 1 });
+  });
+  const e = new RequestEngine({ baseUrl: "https://example.test", transport: mt.transport });
+  await assert.rejects(
+    () => e.getJson("/x"),
+    (err) =>
+      err instanceof TagesschauNetworkError && /unsupported scheme "file:"/i.test(err.message),
+  );
+  // The redirect target is never handed to the transport (only the first leg ran).
+  assert.equal(mt.calls.length, 1);
+});
+
 test("a redirect with no Location header throws a clear TagesschauNetworkError", async () => {
   const mt = makeMockTransport(() => ({
     status: 302,

@@ -152,7 +152,17 @@ export class RequestEngine {
           );
         }
         const previousUrl = url;
-        url = new URL(location, previousUrl).toString();
+        const nextUrl = new URL(location, previousUrl);
+        // Enforce http(s)-only on the redirect target here in the engine, not
+        // only in the default transport: a custom transport gets no scheme guard
+        // otherwise, so a hostile `Location: file:///…` (or ftp:, data:, …) would
+        // be handed to it verbatim. Reject anything else as a typed error.
+        if (nextUrl.protocol !== "http:" && nextUrl.protocol !== "https:") {
+          throw new TagesschauNetworkError(
+            `Refusing to follow redirect to unsupported scheme "${nextUrl.protocol}" (from ${method} ${previousUrl})`,
+          );
+        }
+        url = nextUrl.toString();
         // Cross-origin hop: drop credential headers so they are never re-sent to
         // a host the caller did not intend to authenticate against. Same-origin
         // redirects (e.g. /homepage/ -> /homepage) keep all headers.
