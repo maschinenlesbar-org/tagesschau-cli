@@ -57,6 +57,31 @@ const DEFAULT_MAX_RESPONSE_BYTES = 100 * 1024 * 1024;
 const realSleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * Strip C0/C1 control characters (except tab and newline) and DEL from a string
+ * that originates in an attacker-controlled response — the error `detail`.
+ * `JSON.parse` decodes a backslash-u escape in an error body into a real control
+ * byte, so without this a hostile/MITM'd endpoint could drive ANSI/OSC escape
+ * sequences into the user's terminal when the error message is printed to stderr
+ * (title changes, spoofed lines, clipboard writes on some emulators). The success path
+ * is already safe (`JSON.stringify` escapes these); this only covers text that
+ * flows into an error message. Built via char codes so no raw control byte ever
+ * appears in this source file.
+ */
+export function sanitizeServerText(text: string): string {
+  let out = "";
+  for (const ch of text) {
+    const n = ch.codePointAt(0) ?? 0;
+    if (n === 9 || n === 10) {
+      out += ch;
+      continue;
+    }
+    if (n <= 8 || (n >= 0x0b && n <= 0x1f) || (n >= 0x7f && n <= 0x9f)) continue;
+    out += ch;
+  }
+  return out;
+}
+
 /** Return a copy of `headers` with all credential-bearing headers removed. */
 export function stripCredentialHeaders(
   headers: Record<string, string>,
@@ -203,6 +228,10 @@ export class RequestEngine {
     } catch {
       // Non-JSON error body; leave detail undefined.
     }
+    // `detail` comes straight from the (attacker-controllable) response body and
+    // ends up in the error message printed to stderr, so strip control characters
+    // that could inject terminal escape sequences before it leaves the engine.
+    if (detail !== undefined) detail = sanitizeServerText(detail);
     return new TagesschauApiError({ status, url, method, body: text, detail });
   }
 }

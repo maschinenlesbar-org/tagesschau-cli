@@ -147,6 +147,30 @@ test("exhausting the redirect cap throws a clear TagesschauNetworkError", async 
   assert.equal(mt.calls.length, 3);
 });
 
+test("error detail is stripped of terminal control characters (TGS-02)", async () => {
+  // A hostile server puts an ESC (0x1b) OSC sequence into the error detail. It
+  // must not survive into the message that run.ts prints to stderr verbatim.
+  const ESC = String.fromCharCode(0x1b);
+  const detail = `${ESC}]0;pwned${String.fromCharCode(0x07)}before${ESC}[31mafter`;
+  const mt = makeMockTransport(() => jsonResponse({ detail }, 500));
+  const e = new RequestEngine({ transport: mt.transport, maxRetries: 0 });
+  await assert.rejects(
+    () => e.getJson("/x"),
+    (err) => {
+      assert.ok(err instanceof TagesschauApiError);
+      assert.equal(err.detail, "]0;pwnedbefore[31mafter");
+      // No control byte (< 0x20, except tab/newline, or 0x7f-0x9f) survives.
+      assert.ok(
+        ![...(err.detail ?? "")].some((c) => {
+          const n = c.charCodeAt(0);
+          return (n <= 8) || (n >= 0x0b && n <= 0x1f) || (n >= 0x7f && n <= 0x9f);
+        }),
+      );
+      return true;
+    },
+  );
+});
+
 test("a redirect to a non-http(s) scheme is refused in the engine (TGS-01)", async () => {
   // Even against a custom transport with no scheme guard of its own, the engine
   // must reject a hostile Location: file:/// before handing it to the transport.
