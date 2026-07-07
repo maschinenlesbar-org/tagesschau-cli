@@ -58,11 +58,12 @@ try {
 ```ts
 new TagesschauClient({
   baseUrl: "https://www.tagesschau.de",
-  timeoutMs: 15_000,          // 0 disables the per-request timeout
+  timeoutMs: 15_000,          // idle (socket-inactivity) timeout; 0 disables it
   maxRetries: 3,              // 429 / 503 are retried with linear backoff
   maxRedirects: 5,            // follow up to N redirects; credential headers are
                               // dropped on cross-origin hops
-  maxResponseBytes: 50 << 20, // abort responses larger than 50 MiB (0 = unlimited)
+  maxResponseBytes: 50 << 20, // abort responses larger than this (0 = unlimited;
+                              // default is 100 MiB when the option is omitted)
   userAgent: "my-app/1.0",
   transport: customTransport, // inject your own HTTP transport
 });
@@ -84,7 +85,13 @@ credential headers are injected.
 **Redirect safety.** When the API issues a redirect that crosses an origin
 boundary (different scheme, host, or port), the client **strips credential-bearing
 headers** (`Authorization`, `X-API-Key`, `Cookie`) before following it. Same-origin
-redirects keep all headers.
+redirects keep all headers. A same-host `https:` → `http:` **downgrade** counts as
+a cross-origin hop (the origin differs by scheme), so credentials are stripped
+there too — they never cross the wire in cleartext. The engine also enforces that
+a redirect `Location` resolves to an `http:`/`https:` URL, rejecting any other
+scheme (e.g. `file:`, `ftp:`, `data:`) as a typed `TagesschauNetworkError` — this
+guard lives in the engine, so it holds even when a custom `transport` is injected
+that does no scheme checking of its own.
 
 ## Architecture
 
