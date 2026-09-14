@@ -1,0 +1,16 @@
+# The only repo-specific texts of the website. Everything else comes from the
+# repository: the English intro from README.md, the commands from the built CLI.
+
+# How the API is accessed: open | key (env: VAR) | account (token, user, password: VARs)
+access:
+  type: open
+
+de:
+  # German version of the README's intro paragraph. Keep it in step with README.md.
+  intro: >-
+    Nachrichten aus Deutschland im Terminal lesen – `tagesschau` ist ein Kommandozeilen-Tool
+    für die schlüsselfreie [Tagesschau-API](https://tagesschau.api.bund.dev/) von ARD-aktuell
+    (`tagesschau.de`): die redaktionelle Startseite durchblättern, den Nachrichten-Feed nach
+    Thema oder Bundesland filtern, Sendekanäle auflisten und Volltextsuchen ausführen – alles
+    als sauberes JSON, das Sie direkt an [`jq`](https://jqlang.github.io/jq/) weitergeben
+    können.

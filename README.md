@@ -4,6 +4,8 @@
 [![Release](https://github.com/maschinenlesbar-org/tagesschau-cli/actions/workflows/release.yml/badge.svg)](https://github.com/maschinenlesbar-org/tagesschau-cli/actions/workflows/release.yml)
 [![npm](https://img.shields.io/npm/v/@maschinenlesbar.org/tagesschau-cli)](https://www.npmjs.com/package/@maschinenlesbar.org/tagesschau-cli)
 
+**Website:** [English](https://maschinenlesbar-org.github.io/tagesschau-cli/) · [Deutsch](https://maschinenlesbar-org.github.io/tagesschau-cli/de/) — command reference, guides and API docs
+
 Read German news from your terminal — `tagesschau` is a command-line tool for
 ARD-aktuell's keyless [Tagesschau API](https://tagesschau.api.bund.dev/)
 (`tagesschau.de`): browse the curated front page, filter the news feed by topic
