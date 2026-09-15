@@ -102,8 +102,11 @@ encode the non-obvious parts of this API, for example:
 - **`channels[].streams` is an object keyed by protocol** (`adaptivestreaming` → an HLS
   `.m3u8` URL), not a flat string, and the same channel title can appear more than once
   (see **tagesschau-watch-live**);
-- **`ressort` is frequently `null`** on regional, video, and search items — group those
-  into a fallback bucket rather than fabricating a topic.
+- **`ressort` is frequently `null` or missing** on regional, video, and search items —
+  group those into a fallback bucket rather than fabricating a topic;
+- **a `--region` request returns one page shared by all requested states**, and regional
+  items link to the broadcaster's own site (`www.ndr.de`, `www.mdr.de`, …), which is the
+  reliable broadcaster signal (see **tagesschau-regional**).
 
 ## Contributing
 

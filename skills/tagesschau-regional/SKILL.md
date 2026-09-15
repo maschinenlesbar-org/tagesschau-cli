@@ -63,7 +63,13 @@ tagesschau --compact news --region 3 --region 6
 
 The result is `{ news, regional, nextPage?, type }`. **For a `--region` query the items
 land in `news`, each tagged with its `regionId`; the top-level `regional` array is empty**
-(it's only populated on the unfiltered `homepage`). Expect ~50–55 items per state.
+(it's only populated on the unfiltered `homepage`).
+
+> **Trap — one page per request, not per state.** A request returns one page of roughly
+> 50–90 items (on 2026-09-15: 50 for `--region 13` alone, 54 for `--region 13 --region 16`,
+> 90 for four states), and several states **share** it. A quiet state can be all but
+> crowded out (Bremen got 1 of 90 when asked together with BW, HH and HE). When the user
+> wants each state's full feed, run **one request per state**.
 
 > **Trap — Berlin & Brandenburg come as a pair.** Requesting `--region 3` (Berlin) or
 > `--region 4` (Brandenburg) returns items tagged with **both** `regionId: 3` *and* `4`
@@ -74,16 +80,27 @@ land in `news`, each tagged with its `regionId`; the top-level `regional` array 
 > the live API **silently honours the Ressort and ignores the region**: every returned
 > item comes back with `regionId: 0` (national), not your state. So "Bayern + Wirtschaft"
 > is *not* achievable server-side. If the user wants a topic within a state, fetch the
-> region feed alone and **filter client-side** by inspecting each item's `ressort` /
-> `tags` / `shareURL`, and tell the user you filtered locally.
+> region feed alone and **filter client-side** on each item's `title` / `topline` /
+> `tags` (regional items carry no `ressort`, and MDR items have empty `tags`), and tell
+> the user you filtered locally.
 
 ## Step 3 — The fields that matter
 
-Per item (same shape as the briefing skill): `title`, `topline`, `firstSentence`,
-`date` (ISO 8601 +offset), `regionId` (your state, when filtered), `shareURL` (can be
-`null` for video), `ressort` (often `null` on regional items), `sophoraId` (its prefix
-encodes the regional broadcaster — `swr` = BW, `br` = BY, `rb` = Bremen, `ndr`/`aktuell…`
-= North, `wdr` = NRW, `mdr` = SN/ST/TH, etc.).
+Per item (the briefing skill's shape, with gaps): `title`, `topline`, `date` (ISO 8601
++offset), `regionId` (your state, when filtered), `shareURL` (can be `null` for video),
+`tags`, `sophoraId`. Read them defensively:
+
+- **`ressort` is missing** (the key is absent, so `jq .ressort` gives `null`) on regional
+  items.
+- **`firstSentence` is missing** on most NDR and MDR items (HH, MV, NI, SH, SN, ST, TH);
+  fall back to `topline`.
+- **`tags`** is empty on MDR items.
+- **The broadcaster is in the `shareURL` host**, which is the broadcaster's own site,
+  not tagesschau.de: `www.swr.de` (BW, RP), `www.br.de` (BY), `www.rbb24.de` (BE, BB),
+  `www.butenunbinnen.de` (HB), `www.ndr.de` (HH, MV, NI, SH), `www.hessenschau.de` (HE),
+  `www1.wdr.de` (NW), `www.sr.de` (SL), `www.mdr.de` (SN, ST, TH). The `sophoraId` prefix
+  (`swr-`, `br-`, `rbb-`, `rb-`, `hr-`, `wdr-`, `sr-`) is **not** reliable: NDR and MDR
+  ids are bare slugs such as `muenzschatz-kelten-100`.
 
 ## Step 4 — Present, labelled by state
 
@@ -92,13 +109,14 @@ Group by state when several were requested; within a state, sort newest-first by
 ```
 Niedersachsen (Region 9) — 12.06.2026
 
-  • A39: Bauarbeiten zwischen … — Verkehr
-    tagesschau.de/regional/niedersachsen/…
-  • Hannover beschließt … — Kommunalpolitik
+  • A39: Bauarbeiten zwischen …
+    ndr.de/nachrichten/niedersachsen/…
+  • Hannover beschließt …
   …und 43 weitere.
 
 Bremen (Region 5) — 12.06.2026
-  • Bremer Hafen meldet … 
+  • Bremer Hafen meldet …
+    butenunbinnen.de/nachrichten/…
 ```
 
 Rules:

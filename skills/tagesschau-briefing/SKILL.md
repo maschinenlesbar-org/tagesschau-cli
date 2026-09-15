@@ -59,14 +59,14 @@ top-level fields for a briefing:
 | `title` | The headline |
 | `topline` | Short kicker/context line above the headline (e.g. `Spritpreise`) |
 | `firstSentence` | One-sentence summary — the teaser |
-| `ressort` | Topic: `inland`, `ausland`, `wirtschaft`, `sport`, … Can be **`null`** (esp. video items and regional items) |
+| `ressort` | Topic: `inland`, `ausland`, `wirtschaft`, `sport`, … Can be **`null` or missing** (the key is absent on regional items and on some homepage items) |
 | `date` | ISO 8601 with offset, e.g. `2026-06-10T19:03:25.655+02:00` — sort/recency |
 | `breakingNews` | Boolean — `true` means **Eilmeldung**; lead with these |
 | `type` | `story`, `video`, `webview`, … — most are `story`; `video` items have no readable body |
 | `regionId` | `0` for national items; `1`–`16` on regional ones |
-| `shareURL` | Public `tagesschau.de` article URL — cite this. **Can be `null`** (video items) |
+| `shareURL` | Public article URL — cite this. `tagesschau.de` for national items; regional items link to the broadcaster's site (`www.br.de`, `www.ndr.de`, …). **Can be `null`** (video items) |
 | `tags[].tag` | Topic tags — useful for grouping/dedup |
-| `sophoraId` | Stable internal id; prefix often encodes the regional broadcaster |
+| `sophoraId` | Stable internal id. Some regional ids carry a broadcaster prefix (`br-`, `swr-`), but NDR and MDR ids don't; use the `shareURL` host for the broadcaster |
 
 Ignore the heavy nested fields (`content[]`, `teaserImage.imageVariants`, `tracking`,
 `updateCheckUrl`) unless the user asks for full article text — `content[]` holds the body
@@ -79,7 +79,7 @@ as `{type, value}` blocks with HTML in `value`.
 2. **Then the homepage order** for top stories — it is already the editorial ranking;
    don't re-sort it by date. (Ressort/regional feeds *are* newest-first by `date`.)
 3. **Group by `ressort`** for readability (Inland / Ausland / Wirtschaft / Sport / …).
-   Items with `ressort === null` go in a "Weitere"/"Video" bucket — infer a topic from
+   Items whose `ressort` is `null` or missing go in a "Weitere"/"Video" bucket — infer a topic from
    `shareURL` path or `tags` if useful, but don't fabricate one.
 4. **Dedup across feeds.** If you pulled both `homepage` and a Ressort feed, the same
    story appears in both — match on `sophoraId` (or `shareURL`) and keep one.
