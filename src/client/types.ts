@@ -62,5 +62,6 @@ export interface NewsParams {
 export interface SearchParams {
   searchText?: string;
   pageSize?: number;
+  /** 0-based page index: 0 (or omitted) is the first page. */
   resultPage?: number;
 }

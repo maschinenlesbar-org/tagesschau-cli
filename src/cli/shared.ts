@@ -27,9 +27,9 @@ export function parseIntArg(value: string): number {
 }
 
 /**
- * commander value-parser for 1-based paging arguments (--page-size,
- * --result-page). Builds on parseIntArg but additionally rejects 0, since the
- * Tagesschau paging parameters are 1-based and a 0 page is meaningless.
+ * commander value-parser for --page-size. Builds on parseIntArg but
+ * additionally rejects 0, since a page of zero hits is meaningless. (The page
+ * index --result-page is 0-based upstream, so it uses parseIntArg directly.)
  */
 export function parsePagingArg(value: string): number {
   const n = parseIntArg(value);

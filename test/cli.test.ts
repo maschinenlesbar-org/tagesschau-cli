@@ -63,6 +63,21 @@ test("search passes the text and paging options", async () => {
   assert.equal(url.searchParams.get("resultPage"), "3");
 });
 
+test("search accepts --result-page 0 (the API's first page) but still rejects --page-size 0", async () => {
+  const cli = makeCli(() => jsonResponse({ searchResults: [] }));
+  assert.equal(await run(["search", "Wahl", "--result-page", "0"], cli.deps), 0);
+  assert.equal(new URL(cli.mt.last().url).searchParams.get("resultPage"), "0");
+
+  const bad = makeCli(() => jsonResponse({ searchResults: [] }));
+  assert.equal(await run(["search", "Wahl", "--page-size", "0"], bad.deps), 1);
+  assert.equal(bad.mt.calls.length, 0);
+  assert.match(bad.err.join("\n"), />= 1/);
+
+  const negative = makeCli(() => jsonResponse({ searchResults: [] }));
+  assert.equal(await run(["search", "Wahl", "--result-page", "-1"], negative.deps), 1);
+  assert.equal(negative.mt.calls.length, 0);
+});
+
 test("DEL and C1 control characters in server data are escaped in the JSON output", async () => {
   const controls = String.fromCharCode(0x7f, 0x85, 0x9b) + "2J";
   const served = {
