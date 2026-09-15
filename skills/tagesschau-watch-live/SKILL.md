@@ -37,7 +37,7 @@ Returns `{ channels: [...], type }`. There are ~8 channels. Each entry:
 | `streams` | **Object** of `{ <protocol>: <url> }` — usually `{ "adaptivestreaming": "https://…/master.m3u8" }`. This is the playable link |
 | `type` | Typically `video` |
 | `copyright` | Rights holder (`tagesschau`) |
-| `date` | Air/publish time — **often `null`** for the perpetual livestream; set for dated clips |
+| `date` | Air/publish time — **missing** (no `date` key; `jq .date` gives `null`) on the perpetual livestream; set for dated clips |
 | `sophoraId` | Stable internal id |
 | `tracking` | Analytics metadata — ignore |
 
@@ -74,8 +74,8 @@ Rules:
   any HLS player; mention that if the user wants to actually watch.
 - Surface every channel; group the live stream, the dated editions, and the accessibility
   variants (Einfache Sprache, Gebärdensprache) so the user can pick.
-- If a channel has `date`, show it (dated clip vs. the always-on livestream which has
-  `date: null`).
+- If a channel has `date`, show it (dated clip vs. the always-on livestream, which has
+  no `date`).
 - Read the URL from `streams.adaptivestreaming` (or whatever protocol key exists); if a
   channel has no `streams`, say it's currently unavailable rather than emitting a blank.
 - Don't fabricate availability — the feed lists what ARD currently offers; if a requested
