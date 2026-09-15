@@ -152,7 +152,7 @@ These apply to every command and must appear **before** the command name
 | --- | --- |
 | `-V, --version` | Print the version and exit. |
 | `--base-url <url>` | API base URL (default `https://www.tagesschau.de`). |
-| `--timeout <ms>` | Per-request timeout in milliseconds. |
+| `--timeout <ms>` | Time limit per request in milliseconds, whole response included. |
 | `--user-agent <ua>` | `User-Agent` header value. |
 | `--max-retries <n>` | Retries for transient `429`/`503` responses (default `2`). |
 | `--max-redirects <n>` | Max HTTP redirects to follow (default `5`; credential headers are dropped on cross-origin hops). |

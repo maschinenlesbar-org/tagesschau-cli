@@ -58,7 +58,7 @@ try {
 ```ts
 new TagesschauClient({
   baseUrl: "https://www.tagesschau.de",
-  timeoutMs: 15_000,          // idle (socket-inactivity) timeout; 0 disables it
+  timeoutMs: 15_000,          // time limit per request, whole response included; 0 disables it
   maxRetries: 3,              // 429 / 503 are retried with linear backoff
   maxRedirects: 5,            // follow up to N redirects; credential headers are
                               // dropped on cross-origin hops
