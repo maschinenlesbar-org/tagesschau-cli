@@ -176,7 +176,7 @@ These apply to every command and may be given **before or after** the command na
 | `-h, --help` | Show help for the program or a command |
 | `--compact` | Print JSON on a single line instead of pretty-printed |
 | `--base-url <url>` | API base URL (default `https://www.tagesschau.de`) |
-| `--timeout <ms>` | Time limit per request in milliseconds, reading the whole response included (default `30000`; `0` disables) |
+| `--timeout <ms>` | Time limit per request in milliseconds, reading the whole response included (default `30000`; `0` disables; at most `2147483647`) |
 | `--user-agent <ua>` | `User-Agent` header value |
 | `--max-retries <n>` | Retries for transient `429`/`503` responses (default `2`) |
 | `--max-redirects <n>` | Max HTTP redirects to follow (default `5`) |

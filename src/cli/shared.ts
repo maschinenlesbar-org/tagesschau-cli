@@ -39,6 +39,16 @@ export function parsePagingArg(value: string): number {
   return n;
 }
 
+/** Build a commander value-parser for a decimal integer constrained to [min, max]. */
+export function parseBoundedInt(min: number, max: number): (value: string) => number {
+  return (value: string) => {
+    const n = parseIntArg(value);
+    if (n < min) throw new InvalidArgumentError(`Expected an integer >= ${min}.`);
+    if (n > max) throw new InvalidArgumentError(`Expected an integer <= ${max}.`);
+    return n;
+  };
+}
+
 /**
  * Validate a positional argument against an allowed set (commander does not
  * support .choices() on positional args). Throws a TagesschauError so run() prints a

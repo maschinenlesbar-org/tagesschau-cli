@@ -82,6 +82,17 @@ test("DEL and C1 control characters in server data are escaped in the JSON outpu
   }
 });
 
+test("--timeout accepts up to the largest timer Node supports", async () => {
+  const cli = makeCli(() => jsonResponse({ news: [], regional: [] }));
+  assert.equal(await run(["--timeout", "2147483647", "homepage"], cli.deps), 0);
+  assert.equal(cli.mt.last().timeoutMs, 2_147_483_647);
+
+  const over = makeCli(() => jsonResponse({ news: [], regional: [] }));
+  assert.equal(await run(["--timeout", "2147483648", "homepage"], over.deps), 1);
+  assert.equal(over.mt.calls.length, 0); // rejected before any request
+  assert.match(over.err.join("\n"), /<= 2147483647/);
+});
+
 test("a 404 from the API maps to exit code 4", async () => {
   const cli = makeCli(() => jsonResponse({}, 404));
   const code = await run(["channels"], cli.deps);
