@@ -71,8 +71,9 @@ No arguments. Returns a JSON object with a `news` array (top stories) and a
 | `--ressort <ressort>` | topic: `inland` \| `ausland` \| `wirtschaft` \| `sport` \| `video` \| `investigativ` \| `wissen` |
 | `--region <id>` | Bundesland id `1`–`16` (repeatable — pass multiple times to combine) |
 
-Both filters are optional and combinable. The
-**[Glossary](GLOSSARY.md)** decodes every term.
+Both filters are optional. Don't combine them: when both are given, the API
+applies the Ressort and ignores the region (every item comes back national,
+`regionId: 0`). The **[Glossary](GLOSSARY.md)** decodes every term.
 
 ### `channels`
 
@@ -101,10 +102,10 @@ tagesschau homepage | jq -r '.news[].title'
 # Economy news
 tagesschau news --ressort wirtschaft
 
-# Regional news for Bayern (9)
+# Regional news for Niedersachsen (9)
 tagesschau news --region 9
 
-# Several Bundesländer at once — Berlin (5) and Bayern (9)
+# Several Bundesländer at once — Bremen (5) and Niedersachsen (9)
 tagesschau news --region 5 --region 9
 
 # Full-text search

@@ -73,7 +73,7 @@ array (each tagged with the requested `regionId`); the top-level `regional`
 array is only populated on the unfiltered `homepage` feed.
 
 ```bash
-# Bayern (region id 9)
+# Niedersachsen (region id 9)
 tagesschau news --region 9 | jq -r '.news[].title'
 ```
 
@@ -83,17 +83,24 @@ Why: watch a few states at once. `--region` is repeatable; the client joins the
 ids into a single comma-separated `regions` query (e.g. `regions=5,9`).
 
 ```bash
-# Berlin (5) and Bayern (9)
+# Bremen (5) and Niedersachsen (9)
 tagesschau news --region 5 --region 9
 ```
 
-### 6. Combine a Ressort with regions
+The feed returns one page per request, shared by all requested states, so
+each state gets fewer items than it would on its own.
 
-Why: e.g. domestic-politics news scoped to specific states.
+### 6. A Ressort within a region
+
+Why: e.g. domestic-politics news scoped to specific states. The API can't do
+this server-side: when `--ressort` and `--region` are both given, it applies
+the Ressort and ignores the region (every item comes back with `regionId: 0`).
+Fetch the region feed and filter locally instead; regional items carry no
+`ressort`, so match on `title`, `topline` or `tags`.
 
 ```bash
-tagesschau news --ressort inland --region 5 --region 9 \
-  | jq -r '.news[].title'
+tagesschau news --region 9 \
+  | jq -r '.news[] | select((.title + " " + (.topline // "")) | test("Schule"; "i")) | .title'
 ```
 
 ### 7. Full-text search across articles
