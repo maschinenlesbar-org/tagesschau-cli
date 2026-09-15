@@ -74,9 +74,10 @@ Die zulässigen IDs sind als `RegionValues` bereitgestellt.
 `<text>` von `search`). Wird unverändert an die API gesendet; einen leeren Wert lehnt die
 CLI bereits clientseitig ab.
 
-**pageSize / resultPage.** Die Paginierungsparameter des Such-Endpoints, **ab 1** gezählt,
-bereitgestellt als `--page-size` / `--result-page`. Beide müssen `>= 1` sein; `0` wird
-abgelehnt, weil die Paginierung der API ab 1 zählt.
+**pageSize / resultPage.** Die Paginierungsparameter des Such-Endpoints, bereitgestellt
+als `--page-size` / `--result-page`. `pageSize` ist die Zahl der Treffer pro Seite und muss
+`>= 1` sein. `resultPage` ist ein **ab 0** gezählter Seitenindex: `0` (der Standard) ist
+die erste Seite, ein Index hinter der letzten Seite liefert keine Treffer.
 
 **nextPage.** Eine Cursor-URL, die der News-Endpoint liefert und die auf die nächste
 Ergebnisseite zeigt, sofern vorhanden.

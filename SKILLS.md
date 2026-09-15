@@ -96,9 +96,9 @@ encode the non-obvious parts of this API, for example:
 - **video items have `shareURL: null`** (and a `streams` object instead) — they appear in
   feeds and especially in search results, and must be flagged as "Video", not dropped as
   broken links (see **tagesschau-topic-tracker**);
-- **search's `resultPage` echoes `0`** when you don't pass `--result-page`, but the data
-  is the first page; `--result-page` itself is 1-based and pages correctly. Lead with
-  `totalItemCount` as the coverage-volume signal;
+- **search's `resultPage` is 0-based** — `--result-page 0` (or no flag) is the first
+  page, and starting at `1` skips the newest hits. Lead with `totalItemCount` as the
+  coverage-volume signal;
 - **`channels[].streams` is an object keyed by protocol** (`adaptivestreaming` → an HLS
   `.m3u8` URL), not a flat string, and the same channel title can appear more than once
   (see **tagesschau-watch-live**);

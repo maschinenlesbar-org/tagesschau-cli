@@ -42,7 +42,7 @@ const client = new TagesschauClient(); // defaults to https://www.tagesschau.de
 
 const home = await client.homepage();
 const econ = await client.news({ ressort: "wirtschaft" });
-const hits = await client.search({ searchText: "Wahl", resultPage: 1 });
+const hits = await client.search({ searchText: "Wahl", resultPage: 1 }); // 0-based: the second page
 
 try {
   // An empty searchText is sent to the API as-is (not rejected client-side); the

@@ -84,7 +84,7 @@ and image metadata.
 | Flag | Meaning |
 | --- | --- |
 | `--page-size <n>` | results per page (`>= 1`) |
-| `--result-page <n>` | page number (`>= 1`, 1-based) |
+| `--result-page <n>` | page index (`>= 0`, 0-based: `0` is the first page) |
 
 The positional `<text>` argument is required and must not be empty (rejected
 before any request).
@@ -110,7 +110,7 @@ tagesschau news --region 5 --region 9
 # Full-text search
 tagesschau search "Bundestag"
 
-# Page through search results (1-based)
+# Page through search results (0-based: this is the third page)
 tagesschau search "Wahl" --page-size 20 --result-page 2
 
 # List live channel titles
@@ -163,8 +163,8 @@ tagesschau --compact homepage | jq -c '.news'
   text, drop `--ressort`/`--region` filters, or try a different keyword.
 - **Invalid ressort** — must be one of `inland`, `ausland`, `wirtschaft`,
   `sport`, `video`, `investigativ`, `wissen` (exact lowercase string).
-- **`--page-size` / `--result-page` rejected** — both must be integers `>= 1`;
-  the API's paging is 1-based and does not accept `0`.
+- **`--page-size` / `--result-page` rejected** — `--page-size` must be an
+  integer `>= 1`; `--result-page` is a 0-based page index and must be `>= 0`.
 
 ## Global options
 

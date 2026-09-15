@@ -116,11 +116,12 @@ An empty search text is rejected by the CLI before any request is made.
 
 ### 8. Page through search results
 
-Why: walk large result sets. Both paging parameters are **1-based** (`>= 1`).
+Why: walk large result sets. `--result-page` is a **0-based** page index (`0`,
+the default, is the first page); `--page-size` must be `>= 1`.
 
 ```bash
 # 20 results per page, second page
-tagesschau search "Wahl" --page-size 20 --result-page 2
+tagesschau search "Wahl" --page-size 20 --result-page 1
 ```
 
 ### 9. List the live / broadcast channels

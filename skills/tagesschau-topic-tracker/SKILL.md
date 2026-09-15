@@ -40,7 +40,7 @@ The result object:
 | `searchResults[]` | This page's hits (raw news-item objects) |
 | `searchText` | Echo of your query |
 | `pageSize` | Hits per page actually used (**default 25**) |
-| `resultPage` | The page returned. **Note: with no `--result-page` it echoes `0`**, but the data is the first page; the API paging is otherwise 1-based |
+| `resultPage` | The **0-based** index of the page returned: `0` is the first page (also what you get with no `--result-page`), `1` the second |
 | `details` / `type` | Envelope metadata — ignore |
 
 Each entry in `searchResults` carries the same fields as feed items: `title`, `topline`,
@@ -53,17 +53,20 @@ on videos), `sophoraId`.
 Default page size is 25. To go wider or deeper:
 
 ```bash
-# 40 hits on page 1
+# first 40 hits (resultPage 0 — the same as leaving the flag out)
+tagesschau --compact search "Wahl" --page-size 40 --result-page 0
+# next 40 hits
 tagesschau --compact search "Wahl" --page-size 40 --result-page 1
-# next page
-tagesschau --compact search "Wahl" --page-size 40 --result-page 2
 ```
 
-Both `--page-size` and `--result-page` must be integers `>= 1` (the CLI rejects `0`).
-`--result-page` **is 1-based and works** — page 1 and page 2 return different,
-non-overlapping titles (verified live). Use `totalItemCount / pageSize` to know how many
-pages exist; fetch only as many as the user needs (1 page for "is X in the news?", more
-for "give me everything on X"). Don't loop the whole result set unprompted.
+> **Trap — `--result-page` is 0-based.** `0` is the first page, `1` the second. Starting
+> at `--result-page 1` silently skips the newest hits. `--page-size` must be `>= 1`;
+> `--result-page` takes any integer `>= 0`.
+
+There are `ceil(totalItemCount / pageSize)` pages, so the last index is one less; an
+index past the end returns an empty `searchResults`. Fetch only as many pages as the user
+needs (1 page for "is X in the news?", more for "give me everything on X"). Don't loop the
+whole result set unprompted.
 
 ## Step 3 — Sort, classify, dedup
 
@@ -96,7 +99,8 @@ Rules:
 - **`totalItemCount` is the headline metric** — "163 Treffer" tells the user how much
   coverage exists; a low number = niche/quiet topic, a high number = major story.
 - Show `date` (German `DD.MM.`), `title`, and `shareURL`; flag `null`-URL items as Video.
-- State the paging math (page X of N) so the user can ask for more.
+- State the paging math (page X of N) so the user can ask for more. X is `resultPage + 1`,
+  N is `ceil(totalItemCount / pageSize)`.
 - For a **timeline** request, bucket the dates (today / this week / older) and report
   counts per bucket to show whether coverage is rising or fading.
 - 0 hits → say the term isn't currently covered and suggest a broader synonym; don't

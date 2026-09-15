@@ -72,9 +72,10 @@ ids are exposed as `RegionValues`.
 `<text>` argument of `search`). Sent verbatim to the API; an empty value is
 rejected client-side by the CLI.
 
-**pageSize / resultPage.** The search endpoint's **1-based** paging parameters,
-exposed as `--page-size` / `--result-page`. Both must be `>= 1`; `0` is rejected
-because the API's paging is 1-based.
+**pageSize / resultPage.** The search endpoint's paging parameters, exposed as
+`--page-size` / `--result-page`. `pageSize` is the number of hits per page and must
+be `>= 1`. `resultPage` is a **0-based** page index: `0` (the default) is the first
+page, and an index past the last page returns no hits.
 
 **nextPage.** A cursor URL returned by the news endpoint pointing at the next
 page of results, when present.
