@@ -63,9 +63,10 @@ const realSleep = (ms: number): Promise<void> =>
  * `JSON.parse` decodes a backslash-u escape in an error body into a real control
  * byte, so without this a hostile/MITM'd endpoint could drive ANSI/OSC escape
  * sequences into the user's terminal when the error message is printed to stderr
- * (title changes, spoofed lines, clipboard writes on some emulators). The success path
- * is already safe (`JSON.stringify` escapes these); this only covers text that
- * flows into an error message. Built via char codes so no raw control byte ever
+ * (title changes, spoofed lines, clipboard writes on some emulators). This only
+ * covers text that flows into an error message; the CLI's JSON output is escaped
+ * separately (escapeControlChars in cli/shared.ts), since `JSON.stringify` alone
+ * leaves DEL and the C1 range raw. Built via char codes so no raw control byte ever
  * appears in this source file.
  */
 export function sanitizeServerText(text: string): string {
