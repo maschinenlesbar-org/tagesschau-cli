@@ -1,6 +1,6 @@
 {
   "name": "tagesschau",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "German news intelligence skills powered by the tagesschau-cli (ARD-aktuell Tagesschau API).",
   "author": {
     "name": "Sebastian Schürmann",
