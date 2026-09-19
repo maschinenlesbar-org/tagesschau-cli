@@ -113,3 +113,13 @@ test("a 404 from the API maps to exit code 4", async () => {
   const code = await run(["channels"], cli.deps);
   assert.equal(code, 4);
 });
+
+test("--base-url rejects a non-http(s) or malformed URL at parse time, before any request", async () => {
+  for (const bad of ["file:///etc/passwd", "ftp://example.org", "notaurl"]) {
+    const cli = makeCli(() => jsonResponse({ news: [], regional: [] }));
+    const code = await run(["--base-url", bad, "homepage"], cli.deps);
+    assert.notEqual(code, 0, `expected a non-zero exit for --base-url ${bad}`);
+    assert.equal(cli.mt.calls.length, 0, `no request may be sent for --base-url ${bad}`);
+    assert.match(cli.err.join("\n"), /--base-url/);
+  }
+});

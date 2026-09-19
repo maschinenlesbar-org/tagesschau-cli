@@ -9,7 +9,7 @@ import type { CliDeps } from "./io.js";
 import { defaultIO } from "./io.js";
 import { TagesschauClient } from "../client/client.js";
 import { MAX_TIMEOUT_MS } from "../client/http.js";
-import { parseBoundedInt, parseIntArg } from "./shared.js";
+import { parseBaseUrl, parseBoundedInt, parseIntArg } from "./shared.js";
 import { registerNewsCommands } from "./commands/news.js";
 
 /**
@@ -43,7 +43,7 @@ export function buildProgram(deps: CliDeps = defaultDeps): Command {
     .name("tagesschau")
     .description("CLI for the open Tagesschau news API (https://www.tagesschau.de/api2u)")
     .version(VERSION)
-    .option("--base-url <url>", "API base URL", "https://www.tagesschau.de")
+    .option("--base-url <url>", "API base URL", parseBaseUrl, "https://www.tagesschau.de")
     .option(
       "--timeout <ms>",
       "time limit per request in milliseconds, whole response included",

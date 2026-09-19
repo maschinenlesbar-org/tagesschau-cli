@@ -91,7 +91,10 @@ there too — they never cross the wire in cleartext. The engine also enforces t
 a redirect `Location` resolves to an `http:`/`https:` URL, rejecting any other
 scheme (e.g. `file:`, `ftp:`, `data:`) as a typed `TagesschauNetworkError` — this
 guard lives in the engine, so it holds even when a custom `transport` is injected
-that does no scheme checking of its own.
+that does no scheme checking of its own. The same holds for the configured base
+URL: the `RequestEngine` constructor rejects a non-`http(s)` or malformed base URL
+with a `TagesschauNetworkError` before any request, and the CLI's `--base-url`
+parser (`parseBaseUrl`) already turns one into a usage error at parse time.
 
 ## Architecture
 

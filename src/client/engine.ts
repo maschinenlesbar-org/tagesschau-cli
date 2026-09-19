@@ -97,6 +97,26 @@ export function stripCredentialHeaders(
   return out;
 }
 
+/**
+ * Reject a base URL whose scheme is not http(s). The default transport already
+ * gates this per hop, but the engine is exported as a library and may be handed a
+ * custom transport that does no such check, so gate the configured base URL here
+ * too (a `file:`/`ftp:` base URL fails fast with a typed error).
+ */
+function assertHttpScheme(baseUrl: string): void {
+  let url: URL;
+  try {
+    url = new URL(baseUrl);
+  } catch {
+    throw new TagesschauNetworkError(`Invalid base URL: ${baseUrl}`);
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new TagesschauNetworkError(
+      `Unsupported protocol "${url.protocol}" in base URL: ${baseUrl}`,
+    );
+  }
+}
+
 export class RequestEngine {
   private readonly baseUrl: string;
   private readonly transport: Transport;
@@ -113,6 +133,10 @@ export class RequestEngine {
       throw new TagesschauError("Base URL must not be empty.");
     }
     this.baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
+    // Re-check the base-URL scheme here, not only in the default transport: a
+    // library consumer that injects a custom transport would otherwise get no
+    // gating at all, and could be steered to a non-http(s) scheme.
+    assertHttpScheme(this.baseUrl);
     this.transport = options.transport ?? nodeHttpTransport;
     // An empty User-Agent would send a blank header (rejected by some hosts);
     // treat it like an unset value and fall back to the default.

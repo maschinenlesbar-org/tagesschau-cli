@@ -207,3 +207,16 @@ test("a redirect with no Location header throws a clear TagesschauNetworkError",
       err instanceof TagesschauNetworkError && /no Location/i.test(err.message),
   );
 });
+
+test("a non-http(s) base URL is rejected in the constructor, before any request", () => {
+  // A custom transport has no scheme guard of its own, so the engine must refuse
+  // a file:/ftp:/malformed base URL itself rather than hand it to the transport.
+  for (const bad of ["file:///etc/passwd", "ftp://example.org", "notaurl"]) {
+    const mt = makeMockTransport(() => jsonResponse({ ok: 1 }));
+    assert.throws(
+      () => new RequestEngine({ baseUrl: bad, transport: mt.transport }),
+      TagesschauNetworkError,
+    );
+    assert.equal(mt.calls.length, 0);
+  }
+});
