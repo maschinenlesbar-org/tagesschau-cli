@@ -8,8 +8,11 @@ description: >
   API's numeric region ids, queries the (region-filtered) news feed, and labels
   each headline by state — handling the id mapping and the Ressort/region trap
   the bare CLI leaves to you.
-version: 1.0.0
-userInvocable: true
+compatibility: >
+  Requires the `tagesschau` CLI (npm package
+  @maschinenlesbar.org/tagesschau-cli) on PATH, installed by the user; the skill
+  never installs it. Uses jq for JSON filtering. Network access to
+  www.tagesschau.de.
 ---
 
 # Tagesschau Regional News
@@ -21,6 +24,8 @@ and presenting headlines labelled by state.
 ## Tooling
 
 This skill drives the `tagesschau` command. **Before anything else, validate it is available** — run `command -v tagesschau` (or `tagesschau --version`). If it is not on your PATH, STOP and inform the user that the `tagesschau` CLI (`@maschinenlesbar.org/tagesschau-cli`) is not installed — installing it is their responsibility; never install it yourself, and do not fall back to `npx` or a local `node dist/...` build.
+
+This skill also filters JSON with `jq`. **Validate it too** — run `command -v jq`. If it is missing, inform the user that `jq` is not installed — installing it is their responsibility; never install it yourself — and carry on without it: filter the CLI output with `node -e` instead (Node is already on your PATH, since the CLI runs on it).
 
 Data comes from the `tagesschau` CLI — read-only, no API key, plain GETs. Pass `--compact`. An empty `news` array is a valid "nothing regional right now" answer.
 

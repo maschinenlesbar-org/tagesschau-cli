@@ -7,8 +7,10 @@ description: >
   "latest news on a person or event", "search Tagesschau for a keyword", "is a topic in
   the news?", or wants a timeline of coverage. Runs paged search, reports the
   total hit count, sorts results newest-first, and separates articles from video.
-version: 1.0.0
-userInvocable: true
+compatibility: >
+  Requires the `tagesschau` CLI (npm package
+  @maschinenlesbar.org/tagesschau-cli) on PATH, installed by the user; the skill
+  never installs it. Network access to www.tagesschau.de.
 ---
 
 # Tagesschau Topic Tracker

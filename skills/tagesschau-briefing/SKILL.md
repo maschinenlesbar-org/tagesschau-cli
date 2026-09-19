@@ -8,8 +8,11 @@ description: >
   read-out of current German headlines. Merges the curated homepage with topic
   (Ressort) feeds, leads with breaking news, groups by topic, and drops
   duplicates — not the raw nested JSON the CLI returns.
-version: 1.0.0
-userInvocable: true
+compatibility: >
+  Requires the `tagesschau` CLI (npm package
+  @maschinenlesbar.org/tagesschau-cli) on PATH, installed by the user; the skill
+  never installs it. Uses jq for JSON filtering. Network access to
+  www.tagesschau.de.
 ---
 
 # Tagesschau News Briefing
@@ -21,6 +24,8 @@ one-line teaser each — instead of the deeply nested per-item JSON the CLI emit
 ## Tooling
 
 This skill drives the `tagesschau` command. **Before anything else, validate it is available** — run `command -v tagesschau` (or `tagesschau --version`). If it is not on your PATH, STOP and inform the user that the `tagesschau` CLI (`@maschinenlesbar.org/tagesschau-cli`) is not installed — installing it is their responsibility; never install it yourself, and do not fall back to `npx` or a local `node dist/...` build.
+
+This skill also filters JSON with `jq`. **Validate it too** — run `command -v jq`. If it is missing, inform the user that `jq` is not installed — installing it is their responsibility; never install it yourself — and carry on without it: filter the CLI output with `node -e` instead (Node is already on your PATH, since the CLI runs on it).
 
 All data comes from the `tagesschau` CLI — read-only, needs **no API key**, and each command is a plain GET. Pass `--compact` so each result is one line, easy to pipe into `jq`. Bump `--timeout 60000` if a call times out. Empty arrays / `totalItemCount: 0` are valid "nothing to report" answers, not errors.
 
