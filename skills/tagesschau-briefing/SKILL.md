@@ -50,9 +50,13 @@ tagesschau --compact news --ressort wirtschaft
 ```
 
 Valid `--ressort` values: `inland`, `ausland`, `wirtschaft`, `sport`, `video`,
-`investigativ`, `wissen`. A Ressort feed is much larger (50–60 items) and ordered
-newest-first, not editorially ranked — so for "top news" prefer `homepage`; use Ressort
-feeds to go deep on one topic.
+`investigativ`, `wissen`. A Ressort feed is much larger (50–60 items) and not editorially
+ranked — so for "top news" prefer `homepage`; use Ressort feeds to go deep on one topic.
+
+> **Trap — `--ressort sport` is different.** Its items come from `www.sportschau.de`, carry
+> **`ressort: null`**, and the feed is **not** in date order (on 2026-09-26 it opened with
+> a two-day-old item). Sort it by `date` yourself, and file its items under *Sport* because
+> you asked for that Ressort — not under "Weitere".
 
 ## Step 2 — The fields that matter
 
@@ -64,7 +68,7 @@ top-level fields for a briefing:
 | `title` | The headline |
 | `topline` | Short kicker/context line above the headline (e.g. `Spritpreise`) |
 | `firstSentence` | One-sentence summary — the teaser |
-| `ressort` | Topic: `inland`, `ausland`, `wirtschaft`, `sport`, … Can be **`null` or missing** (the key is absent on regional items and on some homepage items) |
+| `ressort` | Topic: `inland`, `ausland`, `wirtschaft`, `sport`, … Can be **`null` or missing** (the key is absent on regional items and on some homepage items; `null` on every `--ressort sport` item) |
 | `date` | ISO 8601 with offset, e.g. `2026-06-10T19:03:25.655+02:00` — sort/recency |
 | `breakingNews` | Boolean — `true` means **Eilmeldung**; lead with these |
 | `type` | `story`, `video`, `webview`, … — most are `story`; `video` items have no readable body |
@@ -82,10 +86,13 @@ as `{type, value}` blocks with HTML in `value`.
 1. **Breaking news first.** Any item with `breakingNews === true` leads the briefing,
    flagged as *Eilmeldung*.
 2. **Then the homepage order** for top stories — it is already the editorial ranking;
-   don't re-sort it by date. (Ressort/regional feeds *are* newest-first by `date`.)
+   don't re-sort it by date. Ressort feeds are not guaranteed to be in date order
+   (`sport` is not), so **sort a Ressort feed newest-first by `date`** before you cut it.
 3. **Group by `ressort`** for readability (Inland / Ausland / Wirtschaft / Sport / …).
-   Items whose `ressort` is `null` or missing go in a "Weitere"/"Video" bucket — infer a topic from
-   `shareURL` path or `tags` if useful, but don't fabricate one.
+   An item from a Ressort feed you requested belongs to that Ressort even when its own
+   `ressort` is `null` (every `--ressort sport` item). Other items whose `ressort` is `null`
+   or missing go in a "Weitere"/"Video" bucket — infer a topic from `shareURL` path or `tags`
+   if useful, but don't fabricate one.
 4. **Dedup across feeds.** If you pulled both `homepage` and a Ressort feed, the same
    story appears in both — match on `sophoraId` (or `shareURL`) and keep one.
 
