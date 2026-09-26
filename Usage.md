@@ -164,7 +164,7 @@ These apply to every command and must appear **before** the command name
 | `--timeout <ms>` | Time limit per request in milliseconds, whole response included (at most `2147483647`). |
 | `--user-agent <ua>` | `User-Agent` header value. |
 | `--max-retries <n>` | Retries for transient `429`/`503` responses, `0`–`10` (default `2`); each waits the server's `Retry-After` (up to 30 s; a longer one is not retried), else 200 ms × attempt. |
-| `--max-redirects <n>` | Max HTTP redirects to follow (default `5`; credential headers are dropped on cross-origin hops). |
+| `--max-redirects <n>` | Max HTTP redirects to follow, `0`–`20` (default `5`; credential headers are dropped on cross-origin hops). |
 | `--max-response-bytes <n>` | Cap response body size in bytes (`0` = unlimited; default 100 MiB). |
 | `--compact` | Print JSON on a single line instead of pretty-printed. |
 | `-h, --help` | Display help for the program or a command. |

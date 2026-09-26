@@ -144,3 +144,12 @@ test("--max-retries is bounded to 0..10", async () => {
   const ok = makeCli(() => jsonResponse({ channels: [] }));
   assert.equal(await run(["--max-retries", "10", "channels"], ok.deps), 0);
 });
+
+test("--max-redirects is bounded to 0..20", async () => {
+  const cli = makeCli(() => jsonResponse({ channels: [] }));
+  assert.equal(await run(["--max-redirects", "21", "channels"], cli.deps), 1);
+  assert.equal(cli.mt.calls.length, 0);
+  assert.match(cli.err.join("\n"), /<= 20/);
+  const ok = makeCli(() => jsonResponse({ channels: [] }));
+  assert.equal(await run(["--max-redirects", "20", "channels"], ok.deps), 0);
+});

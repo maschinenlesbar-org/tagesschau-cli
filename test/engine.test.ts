@@ -8,6 +8,7 @@ import {
 } from "../src/client/engine.js";
 import {
   TagesschauApiError,
+  TagesschauError,
   TagesschauNetworkError,
   TagesschauParseError,
 } from "../src/client/errors.js";
@@ -289,4 +290,25 @@ test("parseRetryAfter reads delay-seconds and IMF-fixdate only", () => {
   assert.equal(parseRetryAfter("1.5", now), undefined);
   assert.equal(parseRetryAfter(undefined, now), undefined);
   assert.equal(MAX_RETRY_AFTER_MS, 30_000);
+});
+
+test("numeric engine options must be integers in range, or the constructor throws", () => {
+  const bad: Array<[string, number]> = [
+    ["timeoutMs", NaN], ["timeoutMs", -1], ["timeoutMs", 2_147_483_648], ["timeoutMs", 1.5],
+    ["maxRetries", NaN], ["maxRetries", Infinity], ["maxRetries", 11],
+    ["retryDelayMs", -1], ["retryDelayMs", 30_001],
+    ["maxRedirects", NaN], ["maxRedirects", -1], ["maxRedirects", 21],
+    ["maxResponseBytes", -1], ["maxResponseBytes", 2 ** 53],
+  ];
+  for (const [name, value] of bad) {
+    assert.throws(
+      () => new RequestEngine({ [name]: value }),
+      (err: unknown) =>
+        err instanceof TagesschauError &&
+        err.message.startsWith(`Invalid option ${name}: expected an integer from 0 to `) &&
+        err.message.endsWith(`, got ${String(value)}.`),
+      `${name}=${value}`,
+    );
+  }
+  new RequestEngine({ timeoutMs: 0, maxRetries: 10, retryDelayMs: 0, maxRedirects: 20, maxResponseBytes: 0 });
 });

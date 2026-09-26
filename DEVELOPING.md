@@ -69,6 +69,12 @@ new TagesschauClient({
 });
 ```
 
+The numeric options must be integers in range — `timeoutMs` 0..`MAX_TIMEOUT_MS`,
+`maxRetries` 0..`MAX_RETRIES` (10), `retryDelayMs` 0..`MAX_RETRY_AFTER_MS`,
+`maxRedirects` 0..`MAX_REDIRECTS` (20), `maxResponseBytes` 0..2^53−1. Anything else
+(negative, fractional, `NaN`, `Infinity`) makes the constructor throw a `TagesschauError`
+(`Invalid option maxRedirects: expected an integer from 0 to 20, got NaN.`).
+
 ### Methods
 
 `client.homepage()`, `client.news({ regions?, ressort? })` (one or the other: both together

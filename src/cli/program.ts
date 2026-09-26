@@ -9,6 +9,7 @@ import type { CliDeps } from "./io.js";
 import { defaultIO } from "./io.js";
 import { TagesschauClient } from "../client/client.js";
 import { MAX_TIMEOUT_MS } from "../client/http.js";
+import { MAX_REDIRECTS, MAX_RETRIES } from "../client/engine.js";
 import { parseBaseUrl, parseBoundedInt, parseIntArg } from "./shared.js";
 import { registerNewsCommands } from "./commands/news.js";
 
@@ -53,12 +54,12 @@ export function buildProgram(deps: CliDeps = defaultDeps): Command {
     .option(
       "--max-retries <n>",
       "retries for transient 429/503 responses (0..10; each waits the server's Retry-After, up to 30 s)",
-      parseBoundedInt(0, 10),
+      parseBoundedInt(0, MAX_RETRIES),
     )
     .option(
       "--max-redirects <n>",
-      "max HTTP redirects to follow (default 5; credential headers are dropped on cross-origin hops)",
-      parseIntArg,
+      "max HTTP redirects to follow (0..20, default 5; credential headers are dropped on cross-origin hops)",
+      parseBoundedInt(0, MAX_REDIRECTS),
     )
     .option(
       "--max-response-bytes <n>",
