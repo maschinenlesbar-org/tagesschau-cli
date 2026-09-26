@@ -160,8 +160,10 @@ tagesschau --compact homepage | jq -c '.news'
 - **`command not found: tagesschau`** — the global npm bin directory isn't on
   your `PATH`. Run `npm bin -g` to find it and add it, or run via
   `npx @maschinenlesbar.org/tagesschau-cli …`.
-- **Exit `4` / "not found"** — the API returned a `404`. Check that any region
-  id is in the range `1`–`16` and that the search text isn't empty.
+- **Exit `4` / "not found"** — the API returned a `404`. Every command calls a
+  fixed endpoint, so this usually means a wrong `--base-url` or a moved API. (An
+  out-of-range region id or an empty search text never reaches the API: the CLI
+  rejects them with exit `1`.)
 - **Network error / timeout** — connectivity or a timeout. Try again, or raise
   the limit with `--timeout 60000`.
 - **No results / empty arrays** — the query matched nothing; broaden the search

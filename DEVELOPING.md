@@ -87,9 +87,8 @@ cursor from `nextPage`, checked by the exported `newsDateProblem`), `client.chan
 ## Authentication internals
 
 The Tagesschau API is fully open — no API key, no token, no cookie. The client
-sends only read-only `GET` requests. The `defaultHeaders` seam in the engine is
-present for structural consistency with the library's HTTP engine, but no
-credential headers are injected.
+sends only read-only `GET` requests with two headers, `Accept` and `User-Agent`;
+there is no seam for extra headers and no credential header is ever injected.
 
 **Redirect safety.** When the API issues a redirect that crosses an origin
 boundary (different scheme, host, or port), the client **strips credential-bearing

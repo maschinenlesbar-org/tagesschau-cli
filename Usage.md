@@ -160,12 +160,14 @@ Why: feed downstream tooling or log a compact record.
 tagesschau --compact homepage
 ```
 
-`--compact` is a global option, so it goes **before** the command.
+`--compact` is a global option; it works **before or after** the command name
+(`tagesschau homepage --compact` works too).
 
 ## Global options
 
-These apply to every command and must appear **before** the command name
-(e.g. `tagesschau --compact news --ressort sport`).
+These apply to every command and may be given **before or after** the command
+name (e.g. `tagesschau --compact news --ressort sport` or
+`tagesschau news --ressort sport --compact`).
 
 | Option | Description |
 | --- | --- |
