@@ -1,6 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { RequestEngine, stripCredentialHeaders } from "../src/client/engine.js";
+import {
+  RequestEngine,
+  stripCredentialHeaders,
+  parseRetryAfter,
+  MAX_RETRY_AFTER_MS,
+} from "../src/client/engine.js";
 import {
   TagesschauApiError,
   TagesschauNetworkError,
@@ -219,4 +224,69 @@ test("a non-http(s) base URL is rejected in the constructor, before any request"
     );
     assert.equal(mt.calls.length, 0);
   }
+});
+
+function retryEngine(headers: Record<string, string>) {
+  const delays: number[] = [];
+  let calls = 0;
+  const mt = makeMockTransport(() => {
+    calls += 1;
+    return {
+      status: 429,
+      headers: { "content-type": "application/json", ...headers },
+      body: Buffer.from('{"detail":"slow"}'),
+    };
+  });
+  const e = new RequestEngine({
+    transport: mt.transport,
+    maxRetries: 2,
+    sleep: async (ms) => {
+      delays.push(ms);
+    },
+  });
+  return { e, delays, calls: () => calls };
+}
+
+test("a 429 waits the server's Retry-After (seconds) before each retry", async () => {
+  const r = retryEngine({ "retry-after": "1" });
+  await assert.rejects(() => r.e.getJson("/x"), (err) => err instanceof TagesschauApiError && err.status === 429);
+  assert.deepEqual(r.delays, [1000, 1000]);
+  assert.equal(r.calls(), 3);
+});
+
+test("a 429 waits the time left until a Retry-After HTTP date", async () => {
+  const soon = new Date(Date.now() + 5_000).toUTCString();
+  const r = retryEngine({ "retry-after": soon });
+  await assert.rejects(() => r.e.getJson("/x"), TagesschauApiError);
+  assert.equal(r.delays.length, 2);
+  for (const d of r.delays) assert.ok(d > 3_000 && d <= 5_000, String(d));
+});
+
+test("a malformed Retry-After falls back to linear backoff", async () => {
+  for (const bad of ["-1", "1.5", "+5", "1e3", "0x10", "soon", "Sunday, 06-Nov-94 08:49:37 GMT", ""]) {
+    const r = retryEngine({ "retry-after": bad });
+    await assert.rejects(() => r.e.getJson("/x"), TagesschauApiError);
+    assert.deepEqual(r.delays, [200, 400], bad);
+  }
+});
+
+test("a Retry-After beyond MAX_RETRY_AFTER_MS is not retried at all", async () => {
+  const far = new Date(Date.now() + 3_600_000).toUTCString();
+  for (const ra of ["31", "3600", "99999999999", far]) {
+    const r = retryEngine({ "retry-after": ra });
+    await assert.rejects(() => r.e.getJson("/x"), (err) => err instanceof TagesschauApiError && err.status === 429);
+    assert.deepEqual(r.delays, [], ra);
+    assert.equal(r.calls(), 1, ra);
+  }
+});
+
+test("parseRetryAfter reads delay-seconds and IMF-fixdate only", () => {
+  const now = Date.parse("Sat, 26 Sep 2026 10:00:00 GMT");
+  assert.equal(parseRetryAfter("5", now), 5000);
+  assert.equal(parseRetryAfter([" 2 ", "9"], now), 2000);
+  assert.equal(parseRetryAfter("Sat, 26 Sep 2026 10:00:10 GMT", now), 10_000);
+  assert.equal(parseRetryAfter("Sat, 26 Sep 2026 09:00:00 GMT", now), 0);
+  assert.equal(parseRetryAfter("1.5", now), undefined);
+  assert.equal(parseRetryAfter(undefined, now), undefined);
+  assert.equal(MAX_RETRY_AFTER_MS, 30_000);
 });

@@ -97,9 +97,13 @@ geratenen Typ.
 **Keine Authentifizierung.** Die Tagesschau-API ist vollständig offen; dieser Client
 sendet weder Schlüssel noch Token noch Cookie. Er stellt nur lesende `GET`-Anfragen.
 
-**Rate-Limiting / vorübergehende Fehler.** Antwortet die API mit einem vorübergehenden
-Status (**429** Too Many Requests, **503** Service Unavailable), wiederholt der Client die
-Anfrage automatisch mit linearem Backoff (`--max-retries`, Standard `2`).
+**Rate-Limiting / vorübergehende Fehler.** Die API erlaubt etwa **60 Anfragen pro
+Stunde**. Antwortet sie mit einem vorübergehenden Status (**429** Too Many Requests,
+**503** Service Unavailable), wiederholt der Client die Anfrage automatisch, bis zu
+`--max-retries`-mal (Standard `2`, höchstens `10`). Jede Wiederholung wartet das
+`Retry-After` der Antwort ab (Sekunden oder HTTP-Datum), sofern es höchstens 30 s
+beträgt (`MAX_RETRY_AFTER_MS`); ein längeres wird nicht wiederholt, der Fehler kommt
+sofort. Ohne brauchbares `Retry-After` wächst die Wartezeit linear (200 ms × Versuch).
 
 **Weiterleitungen.** Der Client folgt bis zu `--max-redirects` Weiterleitungen (Standard
 `5`). Bei einem Sprung auf einen **anderen Origin** entfernt er Header mit Zugangsdaten

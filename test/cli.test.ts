@@ -123,3 +123,14 @@ test("--base-url rejects a non-http(s) or malformed URL at parse time, before an
     assert.match(cli.err.join("\n"), /--base-url/);
   }
 });
+
+test("--max-retries is bounded to 0..10", async () => {
+  for (const bad of ["11", "99999999999"]) {
+    const cli = makeCli(() => jsonResponse({ channels: [] }));
+    assert.equal(await run(["--max-retries", bad, "channels"], cli.deps), 1, bad);
+    assert.equal(cli.mt.calls.length, 0);
+    assert.match(cli.err.join("\n"), /<= 10/);
+  }
+  const ok = makeCli(() => jsonResponse({ channels: [] }));
+  assert.equal(await run(["--max-retries", "10", "channels"], ok.deps), 0);
+});

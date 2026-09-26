@@ -59,7 +59,7 @@ try {
 new TagesschauClient({
   baseUrl: "https://www.tagesschau.de",
   timeoutMs: 15_000,          // time limit per request, whole response included; 0 disables it
-  maxRetries: 3,              // 429 / 503 are retried with linear backoff
+  maxRetries: 3,              // 429 / 503: waits Retry-After (<= 30 s), else linear backoff
   maxRedirects: 5,            // follow up to N redirects; credential headers are
                               // dropped on cross-origin hops
   maxResponseBytes: 50 << 20, // abort responses larger than this (0 = unlimited;
@@ -157,8 +157,12 @@ flag), `TagesschauNetworkError` (transport failure/timeout),
 a `404` to exit code `4`, other errors to `1`.
 
 **Retry / backoff.** Transient `429` (rate limit) and `503` responses are
-retried automatically with backoff, up to `--max-retries`. `TagesschauApiError`
-exposes `isRetryable` (true for `429`/`503`).
+retried automatically, up to `maxRetries` (default `2`; CLI `--max-retries`,
+`0`–`10`). Each retry waits the response's `Retry-After` (`parseRetryAfter`:
+delay-seconds or an IMF-fixdate, anything else is ignored) when it is at most
+`MAX_RETRY_AFTER_MS` (30 s); a longer one is not retried and the error surfaces
+at once. Without a usable header the wait is `retryDelayMs * attempt`.
+`TagesschauApiError` exposes `isRetryable` (true for `429`/`503`).
 
 **maxResponseBytes.** A cap on the response body size in bytes (`0` = unlimited;
 default 100 MiB), guarding against unbounded responses.

@@ -94,9 +94,13 @@ faithful raw `JsonObject` (`NewsItem`) rather than a partially-guessed type.
 **No authentication.** The Tagesschau API is fully open; this client sends no
 key, token or cookie. It only issues read-only `GET` requests.
 
-**Rate limiting / transient errors.** When the API answers with a transient
-status (**429** Too Many Requests, **503** Service Unavailable), the client
-retries automatically with linear backoff (`--max-retries`, default `2`).
+**Rate limiting / transient errors.** The API allows about **60 requests an
+hour**. When it answers with a transient status (**429** Too Many Requests,
+**503** Service Unavailable), the client retries automatically, up to
+`--max-retries` times (default `2`, at most `10`). Each retry waits the
+response's `Retry-After` (seconds or an HTTP date) when it is at most 30 s
+(`MAX_RETRY_AFTER_MS`); a longer one is not retried and the error surfaces at
+once. Without a usable `Retry-After` the wait grows linearly (200 ms × attempt).
 
 **Redirects.** The client follows up to `--max-redirects` redirects (default
 `5`). On a **cross-origin** hop it strips credential-bearing headers
