@@ -145,6 +145,24 @@ test("a 404 from the API maps to exit code 4", async () => {
   assert.equal(code, 4);
 });
 
+test("--base-url with a query, fragment or surrounding whitespace is a usage error", async () => {
+  const cases: Array<[string, RegExp]> = [
+    ["http://127.0.0.1:1/echo?x=1", /query \(\?\) or fragment \(#\)/],
+    ["http://127.0.0.1:1/echo#frag", /query \(\?\) or fragment \(#\)/],
+    [" https://example.test", /surrounding whitespace/],
+    ["https://example.test ", /surrounding whitespace/],
+  ];
+  for (const [url, message] of cases) {
+    const cli = makeCli(() => jsonResponse({ news: [], regional: [] }));
+    assert.equal(await run(["--base-url", url, "news"], cli.deps), 1, url);
+    assert.equal(cli.mt.calls.length, 0);
+    assert.match(cli.err.join("\n"), message);
+  }
+  const prefix = makeCli(() => jsonResponse({ news: [], regional: [] }));
+  assert.equal(await run(["--base-url", "https://mirror.test/ts/", "news"], prefix.deps), 0);
+  assert.equal(prefix.mt.last().url, "https://mirror.test/ts/api2u/news/");
+});
+
 test("--base-url rejects a non-http(s) or malformed URL at parse time, before any request", async () => {
   for (const bad of ["file:///etc/passwd", "ftp://example.org", "notaurl"]) {
     const cli = makeCli(() => jsonResponse({ news: [], regional: [] }));

@@ -325,3 +325,13 @@ test("a Spring-style error body's `error` reason becomes the detail", async () =
       err.message === "HTTP 400 for GET https://example.test/api2u/search/: Bad Request",
   );
 });
+
+test("the engine refuses a base URL with a query or fragment", () => {
+  for (const baseUrl of ["http://h.test/?x=1", "http://h.test/#f"]) {
+    assert.throws(
+      () => new RequestEngine({ baseUrl }),
+      (err: unknown) =>
+        err instanceof TagesschauNetworkError && /^Base URL must not contain a query or fragment: /.test(err.message),
+    );
+  }
+});
