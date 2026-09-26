@@ -81,9 +81,11 @@ land in `news`, each tagged with its `regionId`; the top-level `regional` array 
 > (the rbb broadcaster serves the region jointly). That's upstream behaviour, not a bug —
 > say "Berlin/Brandenburg" rather than implying you mixed states by mistake.
 
-> **Critical trap — do NOT combine `--ressort` with `--region`.** When both are passed,
+> **Critical trap — do NOT combine `--ressort` with `--region`.** When both are sent,
 > the live API **silently honours the Ressort and ignores the region**: every returned
-> item comes back with `regionId: 0` (national), not your state. So "Bayern + Wirtschaft"
+> item comes back with `regionId: 0` (national), not your state. Current CLI versions
+> refuse the combination (`Error: --ressort and --region cannot be combined…`, exit 1);
+> older ones send it and print the national feed. So "Bayern + Wirtschaft"
 > is *not* achievable server-side. If the user wants a topic within a state, fetch the
 > region feed alone and **filter client-side** on each item's `title` / `topline` /
 > `tags` (regional items carry no `ressort`, and MDR items have empty `tags`), and tell

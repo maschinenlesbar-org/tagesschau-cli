@@ -71,9 +71,12 @@ No arguments. Returns a JSON object with a `news` array (top stories) and a
 | `--ressort <ressort>` | topic: `inland` \| `ausland` \| `wirtschaft` \| `sport` \| `video` \| `investigativ` \| `wissen` |
 | `--region <id>` | Bundesland id `1`–`16` (repeatable — pass multiple times to combine) |
 
-Both filters are optional. Don't combine them: when both are given, the API
-applies the Ressort and ignores the region (every item comes back national,
-`regionId: 0`). The **[Glossary](GLOSSARY.md)** decodes every term.
+Both filters are optional, but they can't be combined: when both are given, the
+API applies the Ressort and silently ignores the region (every item comes back
+national, `regionId: 0`), so the CLI refuses `--ressort` together with `--region`
+(exit `1`, no request). For a topic within a state, fetch the region feed and
+filter it locally (see [Usage.md](Usage.md), use case 6). The
+**[Glossary](GLOSSARY.md)** decodes every term.
 
 ### `channels`
 

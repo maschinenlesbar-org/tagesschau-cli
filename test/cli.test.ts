@@ -28,16 +28,26 @@ test("homepage hits the right path", async () => {
   assert.equal(new URL(cli.mt.last().url).pathname, "/api2u/homepage/");
 });
 
-test("news --ressort + repeatable --region builds the query", async () => {
+test("news: repeatable --region builds the query; --ressort alone too", async () => {
   const cli = makeCli(() => jsonResponse({ news: [], regional: [] }));
-  const code = await run(
-    ["news", "--ressort", "sport", "--region", "1", "--region", "9"],
-    cli.deps,
-  );
-  assert.equal(code, 0);
-  const url = new URL(cli.mt.last().url);
-  assert.equal(url.searchParams.get("ressort"), "sport");
-  assert.equal(url.searchParams.get("regions"), "1,9");
+  assert.equal(await run(["news", "--region", "1", "--region", "9"], cli.deps), 0);
+  assert.equal(new URL(cli.mt.last().url).searchParams.get("regions"), "1,9");
+
+  const ress = makeCli(() => jsonResponse({ news: [], regional: [] }));
+  assert.equal(await run(["news", "--ressort", "sport"], ress.deps), 0);
+  assert.equal(new URL(ress.mt.last().url).searchParams.get("ressort"), "sport");
+});
+
+test("news --ressort with --region is refused before any request (the API drops the region)", async () => {
+  for (const argv of [
+    ["news", "--ressort", "inland", "--region", "2"],
+    ["news", "--region", "5", "--region", "9", "--ressort", "wirtschaft"],
+  ]) {
+    const cli = makeCli(() => jsonResponse({ news: [], regional: [] }));
+    assert.equal(await run(argv, cli.deps), 1, argv.join(" "));
+    assert.equal(cli.mt.calls.length, 0);
+    assert.match(cli.err.join("\n"), /^Error: --ressort and --region cannot be combined/);
+  }
 });
 
 test("news rejects an invalid ressort before any request", async () => {

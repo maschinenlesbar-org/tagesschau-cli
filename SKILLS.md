@@ -88,9 +88,10 @@ Every skill is a single `SKILL.md` — a short, model-facing playbook describing
 `tagesschau` subcommands to call, in what order, and how to interpret the JSON. The skills
 encode the non-obvious parts of this API, for example:
 
-- **`--ressort` silently wins over `--region`.** Passing both makes the API return
-  national items (`regionId: 0`) and ignore the region entirely — so "topic within a
-  state" must be filtered client-side (see **tagesschau-regional**);
+- **`--ressort` silently wins over `--region` upstream.** Sending both makes the API return
+  national items (`regionId: 0`) and ignore the region entirely, so the CLI refuses the
+  combination — "topic within a state" must be filtered client-side (see
+  **tagesschau-regional**);
 - **Berlin (3) and Brandenburg (4) come as a pair** — requesting either returns items
   tagged with both region ids (the rbb broadcaster serves them jointly);
 - **video items have `shareURL: null`** (and a `streams` object instead) — they appear in

@@ -93,10 +93,11 @@ each state gets fewer items than it would on its own.
 ### 6. A Ressort within a region
 
 Why: e.g. domestic-politics news scoped to specific states. The API can't do
-this server-side: when `--ressort` and `--region` are both given, it applies
-the Ressort and ignores the region (every item comes back with `regionId: 0`).
-Fetch the region feed and filter locally instead; regional items carry no
-`ressort`, so match on `title`, `topline` or `tags`.
+this server-side: when `ressort` and `regions` are both sent, it applies the
+Ressort and silently ignores the region (every item comes back with
+`regionId: 0`), so the CLI refuses `--ressort` together with `--region` (exit
+`1`, no request). Fetch the region feed and filter locally instead; regional
+items carry no `ressort`, so match on `title`, `topline` or `tags`.
 
 ```bash
 tagesschau news --region 9 \

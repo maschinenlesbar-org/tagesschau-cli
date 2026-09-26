@@ -22,8 +22,8 @@ export function registerNewsCommands(program: Command, deps: CliDeps): void {
 
   program
     .command("news")
-    .description("The news feed, optionally filtered by region and/or Ressort")
-    .option("--ressort <ressort>", `topic: ${RessortValues.join(" | ")}`)
+    .description("The news feed, optionally filtered by region or by Ressort (not both)")
+    .option("--ressort <ressort>", `topic: ${RessortValues.join(" | ")} (not with --region)`)
     .option("--region <id>", "Bundesland id 1..16 (repeatable)", collectRegion)
     .action(
       action(deps, async ({ client, global, opts }) => {
@@ -32,6 +32,13 @@ export function registerNewsCommands(program: Command, deps: CliDeps): void {
           params.ressort = assertEnum(String(opts["ressort"]), RessortValues, "ressort");
         }
         if (opts["region"] !== undefined) params.regions = opts["region"] as string[];
+        if (params.ressort !== undefined && params.regions !== undefined) {
+          throw new TagesschauError(
+            "--ressort and --region cannot be combined: the API applies the Ressort and silently ignores " +
+              "the region, so every item would come back national (regionId 0). Fetch the region feed and " +
+              "filter it locally instead (see Usage.md, use case 6).",
+          );
+        }
         renderJson(deps, global, await client.news(params));
       }),
     );

@@ -42,7 +42,9 @@ selected top stories plus a regional block. CLI: `homepage`. Returns a
 `HomepageResult` (`news`, `regional`).
 
 **News (`/api2u/news/`).** The general news feed, optionally narrowed by
-**region(s)** and/or a **Ressort**. CLI: `news`. Returns a `NewsResult`
+**region(s)** or by a **Ressort** — not both: the API applies the Ressort and
+silently ignores the regions, so the CLI and the client refuse the combination
+before any request. CLI: `news`. Returns a `NewsResult`
 (`news`, `regional`, optional `nextPage` cursor).
 
 **Channels (`/api2u/channels/`).** The live and broadcast channels (the

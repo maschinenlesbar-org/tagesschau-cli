@@ -8,6 +8,7 @@
 
 import { RequestEngine, type EngineOptions } from "./engine.js";
 import type { QueryParams } from "./query.js";
+import { TagesschauError } from "./errors.js";
 import type {
   HomepageResult,
   NewsResult,
@@ -31,10 +32,21 @@ export class TagesschauClient {
     return this.engine.getJson(`${API}/homepage/`);
   }
 
-  /** The news feed, optionally filtered by region(s) and/or Ressort. */
-  news(params: NewsParams = {}): Promise<NewsResult> {
+  /**
+   * The news feed, optionally filtered by region(s) or by Ressort — not both: the
+   * API applies the Ressort and silently ignores the regions, so the combination is
+   * rejected with a `TagesschauError` before any request.
+   */
+  async news(params: NewsParams = {}): Promise<NewsResult> {
+    const regions = params.regions ?? [];
+    if (regions.length > 0 && params.ressort !== undefined) {
+      throw new TagesschauError(
+        "ressort and regions cannot be combined: the API applies the Ressort and silently ignores the regions, " +
+          "so every item would come back national (regionId 0). Fetch the region feed and filter it locally instead.",
+      );
+    }
     const query: QueryParams = {};
-    if (params.regions && params.regions.length > 0) query["regions"] = params.regions.join(",");
+    if (regions.length > 0) query["regions"] = regions.join(",");
     if (params.ressort !== undefined) query["ressort"] = params.ressort;
     return this.engine.getJson(`${API}/news/`, query);
   }

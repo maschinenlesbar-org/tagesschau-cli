@@ -71,7 +71,9 @@ new TagesschauClient({
 
 ### Methods
 
-`client.homepage()`, `client.news({ regions?, ressort? })`, `client.channels()`,
+`client.homepage()`, `client.news({ regions?, ressort? })` (one or the other: both together
+are rejected with a `TagesschauError` before any request: the API would apply the Ressort
+and silently drop the regions), `client.channels()`,
 `client.search({ searchText?, pageSize?, resultPage? })`. `RessortValues` and
 `RegionValues` are exported for reference.
 

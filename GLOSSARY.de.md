@@ -44,7 +44,9 @@ Startseite: die ausgewählten Top-Meldungen plus ein Regionalblock. CLI: `homepa
 Liefert ein `HomepageResult` (`news`, `regional`).
 
 **Nachrichten (`/api2u/news/`).** Der allgemeine Nachrichten-Feed, optional eingeschränkt
-nach **Region(en)** und/oder einem **Ressort**. CLI: `news`. Liefert ein `NewsResult`
+nach **Region(en)** oder nach einem **Ressort** – nicht beidem: Die API wendet dann das
+Ressort an und ignoriert die Regionen stillschweigend, deshalb lehnen CLI und Client die
+Kombination vor jeder Anfrage ab. CLI: `news`. Liefert ein `NewsResult`
 (`news`, `regional`, optional den Cursor `nextPage`).
 
 **Kanäle (`/api2u/channels/`).** Die Live- und Sendekanäle (der Programm-Feed für

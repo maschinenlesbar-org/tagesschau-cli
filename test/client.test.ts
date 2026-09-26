@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { TagesschauClient } from "../src/client/client.js";
-import { TagesschauApiError } from "../src/client/errors.js";
+import { TagesschauApiError, TagesschauError } from "../src/client/errors.js";
 import { makeMockTransport, jsonResponse, constantJson } from "./helpers.js";
 
 function clientWith(mt: ReturnType<typeof makeMockTransport>): TagesschauClient {
@@ -14,13 +14,30 @@ test("homepage hits /api2u/homepage/", async () => {
   assert.equal(new URL(mt.last().url).pathname, "/api2u/homepage/");
 });
 
-test("news joins regions with commas and passes ressort", async () => {
+test("news joins regions with commas", async () => {
   const mt = constantJson({ news: [], regional: [] });
-  await clientWith(mt).news({ regions: ["1", "2", "9"], ressort: "wirtschaft" });
+  await clientWith(mt).news({ regions: ["1", "2", "9"] });
   const url = new URL(mt.last().url);
   assert.equal(url.pathname, "/api2u/news/");
   assert.equal(url.searchParams.get("regions"), "1,2,9");
+  assert.equal(url.searchParams.get("ressort"), null);
+});
+
+test("news passes ressort", async () => {
+  const mt = constantJson({ news: [], regional: [] });
+  await clientWith(mt).news({ ressort: "wirtschaft", regions: [] });
+  const url = new URL(mt.last().url);
   assert.equal(url.searchParams.get("ressort"), "wirtschaft");
+  assert.equal(url.searchParams.get("regions"), null);
+});
+
+test("news rejects ressort + regions (the API drops the regions) before any request", async () => {
+  const mt = constantJson({ news: [], regional: [] });
+  await assert.rejects(
+    () => clientWith(mt).news({ regions: ["2"], ressort: "inland" }),
+    (err) => err instanceof TagesschauError && /cannot be combined/.test(err.message),
+  );
+  assert.equal(mt.calls.length, 0);
 });
 
 test("news with no params sends no query", async () => {
