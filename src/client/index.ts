@@ -19,6 +19,7 @@ export {
   TagesschauApiError,
   TagesschauNetworkError,
   TagesschauParseError,
+  redactUrl,
 } from "./errors.js";
 
 export * from "./enums.js";

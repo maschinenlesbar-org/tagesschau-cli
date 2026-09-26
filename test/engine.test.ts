@@ -335,3 +335,26 @@ test("the engine refuses a base URL with a query or fragment", () => {
     );
   }
 });
+
+test("userinfo is redacted in base-URL and redirect errors", async () => {
+  assert.throws(
+    () => new RequestEngine({ baseUrl: "http://u:pw@h.test/#f" }),
+    (err: unknown) => err instanceof TagesschauNetworkError && err.message.includes("http://***@h.test/") && !err.message.includes("pw"),
+  );
+  assert.throws(
+    () => new RequestEngine({ baseUrl: "ftp://u:pw@h.test" }),
+    (err: unknown) => err instanceof Error && err.message.includes("ftp://***@h.test") && !err.message.includes("pw"),
+  );
+  const loop = makeMockTransport(() => ({ status: 302, headers: { location: "/again" }, body: Buffer.from("") }));
+  const e = new RequestEngine({ baseUrl: "http://u:pw@h.test", transport: loop.transport, maxRedirects: 1 });
+  await assert.rejects(
+    () => e.getJson("/x"),
+    (err: unknown) => err instanceof TagesschauNetworkError && err.message.includes("http://***@h.test/") && !err.message.includes("pw"),
+  );
+  const noLoc = makeMockTransport(() => ({ status: 302, headers: {}, body: Buffer.from("") }));
+  const e2 = new RequestEngine({ baseUrl: "http://u:pw@h.test", transport: noLoc.transport });
+  await assert.rejects(
+    () => e2.getJson("/x"),
+    (err: unknown) => err instanceof TagesschauNetworkError && !err.message.includes("pw"),
+  );
+});

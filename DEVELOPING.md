@@ -104,6 +104,10 @@ URL: the `RequestEngine` constructor rejects a non-`http(s)` or malformed base U
 or one with a query or fragment (request paths are appended to it as a string), with a
 `TagesschauNetworkError` before any request, and the CLI's `--base-url`
 parser (`parseBaseUrl`) already turns one into a usage error at parse time.
+Userinfo in the base URL (`https://user:pw@mirror/`) is allowed — Node sends it as
+Basic auth — but every error message shows it as `***` (the exported `redactUrl`):
+`TagesschauApiError` (message and `url`), the base-URL, redirect and transport URL
+errors.
 
 ## Architecture
 

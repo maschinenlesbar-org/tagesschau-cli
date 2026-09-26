@@ -192,3 +192,13 @@ test("--max-redirects is bounded to 0..20", async () => {
   const ok = makeCli(() => jsonResponse({ channels: [] }));
   assert.equal(await run(["--max-redirects", "20", "channels"], ok.deps), 0);
 });
+
+test("userinfo in --base-url is sent but redacted in error messages", async () => {
+  const cli = makeCli(() => jsonResponse({ detail: "nicht gefunden" }, 404));
+  const code = await run(["--base-url", "http://user:s3cret@127.0.0.1:1", "news"], cli.deps);
+  assert.equal(code, 4);
+  assert.ok(cli.mt.last().url.includes("user:s3cret@"));
+  const text = cli.err.join("\n");
+  assert.doesNotMatch(text, /s3cret/);
+  assert.equal(text, "Error: HTTP 404 for GET http://***@127.0.0.1:1/api2u/news/: nicht gefunden");
+});

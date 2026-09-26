@@ -9,6 +9,7 @@ import {
   TagesschauError,
   TagesschauNetworkError,
   TagesschauParseError,
+  redactUrl,
 } from "./errors.js";
 
 export const DEFAULT_BASE_URL = "https://www.tagesschau.de";
@@ -182,15 +183,15 @@ function assertHttpScheme(baseUrl: string): void {
   try {
     url = new URL(baseUrl);
   } catch {
-    throw new TagesschauNetworkError(`Invalid base URL: ${baseUrl}`);
+    throw new TagesschauNetworkError(`Invalid base URL: ${redactUrl(baseUrl)}`);
   }
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     throw new TagesschauNetworkError(
-      `Unsupported protocol "${url.protocol}" in base URL: ${baseUrl}`,
+      `Unsupported protocol "${url.protocol}" in base URL: ${redactUrl(baseUrl)}`,
     );
   }
   if (/[?#]/.test(baseUrl)) {
-    throw new TagesschauNetworkError(`Base URL must not contain a query or fragment: ${baseUrl}`);
+    throw new TagesschauNetworkError(`Base URL must not contain a query or fragment: ${redactUrl(baseUrl)}`);
   }
 }
 
@@ -282,13 +283,13 @@ export class RequestEngine {
       if (status >= 300 && status < 400) {
         if (redirects >= this.maxRedirects) {
           throw new TagesschauNetworkError(
-            `Too many redirects (>${this.maxRedirects}) for ${method} ${url}`,
+            `Too many redirects (>${this.maxRedirects}) for ${method} ${redactUrl(url)}`,
           );
         }
         const location = response.headers["location"];
         if (typeof location !== "string" || location.length === 0) {
           throw new TagesschauNetworkError(
-            `Redirect (HTTP ${status}) with no Location header for ${method} ${url}`,
+            `Redirect (HTTP ${status}) with no Location header for ${method} ${redactUrl(url)}`,
           );
         }
         const previousUrl = url;
@@ -299,7 +300,7 @@ export class RequestEngine {
         // be handed to it verbatim. Reject anything else as a typed error.
         if (nextUrl.protocol !== "http:" && nextUrl.protocol !== "https:") {
           throw new TagesschauNetworkError(
-            `Refusing to follow redirect to unsupported scheme "${nextUrl.protocol}" (from ${method} ${previousUrl})`,
+            `Refusing to follow redirect to unsupported scheme "${nextUrl.protocol}" (from ${method} ${redactUrl(previousUrl)})`,
           );
         }
         url = nextUrl.toString();
