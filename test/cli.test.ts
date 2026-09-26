@@ -202,3 +202,26 @@ test("userinfo in --base-url is sent but redacted in error messages", async () =
   assert.doesNotMatch(text, /s3cret/);
   assert.equal(text, "Error: HTTP 404 for GET http://***@127.0.0.1:1/api2u/news/: nicht gefunden");
 });
+
+test("--user-agent: blank, control characters and non-Latin-1 are usage errors before any request", async () => {
+  const cases: Array<[string, RegExp]> = [
+    ["", /Expected a non-empty value/],
+    ["   ", /Expected a non-empty value/],
+    ["a\nb", /Value contains control characters/],
+    ["x\r\nX-Inject: 1", /Value contains control characters/],
+    ["a\u007fb", /Value contains control characters/],
+    ["Tagesschau\u20ac", /outside Latin-1/],
+  ];
+  for (const [ua, message] of cases) {
+    const cli = makeCli(() => jsonResponse({ channels: [] }));
+    assert.equal(await run(["--user-agent", ua, "channels"], cli.deps), 1, JSON.stringify(ua));
+    assert.equal(cli.mt.calls.length, 0);
+    assert.match(cli.err.join("\n"), message);
+    assert.doesNotMatch(cli.err.join("\n"), /Unexpected error/);
+  }
+  for (const ua of ["a\tb", "M\u00fcller/1.0"]) {
+    const cli = makeCli(() => jsonResponse({ channels: [] }));
+    assert.equal(await run(["--user-agent", ua, "channels"], cli.deps), 0, JSON.stringify(ua));
+    assert.equal(cli.mt.last().headers?.["User-Agent"], ua);
+  }
+});

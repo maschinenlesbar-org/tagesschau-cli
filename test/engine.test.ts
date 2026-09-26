@@ -358,3 +358,16 @@ test("userinfo is redacted in base-URL and redirect errors", async () => {
     (err: unknown) => err instanceof TagesschauNetworkError && !err.message.includes("pw"),
   );
 });
+
+test("the engine refuses an unsendable userAgent with a typed error; blank falls back to the default", async () => {
+  assert.throws(() => new RequestEngine({ userAgent: "a\r\nb" }), /control characters are not allowed/);
+  assert.throws(
+    () => new RequestEngine({ userAgent: "Tagesschau\u20ac" }),
+    (err: unknown) => err instanceof TagesschauError && /outside Latin-1/.test(err.message),
+  );
+  new RequestEngine({ userAgent: "a\tb" });
+  new RequestEngine({ userAgent: "M\u00fcller" });
+  const mt = makeMockTransport(() => jsonResponse({}));
+  await new RequestEngine({ transport: mt.transport, userAgent: "   " }).getJson("/x");
+  assert.equal(mt.last().headers?.["User-Agent"], "tagesschau-cli");
+});

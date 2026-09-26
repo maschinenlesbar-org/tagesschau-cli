@@ -216,12 +216,22 @@ export class RequestEngine {
     // gating at all, and could be steered to a non-http(s) scheme.
     assertHttpScheme(this.baseUrl);
     this.transport = options.transport ?? nodeHttpTransport;
-    // An empty User-Agent would send a blank header (rejected by some hosts);
-    // treat it like an unset value and fall back to the default.
+    // An empty or whitespace-only User-Agent would send a blank header (rejected
+    // by some hosts); treat it like an unset value and fall back to the default.
     this.userAgent =
-      options.userAgent !== undefined && options.userAgent !== ""
+      options.userAgent !== undefined && options.userAgent.trim() !== ""
         ? options.userAgent
         : DEFAULT_USER_AGENT;
+    // Reject what Node's header validation would throw a raw TypeError for (it
+    // would surface as an "Unexpected error") with a typed error up front: control
+    // characters (CR/LF in particular, which also closes header injection; tab is
+    // allowed, as in HTTP) and characters above U+00FF.
+    if (/[\x00-\x08\x0a-\x1f\x7f]/.test(this.userAgent)) {
+      throw new TagesschauError("Invalid User-Agent: control characters are not allowed.");
+    }
+    if (/[^\x00-\xff]/.test(this.userAgent)) {
+      throw new TagesschauError("Invalid User-Agent: characters outside Latin-1 (above U+00FF) are not allowed.");
+    }
     this.timeoutMs = intOption("timeoutMs", options.timeoutMs, 30_000, MAX_TIMEOUT_MS);
     this.maxRetries = intOption("maxRetries", options.maxRetries, 2, MAX_RETRIES);
     this.retryDelayMs = intOption("retryDelayMs", options.retryDelayMs, 200, MAX_RETRY_AFTER_MS);

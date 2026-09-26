@@ -163,7 +163,7 @@ These apply to every command and must appear **before** the command name
 | `-V, --version` | Print the version and exit. |
 | `--base-url <url>` | API base URL (default `https://www.tagesschau.de`); an `http(s)` URL, optionally with a path prefix, without a query (`?`) or fragment (`#`). |
 | `--timeout <ms>` | Time limit per request in milliseconds, whole response included (at most `2147483647`). |
-| `--user-agent <ua>` | `User-Agent` header value. |
+| `--user-agent <ua>` | `User-Agent` header value (not blank; no control characters or characters above U+00FF). |
 | `--max-retries <n>` | Retries for transient `429`/`503` responses, `0`–`10` (default `2`); each waits the server's `Retry-After` (up to 30 s; a longer one is not retried), else 200 ms × attempt. |
 | `--max-redirects <n>` | Max HTTP redirects to follow, `0`–`20` (default `5`; credential headers are dropped on cross-origin hops). |
 | `--max-response-bytes <n>` | Cap response body size in bytes (`0` = unlimited; default 100 MiB). |

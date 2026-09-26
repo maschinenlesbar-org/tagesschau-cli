@@ -62,6 +62,30 @@ export const parsePagingArg = parseBoundedInt(1, MAX_SEARCH_INT);
 export const parseResultPage = parseBoundedInt(0, MAX_SEARCH_INT);
 
 /**
+ * commander value-parser for a value that ends up in an HTTP header (`--user-agent`).
+ * A blank value would send an empty header. Node's HTTP layer throws an opaque
+ * "Invalid character in header content" at request time for a CR/LF (or any other
+ * C0 control or DEL) and for any character above U+00FF, which surfaced as
+ * "Unexpected error". Reject those here as a usage error. Tab is allowed, as in
+ * HTTP. Checked by char code so the source stays free of control bytes.
+ */
+export function parseHeaderValue(value: string): string {
+  if (value.trim() === "") {
+    throw new InvalidArgumentError("Expected a non-empty value.");
+  }
+  for (let i = 0; i < value.length; i++) {
+    const c = value.charCodeAt(i);
+    if ((c < 0x20 && c !== 0x09) || c === 0x7f) {
+      throw new InvalidArgumentError("Value contains control characters.");
+    }
+    if (c > 0xff) {
+      throw new InvalidArgumentError("Value contains characters outside Latin-1 (above U+00FF).");
+    }
+  }
+  return value;
+}
+
+/**
  * commander value-parser for --base-url: an absolute http(s) URL. Anything else
  * (a `file:`/`ftp:` URL, or text that is not a URL at all) is a usage error at
  * parse time instead of reaching the transport.

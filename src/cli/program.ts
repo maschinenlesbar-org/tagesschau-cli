@@ -10,7 +10,7 @@ import { defaultIO } from "./io.js";
 import { TagesschauClient } from "../client/client.js";
 import { MAX_TIMEOUT_MS } from "../client/http.js";
 import { MAX_REDIRECTS, MAX_RETRIES } from "../client/engine.js";
-import { parseBaseUrl, parseBoundedInt, parseIntArg } from "./shared.js";
+import { parseBaseUrl, parseBoundedInt, parseHeaderValue, parseIntArg } from "./shared.js";
 import { registerNewsCommands } from "./commands/news.js";
 
 /**
@@ -50,7 +50,7 @@ export function buildProgram(deps: CliDeps = defaultDeps): Command {
       "time limit per request in milliseconds, whole response included",
       parseBoundedInt(0, MAX_TIMEOUT_MS),
     )
-    .option("--user-agent <ua>", "User-Agent header value")
+    .option("--user-agent <ua>", "User-Agent header value", parseHeaderValue)
     .option(
       "--max-retries <n>",
       "retries for transient 429/503 responses (0..10; each waits the server's Retry-After, up to 30 s)",
