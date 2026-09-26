@@ -225,3 +225,17 @@ test("--user-agent: blank, control characters and non-Latin-1 are usage errors b
     assert.equal(cli.mt.last().headers?.["User-Agent"], ua);
   }
 });
+
+test("a deeply nested response is a clear error, not a stack overflow", async () => {
+  const deep = '{"news":[' + "[".repeat(200_000) + "]".repeat(200_000) + '],"regional":[]}';
+  const respond = () => ({ status: 200, headers: { "content-type": "application/json" }, body: Buffer.from(deep) });
+  const pretty = makeCli(respond);
+  assert.equal(await run(["news"], pretty.deps), 1);
+  assert.deepEqual(pretty.err, ["Error: The response is nested too deeply to pretty-print; try --compact."]);
+  const compact = makeCli(respond);
+  const code = await run(["--compact", "news"], compact.deps);
+  if (code !== 0) {
+    assert.equal(code, 1);
+    assert.deepEqual(compact.err, ["Error: The response is nested too deeply to print."]);
+  }
+});
