@@ -165,7 +165,9 @@ subprocess.
 
 **Error types.** [`errors.ts`](src/client/errors.ts): `TagesschauApiError`
 (non-2xx, carries `status`/`detail`/`url`/`method`/`body` and an `isRetryable`
-flag), `TagesschauNetworkError` (transport failure/timeout),
+flag; `detail` — the body's `detail`, `message` or `error` string — is cleaned for
+stderr by `sanitizeServerText`: control and bidi characters dropped, whitespace folded
+onto one line, cut at `MAX_DETAIL_LENGTH` (500) characters; `body` keeps the full text), `TagesschauNetworkError` (transport failure/timeout),
 `TagesschauParseError` (bad JSON, or a 2xx body without the documented envelope:
 `Unexpected response shape from /api2u/news/: expected a JSON object with a "news"
 array.` — each method checks its top-level array, `news`/`regional`, `channels`,

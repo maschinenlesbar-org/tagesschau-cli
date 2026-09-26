@@ -133,29 +133,61 @@ const realSleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Strip C0/C1 control characters (except tab and newline) and DEL from a string
- * that originates in an attacker-controlled response — the error `detail`.
- * `JSON.parse` decodes a backslash-u escape in an error body into a real control
- * byte, so without this a hostile/MITM'd endpoint could drive ANSI/OSC escape
- * sequences into the user's terminal when the error message is printed to stderr
- * (title changes, spoofed lines, clipboard writes on some emulators). This only
- * covers text that flows into an error message; the CLI's JSON output is escaped
- * separately (escapeControlChars in cli/shared.ts), since `JSON.stringify` alone
- * leaves DEL and the C1 range raw. Built via char codes so no raw control byte ever
- * appears in this source file.
+ * True for the Unicode bidirectional formatting characters (ALM, LRM, RLM, the
+ * embeddings/overrides U+202A–U+202E and the isolates U+2066–U+2069). Printed raw
+ * in server text they can reorder what the user sees ("Trojan Source" spoofing).
+ */
+export function isBidiControl(code: number): boolean {
+  return (
+    code === 0x061c ||
+    code === 0x200e ||
+    code === 0x200f ||
+    (code >= 0x202a && code <= 0x202e) ||
+    (code >= 0x2066 && code <= 0x2069)
+  );
+}
+
+/**
+ * Make a string that originates in an attacker-controlled response — the error
+ * `detail` — safe to print into an error message on stderr:
+ *
+ * - C0 and C1 controls and DEL are dropped. A JSON error body can encode an escape
+ *   (U+001B) that JSON.parse turns into a real control byte; printed raw, a hostile
+ *   or MITM'd endpoint could drive ANSI/OSC sequences into the terminal (display
+ *   spoofing, title changes).
+ * - Bidi formatting characters (isBidiControl) are dropped, so server text cannot
+ *   reorder the visible message.
+ * - Every run of whitespace — newlines, tabs, U+2028/U+2029 included — becomes one
+ *   space and the ends are trimmed, so the text stays on one line and a server
+ *   cannot forge an `Error:` line of its own.
+ *
+ * The CLI's JSON output is escaped separately (`escapeControlChars` in
+ * cli/shared.ts): `JSON.stringify` alone leaves DEL, C1 and bidi characters raw.
+ * Written as a char-code filter so no raw control byte appears in this source.
  */
 export function sanitizeServerText(text: string): string {
   let out = "";
   for (const ch of text) {
     const n = ch.codePointAt(0) ?? 0;
-    if (n === 9 || n === 10) {
-      out += ch;
-      continue;
-    }
-    if (n <= 8 || (n >= 0x0b && n <= 0x1f) || (n >= 0x7f && n <= 0x9f)) continue;
+    const whitespaceControl = n >= 0x09 && n <= 0x0d;
+    if (!whitespaceControl && (n <= 0x1f || (n >= 0x7f && n <= 0x9f) || isBidiControl(n))) continue;
     out += ch;
   }
-  return out;
+  return out.replace(/\s+/g, " ").trim();
+}
+
+/** Longest error detail kept in a message; the full body stays on `TagesschauApiError.body`. */
+export const MAX_DETAIL_LENGTH = 500;
+
+/**
+ * Make server text fit for a one-line error message: sanitised (sanitizeServerText)
+ * and cut at MAX_DETAIL_LENGTH characters with "…", so a 200 kB `detail` does not
+ * flood stderr. `undefined` when nothing is left.
+ */
+function cleanDetail(text: string): string | undefined {
+  const flat = sanitizeServerText(text);
+  if (flat === "") return undefined;
+  return flat.length > MAX_DETAIL_LENGTH ? `${flat.slice(0, MAX_DETAIL_LENGTH)}…` : flat;
 }
 
 /** Return a copy of `headers` with all credential-bearing headers removed. */
@@ -358,9 +390,9 @@ export class RequestEngine {
       // Non-JSON error body; leave detail undefined.
     }
     // `detail` comes straight from the (attacker-controllable) response body and
-    // ends up in the error message printed to stderr, so strip control characters
-    // that could inject terminal escape sequences before it leaves the engine.
-    if (detail !== undefined) detail = sanitizeServerText(detail);
+    // ends up in the error message printed to stderr, so strip control and bidi
+    // characters, fold it onto one line and cap its length before it leaves the engine.
+    if (detail !== undefined) detail = cleanDetail(detail);
     return new TagesschauApiError({ status, url, method, body: text, detail });
   }
 }

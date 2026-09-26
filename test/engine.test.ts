@@ -5,6 +5,7 @@ import {
   stripCredentialHeaders,
   parseRetryAfter,
   MAX_RETRY_AFTER_MS,
+  MAX_DETAIL_LENGTH,
 } from "../src/client/engine.js";
 import {
   TagesschauApiError,
@@ -370,4 +371,26 @@ test("the engine refuses an unsendable userAgent with a typed error; blank falls
   const mt = makeMockTransport(() => jsonResponse({}));
   await new RequestEngine({ transport: mt.transport, userAgent: "   " }).getJson("/x");
   assert.equal(mt.last().headers?.["User-Agent"], "tagesschau-cli");
+});
+
+test("error detail: bidi controls dropped, newlines folded, length capped", async () => {
+  const rlo = String.fromCharCode(0x202e);
+  const mt = makeMockTransport(() => jsonResponse({ detail: `ok ${rlo}txt.exe\nError: forged\u2028line` }, 500));
+  const e = new RequestEngine({ baseUrl: "https://example.test", transport: mt.transport });
+  await assert.rejects(
+    () => e.getJson("/x"),
+    (err) =>
+      err instanceof TagesschauApiError &&
+      err.message === "HTTP 500 for GET https://example.test/x: ok txt.exe Error: forged line",
+  );
+  const long = makeMockTransport(() => jsonResponse({ detail: "a".repeat(200_000) }, 500));
+  const e2 = new RequestEngine({ baseUrl: "https://example.test", transport: long.transport });
+  await assert.rejects(
+    () => e2.getJson("/x"),
+    (err) =>
+      err instanceof TagesschauApiError &&
+      err.detail === `${"a".repeat(MAX_DETAIL_LENGTH)}…` &&
+      err.message.length < 1000 &&
+      err.body.length > 200_000,
+  );
 });

@@ -246,3 +246,11 @@ test("a null 2xx body is an error (exit 1), not `null` with exit 0", async () =>
   assert.deepEqual(cli.out, []);
   assert.deepEqual(cli.err, ['Error: Unexpected response shape from /api2u/news/: expected a JSON object with a "news" array.']);
 });
+
+test("bidi formatting characters in server data are escaped in the JSON output", async () => {
+  const served = { news: [{ title: `a${String.fromCharCode(0x202e)}b${String.fromCharCode(0x2066)}c` }], regional: [] };
+  const cli = makeCli(() => jsonResponse(served));
+  assert.equal(await run(["--compact", "news"], cli.deps), 0);
+  assert.match(cli.out.join(""), /a\\u202eb\\u2066c/);
+  assert.deepEqual(JSON.parse(cli.out.join("")), served);
+});
