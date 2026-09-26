@@ -177,6 +177,7 @@ npm test          # builds, then runs `node --test` over dist/test
 - **`engine.test.ts`** — URL building, JSON decoding, error mapping, 429/503 retry — mocked transport.
 - **`client.test.ts`** — every endpoint's method/URL/query mapping — mocked transport.
 - **`cli.test.ts`** — end-to-end command parsing, validation and exit codes — mocked client.
+- **`io.test.ts`** — stdout/stderr write errors (a closed pipe exits quietly) — fake streams.
 
 ## Continuous integration
 
