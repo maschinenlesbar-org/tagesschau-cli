@@ -73,8 +73,9 @@ IDs zu einem einzigen kommagetrennten Query-Wert `regions` zusammen (z. B. `?reg
 Die zulässigen IDs sind als `RegionValues` bereitgestellt.
 
 **searchText.** Der Freitext-Suchbegriff für den Such-Endpoint (das Positionsargument
-`<text>` von `search`). Wird unverändert an die API gesendet; einen leeren Wert lehnt die
-CLI bereits clientseitig ab.
+`<text>` von `search`). Wird wie eingegeben an die API gesendet, nur vorher auf Unicode-NFKC
+normalisiert (ein zerlegter Umlaut, etwa aus macOS-Dateinamen oder PDFs kopiert, fände sonst
+nichts); einen leeren Wert lehnt die CLI bereits clientseitig ab.
 
 **pageSize / resultPage.** Die Paginierungsparameter des Such-Endpoints, bereitgestellt
 als `--page-size` / `--result-page`. `pageSize` ist die Zahl der Treffer pro Seite und muss

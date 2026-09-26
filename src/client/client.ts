@@ -56,10 +56,15 @@ export class TagesschauClient {
     return this.engine.getJson(`${API}/channels/`);
   }
 
-  /** Full-text search across articles. */
+  /**
+   * Full-text search across articles. The search text is normalised to NFKC before
+   * sending: the API finds nothing for a decomposed umlaut ("Ko" + U+0308, as pasted
+   * from macOS file names or PDFs), which looks identical to the composed "Köln"
+   * with hundreds of hits; NFKC also folds fullwidth digits and ligatures.
+   */
   search(params: SearchParams = {}): Promise<SearchResult> {
     const query: QueryParams = {
-      searchText: params.searchText,
+      searchText: params.searchText?.normalize("NFKC"),
       pageSize: params.pageSize,
       resultPage: params.resultPage,
     };

@@ -71,8 +71,10 @@ single comma-separated `regions` query value (e.g. `?regions=5,9`). The accepted
 ids are exposed as `RegionValues`.
 
 **searchText.** The free-text query for the search endpoint (the positional
-`<text>` argument of `search`). Sent verbatim to the API; an empty value is
-rejected client-side by the CLI.
+`<text>` argument of `search`). Sent to the API as typed, except that it is
+normalised to Unicode NFKC first (a decomposed umlaut, as pasted from macOS file
+names or PDFs, otherwise finds nothing); an empty value is rejected client-side
+by the CLI.
 
 **pageSize / resultPage.** The search endpoint's paging parameters, exposed as
 `--page-size` / `--result-page`. `pageSize` is the number of hits per page and must

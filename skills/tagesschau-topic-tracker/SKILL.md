@@ -31,7 +31,9 @@ Data comes from the `tagesschau` CLI — read-only, no API key. Pass `--compact`
 tagesschau --compact search "Bundestag"
 ```
 
-Multi-word queries: quote them (`search "CDU Parteitag"`). The query is sent verbatim;
+Multi-word queries: quote them (`search "CDU Parteitag"`). The query is sent as typed
+(current CLI versions normalise it to Unicode NFKC, so a decomposed umlaut pasted from a
+PDF or a macOS file name still matches; with an older CLI, retype such a word);
 it's a keyword/phrase match, not boolean — keep terms simple, broaden if you get 0 hits.
 
 The result object:

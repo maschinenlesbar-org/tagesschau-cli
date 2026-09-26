@@ -62,6 +62,13 @@ test("search passes searchText and paging", async () => {
   assert.equal(url.searchParams.get("resultPage"), "10");
 });
 
+test("search sends the text in composed form (NFKC): a decomposed umlaut finds the same hits", async () => {
+  const mt = constantJson({ searchResults: [] });
+  await clientWith(mt).search({ searchText: "Ko\u0308ln \uFF16\uFF10" });
+  assert.equal(new URL(mt.last().url).searchParams.get("searchText"), "Köln 60");
+  assert.match(mt.last().url, /searchText=K%C3%B6ln%2060/);
+});
+
 test("a 404 raises TagesschauApiError with status 404", async () => {
   const mt = makeMockTransport(() => jsonResponse({}, 404));
   await assert.rejects(

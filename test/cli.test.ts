@@ -73,6 +73,12 @@ test("search passes the text and paging options", async () => {
   assert.equal(url.searchParams.get("resultPage"), "3");
 });
 
+test("search sends a decomposed umlaut composed (NFKC)", async () => {
+  const cli = makeCli(() => jsonResponse({ searchResults: [] }));
+  assert.equal(await run(["search", "Ko\u0308ln"], cli.deps), 0);
+  assert.match(cli.mt.last().url, /searchText=K%C3%B6ln(&|$)/);
+});
+
 test("search accepts --result-page 0 (the API's first page) but still rejects --page-size 0", async () => {
   const cli = makeCli(() => jsonResponse({ searchResults: [] }));
   assert.equal(await run(["search", "Wahl", "--result-page", "0"], cli.deps), 0);
