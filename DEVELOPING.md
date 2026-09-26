@@ -166,7 +166,11 @@ subprocess.
 **Error types.** [`errors.ts`](src/client/errors.ts): `TagesschauApiError`
 (non-2xx, carries `status`/`detail`/`url`/`method`/`body` and an `isRetryable`
 flag), `TagesschauNetworkError` (transport failure/timeout),
-`TagesschauParseError` (bad JSON), all extending `TagesschauError`. The CLI maps
+`TagesschauParseError` (bad JSON, or a 2xx body without the documented envelope:
+`Unexpected response shape from /api2u/news/: expected a JSON object with a "news"
+array.` — each method checks its top-level array, `news`/`regional`, `channels`,
+`searchResults` and a non-negative `totalItemCount`; items are not checked), all
+extending `TagesschauError`. The CLI maps
 a `404` to exit code `4`, other errors to `1`.
 
 **Retry / backoff.** Transient `429` (rate limit) and `503` responses are

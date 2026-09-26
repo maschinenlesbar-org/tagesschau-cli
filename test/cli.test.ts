@@ -239,3 +239,10 @@ test("a deeply nested response is a clear error, not a stack overflow", async ()
     assert.deepEqual(compact.err, ["Error: The response is nested too deeply to print."]);
   }
 });
+
+test("a null 2xx body is an error (exit 1), not `null` with exit 0", async () => {
+  const cli = makeCli(() => jsonResponse(null));
+  assert.equal(await run(["--compact", "news"], cli.deps), 1);
+  assert.deepEqual(cli.out, []);
+  assert.deepEqual(cli.err, ['Error: Unexpected response shape from /api2u/news/: expected a JSON object with a "news" array.']);
+});

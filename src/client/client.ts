@@ -8,7 +8,7 @@
 
 import { RequestEngine, type EngineOptions } from "./engine.js";
 import type { QueryParams } from "./query.js";
-import { TagesschauError } from "./errors.js";
+import { TagesschauError, TagesschauParseError } from "./errors.js";
 import type {
   HomepageResult,
   NewsResult,
@@ -20,6 +20,30 @@ import type {
 
 const API = "/api2u";
 
+/** A non-null, non-array JSON object. */
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function shapeError(path: string, expected: string): TagesschauParseError {
+  return new TagesschauParseError(`Unexpected response shape from ${path}: expected ${expected}.`);
+}
+
+/**
+ * Check the top-level shape callers rely on — a JSON object whose `key` is an array
+ * (and, for the feeds, whose `regional` is an array when present) — so a `null`,
+ * `{}` or wrong-typed 2xx body is a TagesschauParseError instead of a silent
+ * success or a TypeError in the caller. Items are not checked (their shape varies).
+ */
+function assertEnvelope(body: unknown, path: string, key: string, optionalArrays: string[] = []): void {
+  if (!isObject(body) || !Array.isArray(body[key])) {
+    throw shapeError(path, `a JSON object with a "${key}" array`);
+  }
+  for (const k of optionalArrays) {
+    if (body[k] !== undefined && !Array.isArray(body[k])) throw shapeError(path, `"${k}" to be an array`);
+  }
+}
+
 export class TagesschauClient {
   private readonly engine: RequestEngine;
 
@@ -28,8 +52,11 @@ export class TagesschauClient {
   }
 
   /** The curated homepage feed (top news + regional). */
-  homepage(): Promise<HomepageResult> {
-    return this.engine.getJson(`${API}/homepage/`);
+  async homepage(): Promise<HomepageResult> {
+    const path = `${API}/homepage/`;
+    const body = await this.engine.getJson<unknown>(path);
+    assertEnvelope(body, path, "news", ["regional"]);
+    return body as HomepageResult;
   }
 
   /**
@@ -48,12 +75,18 @@ export class TagesschauClient {
     const query: QueryParams = {};
     if (regions.length > 0) query["regions"] = regions.join(",");
     if (params.ressort !== undefined) query["ressort"] = params.ressort;
-    return this.engine.getJson(`${API}/news/`, query);
+    const path = `${API}/news/`;
+    const body = await this.engine.getJson<unknown>(path, query);
+    assertEnvelope(body, path, "news", ["regional"]);
+    return body as NewsResult;
   }
 
   /** The live/broadcast channels. */
-  channels(): Promise<ChannelsResult> {
-    return this.engine.getJson(`${API}/channels/`);
+  async channels(): Promise<ChannelsResult> {
+    const path = `${API}/channels/`;
+    const body = await this.engine.getJson<unknown>(path);
+    assertEnvelope(body, path, "channels");
+    return body as ChannelsResult;
   }
 
   /**
@@ -62,12 +95,19 @@ export class TagesschauClient {
    * from macOS file names or PDFs), which looks identical to the composed "Köln"
    * with hundreds of hits; NFKC also folds fullwidth digits and ligatures.
    */
-  search(params: SearchParams = {}): Promise<SearchResult> {
+  async search(params: SearchParams = {}): Promise<SearchResult> {
     const query: QueryParams = {
       searchText: params.searchText?.normalize("NFKC"),
       pageSize: params.pageSize,
       resultPage: params.resultPage,
     };
-    return this.engine.getJson(`${API}/search/`, query);
+    const path = `${API}/search/`;
+    const body = await this.engine.getJson<unknown>(path, query);
+    assertEnvelope(body, path, "searchResults");
+    const total = (body as Record<string, unknown>)["totalItemCount"];
+    if (total !== undefined && !(Number.isSafeInteger(total) && (total as number) >= 0)) {
+      throw shapeError(path, "a non-negative integer totalItemCount");
+    }
+    return body as SearchResult;
   }
 }

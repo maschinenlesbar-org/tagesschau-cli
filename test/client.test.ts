@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { TagesschauClient } from "../src/client/client.js";
-import { TagesschauApiError, TagesschauError } from "../src/client/errors.js";
+import { TagesschauApiError, TagesschauError, TagesschauParseError } from "../src/client/errors.js";
 import { makeMockTransport, jsonResponse, constantJson } from "./helpers.js";
 
 function clientWith(mt: ReturnType<typeof makeMockTransport>): TagesschauClient {
@@ -75,4 +75,26 @@ test("a 404 raises TagesschauApiError with status 404", async () => {
     () => clientWith(mt).homepage(),
     (err) => err instanceof TagesschauApiError && err.status === 404,
   );
+});
+
+test("a 2xx body without the documented envelope is a TagesschauParseError", async () => {
+  const cases: Array<[(c: TagesschauClient) => Promise<unknown>, unknown, string]> = [
+    [(c) => c.homepage(), null, 'from /api2u/homepage/: expected a JSON object with a "news" array.'],
+    [(c) => c.homepage(), [], 'from /api2u/homepage/: expected a JSON object with a "news" array.'],
+    [(c) => c.news(), {}, 'from /api2u/news/: expected a JSON object with a "news" array.'],
+    [(c) => c.news(), { news: [], regional: "x" }, 'from /api2u/news/: expected "regional" to be an array.'],
+    [(c) => c.channels(), { channels: {} }, 'from /api2u/channels/: expected a JSON object with a "channels" array.'],
+    [(c) => c.search({ searchText: "x" }), "text", 'from /api2u/search/: expected a JSON object with a "searchResults" array.'],
+    [(c) => c.search({ searchText: "x" }), { searchResults: [], totalItemCount: -1 }, "from /api2u/search/: expected a non-negative integer totalItemCount."],
+  ];
+  for (const [call, body, message] of cases) {
+    const mt = constantJson(body);
+    await assert.rejects(
+      () => call(clientWith(mt)),
+      (err) => err instanceof TagesschauParseError && err.message === `Unexpected response shape ${message}`,
+      JSON.stringify(body),
+    );
+  }
+  // A body without the optional keys passes.
+  assert.deepEqual(await clientWith(constantJson({ news: [] })).news(), { news: [] });
 });
