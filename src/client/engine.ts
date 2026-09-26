@@ -331,9 +331,12 @@ export class RequestEngine {
     const text = body.toString("utf8");
     let detail: string | undefined;
     try {
-      const parsed = JSON.parse(text) as { detail?: unknown; message?: unknown };
+      // `error` is the reason phrase of a Spring-style body
+      // ({timestamp, status, error, path}), which the search endpoint sends on a 400.
+      const parsed = JSON.parse(text) as { detail?: unknown; message?: unknown; error?: unknown };
       if (parsed && typeof parsed.detail === "string") detail = parsed.detail;
       else if (parsed && typeof parsed.message === "string") detail = parsed.message;
+      else if (parsed && typeof parsed.error === "string") detail = parsed.error;
     } catch {
       // Non-JSON error body; leave detail undefined.
     }

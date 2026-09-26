@@ -79,7 +79,8 @@ by the CLI.
 **pageSize / resultPage.** The search endpoint's paging parameters, exposed as
 `--page-size` / `--result-page`. `pageSize` is the number of hits per page and must
 be `>= 1`. `resultPage` is a **0-based** page index: `0` (the default) is the first
-page, and an index past the last page returns no hits.
+page, and an index past the last page returns no hits. Both are at most
+`2147483647` (a 32-bit integer upstream; a larger value is rejected by the CLI).
 
 **nextPage.** A cursor URL returned by the news endpoint pointing at the next
 page of results, when present.

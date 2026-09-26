@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import type { CliDeps } from "../io.js";
-import { action, assertEnum, parseIntArg, parsePagingArg, renderJson } from "../shared.js";
+import { action, assertEnum, parsePagingArg, parseResultPage, renderJson } from "../shared.js";
 import { RegionValues, RessortValues } from "../../client/enums.js";
 import { TagesschauError } from "../../client/errors.js";
 import type { NewsParams } from "../../client/types.js";
@@ -55,8 +55,12 @@ export function registerNewsCommands(program: Command, deps: CliDeps): void {
   program
     .command("search <text>")
     .description("Full-text search across articles")
-    .option("--page-size <n>", "pageSize parameter (>= 1)", parsePagingArg)
-    .option("--result-page <n>", "resultPage parameter (0-based; 0 = first page)", parseIntArg)
+    .option("--page-size <n>", "pageSize parameter (1..2147483647)", parsePagingArg)
+    .option(
+      "--result-page <n>",
+      "resultPage parameter (0-based; 0 = first page; at most 2147483647)",
+      parseResultPage,
+    )
     .action(
       action(deps, async ({ client, global, opts }, [text]) => {
         if (text === undefined || text.trim() === "") {

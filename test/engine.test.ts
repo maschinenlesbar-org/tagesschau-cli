@@ -312,3 +312,16 @@ test("numeric engine options must be integers in range, or the constructor throw
   }
   new RequestEngine({ timeoutMs: 0, maxRetries: 10, retryDelayMs: 0, maxRedirects: 20, maxResponseBytes: 0 });
 });
+
+test("a Spring-style error body's `error` reason becomes the detail", async () => {
+  const body = { timestamp: "2026-09-26T10:03:23.383+02:00", status: 400, error: "Bad Request", path: "/api2u/search/" };
+  const mt = makeMockTransport(() => jsonResponse(body, 400));
+  const e = new RequestEngine({ baseUrl: "https://example.test", transport: mt.transport });
+  await assert.rejects(
+    () => e.getJson("/api2u/search/"),
+    (err) =>
+      err instanceof TagesschauApiError &&
+      err.detail === "Bad Request" &&
+      err.message === "HTTP 400 for GET https://example.test/api2u/search/: Bad Request",
+  );
+});

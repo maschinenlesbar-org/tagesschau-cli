@@ -87,8 +87,8 @@ and image metadata.
 
 | Flag | Meaning |
 | --- | --- |
-| `--page-size <n>` | results per page (`>= 1`) |
-| `--result-page <n>` | page index (`>= 0`, 0-based: `0` is the first page) |
+| `--page-size <n>` | results per page (`1`–`2147483647`) |
+| `--result-page <n>` | page index (`0`–`2147483647`, 0-based: `0` is the first page) |
 
 The positional `<text>` argument is required and must not be empty (rejected
 before any request).
@@ -169,6 +169,8 @@ tagesschau --compact homepage | jq -c '.news'
   `sport`, `video`, `investigativ`, `wissen` (exact lowercase string).
 - **`--page-size` / `--result-page` rejected** — `--page-size` must be an
   integer `>= 1`; `--result-page` is a 0-based page index and must be `>= 0`.
+  Both are at most `2147483647` (the API answers a larger value with a bare
+  `400 Bad Request`).
 
 ## Global options
 

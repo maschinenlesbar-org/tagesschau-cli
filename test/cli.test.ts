@@ -94,6 +94,21 @@ test("search accepts --result-page 0 (the API's first page) but still rejects --
   assert.equal(negative.mt.calls.length, 0);
 });
 
+test("--page-size and --result-page are bounded to the API's 32-bit int", async () => {
+  for (const argv of [
+    ["search", "Wahl", "--result-page", "2147483648"],
+    ["search", "Wahl", "--result-page", "9007199254740993"],
+    ["search", "Wahl", "--page-size", "2147483648"],
+  ]) {
+    const cli = makeCli(() => jsonResponse({ searchResults: [] }));
+    assert.equal(await run(argv, cli.deps), 1, argv.join(" "));
+    assert.equal(cli.mt.calls.length, 0);
+    assert.match(cli.err.join("\n"), /Expected an integer <= 2147483647\./);
+  }
+  const ok = makeCli(() => jsonResponse({ searchResults: [] }));
+  assert.equal(await run(["search", "Wahl", "--result-page", "2147483647", "--page-size", "2147483647"], ok.deps), 0);
+});
+
 test("DEL and C1 control characters in server data are escaped in the JSON output", async () => {
   const controls = String.fromCharCode(0x7f, 0x85, 0x9b) + "2J";
   const served = {

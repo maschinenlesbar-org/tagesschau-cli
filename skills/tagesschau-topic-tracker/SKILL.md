@@ -65,7 +65,7 @@ tagesschau --compact search "Wahl" --page-size 40 --result-page 1
 
 > **Trap — `--result-page` is 0-based.** `0` is the first page, `1` the second. Starting
 > at `--result-page 1` silently skips the newest hits. `--page-size` must be `>= 1`;
-> `--result-page` takes any integer `>= 0`.
+> `--result-page` takes an integer `>= 0`; both are at most `2147483647`.
 
 There are `ceil(totalItemCount / pageSize)` pages, so the last index is one less; an
 index past the end returns an empty `searchResults`. Fetch only as many pages as the user

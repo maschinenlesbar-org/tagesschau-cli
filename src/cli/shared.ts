@@ -27,27 +27,39 @@ export function parseIntArg(value: string): number {
 }
 
 /**
- * commander value-parser for --page-size. Builds on parseIntArg but
- * additionally rejects 0, since a page of zero hits is meaningless. (The page
- * index --result-page is 0-based upstream, so it uses parseIntArg directly.)
+ * Build a commander value-parser for a decimal integer constrained to [min, max].
+ * A well-formed number that is too large (even beyond 2^53) says so, rather than
+ * the generic "too large; expected a safe integer" of parseIntArg.
  */
-export function parsePagingArg(value: string): number {
-  const n = parseIntArg(value);
-  if (n < 1) {
-    throw new InvalidArgumentError("Expected an integer >= 1.");
-  }
-  return n;
-}
-
-/** Build a commander value-parser for a decimal integer constrained to [min, max]. */
 export function parseBoundedInt(min: number, max: number): (value: string) => number {
   return (value: string) => {
-    const n = parseIntArg(value);
+    if (!/^[0-9]+$/.test(value)) {
+      throw new InvalidArgumentError("Expected a non-negative integer in decimal notation.");
+    }
+    const n = Number(value);
+    if (!Number.isSafeInteger(n) || n > max) throw new InvalidArgumentError(`Expected an integer <= ${max}.`);
     if (n < min) throw new InvalidArgumentError(`Expected an integer >= ${min}.`);
-    if (n > max) throw new InvalidArgumentError(`Expected an integer <= ${max}.`);
     return n;
   };
 }
+
+/**
+ * The largest value the search endpoint accepts for `pageSize` / `resultPage`
+ * (a 32-bit int upstream): `--result-page 2147483648` came back as a bare HTTP 400.
+ */
+export const MAX_SEARCH_INT = 2_147_483_647;
+
+/**
+ * commander value-parser for --page-size: 1..MAX_SEARCH_INT, since a page of zero
+ * hits is meaningless.
+ */
+export const parsePagingArg = parseBoundedInt(1, MAX_SEARCH_INT);
+
+/**
+ * commander value-parser for --result-page: the page index is 0-based upstream,
+ * so 0..MAX_SEARCH_INT.
+ */
+export const parseResultPage = parseBoundedInt(0, MAX_SEARCH_INT);
 
 /**
  * commander value-parser for --base-url: an absolute http(s) URL. Anything else
