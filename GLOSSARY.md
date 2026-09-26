@@ -52,8 +52,8 @@ linear/streaming programme feed). CLI: `channels`. Returns a `ChannelsResult`
 (`channels`).
 
 **Search (`/api2u/search/`).** Full-text search across articles. CLI:
-`search <text>`. Returns a `SearchResult` (`searchResults`, optional
-`totalItemCount`).
+`search <text>`. Returns a `SearchResult` (`searchResults`, `totalItemCount`,
+the echoed `searchText`/`pageSize`/`resultPage`, and `type`/`details`).
 
 ---
 

@@ -54,8 +54,8 @@ lineares Fernsehen und Streaming). CLI: `channels`. Liefert ein `ChannelsResult`
 (`channels`).
 
 **Suche (`/api2u/search/`).** Volltextsuche über Artikel. CLI:
-`search <text>`. Liefert ein `SearchResult` (`searchResults`, optional
-`totalItemCount`).
+`search <text>`. Liefert ein `SearchResult` (`searchResults`, `totalItemCount`, die
+zurückgegebenen `searchText`/`pageSize`/`resultPage` sowie `type`/`details`).
 
 ---
 

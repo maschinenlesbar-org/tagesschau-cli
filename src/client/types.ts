@@ -46,13 +46,24 @@ export interface ChannelsResult {
   type?: string;
 }
 
-/** Response of `/api2u/search/`. */
+/**
+ * Response of `/api2u/search/`. Live (2026-09-26) it carries exactly these keys:
+ * `type` ("search"), `details` (the endpoint URL), the echoed `searchText`,
+ * `pageSize` and `resultPage`, `totalItemCount` and `searchResults`.
+ */
 export interface SearchResult {
   type?: string;
+  /** The endpoint's own URL, e.g. `https://www.tagesschau.de/api2u/search`. */
+  details?: string;
+  /** Echo of the search text. */
   searchText?: string;
+  /** Hits per page actually used (default 25). */
+  pageSize?: number;
+  /** The 0-based index of the page returned. */
+  resultPage?: number;
+  /** Total hits across all pages. */
   totalItemCount?: number;
   searchResults: JsonObject[];
-  query?: string;
 }
 
 /** Parameters for the news endpoint. */

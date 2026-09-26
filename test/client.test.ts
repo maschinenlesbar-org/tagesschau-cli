@@ -115,3 +115,22 @@ test("news passes the nextPage date cursor and validates it before any request",
     assert.equal(m.calls.length, 0);
   }
 });
+
+test("SearchResult types the echoed paging fields (compile-time check)", async () => {
+  const live = {
+    details: "https://www.tagesschau.de/api2u/search",
+    type: "search",
+    pageSize: 3,
+    resultPage: 0,
+    searchText: "Köln",
+    totalItemCount: 407,
+    searchResults: [],
+  };
+  const r = await clientWith(constantJson(live)).search({ searchText: "Köln", pageSize: 3 });
+  const paging: { size?: number; page?: number; details?: string } = {
+    size: r.pageSize,
+    page: r.resultPage,
+    details: r.details,
+  };
+  assert.deepEqual(paging, { size: 3, page: 0, details: live.details });
+});
