@@ -82,8 +82,11 @@ be `>= 1`. `resultPage` is a **0-based** page index: `0` (the default) is the fi
 page, and an index past the last page returns no hits. Both are at most
 `2147483647` (a 32-bit integer upstream; a larger value is rejected by the CLI).
 
-**nextPage.** A cursor URL returned by the news endpoint pointing at the next
-page of results, when present.
+**nextPage.** A URL returned by the news endpoint pointing at the next, older
+page of results, when present: the same filters plus a **`date`** cursor written
+`YYMMDD` (`…/api2u/news?date=260924&regions=9`). Follow it with `news --date
+260924` and the same filters (library: `news({ date: "260924" })`); a malformed or
+impossible date is rejected before any request.
 
 **news / regional.** The two item lists returned by the homepage and news
 feeds: the main feed and the regional block. Each entry is a **news item**.

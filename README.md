@@ -70,6 +70,7 @@ No arguments. Returns a JSON object with a `news` array (top stories) and a
 | --- | --- |
 | `--ressort <ressort>` | topic: `inland` \| `ausland` \| `wirtschaft` \| `sport` \| `video` \| `investigativ` \| `wissen` |
 | `--region <id>` | Bundesland id `1`–`16` (repeatable — pass multiple times to combine) |
+| `--date <yymmdd>` | page cursor: the `date=` value (`YYMMDD`) of a previous response's `nextPage`, to fetch the next, older page |
 
 Both filters are optional, but they can't be combined: when both are given, the
 API applies the Ressort and silently ignores the region (every item comes back

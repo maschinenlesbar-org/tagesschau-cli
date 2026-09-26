@@ -98,3 +98,20 @@ test("a 2xx body without the documented envelope is a TagesschauParseError", asy
   // A body without the optional keys passes.
   assert.deepEqual(await clientWith(constantJson({ news: [] })).news(), { news: [] });
 });
+
+test("news passes the nextPage date cursor and validates it before any request", async () => {
+  const mt = constantJson({ news: [], regional: [] });
+  await clientWith(mt).news({ regions: ["5", "9"], date: "260923" });
+  const url = new URL(mt.last().url);
+  assert.equal(url.searchParams.get("date"), "260923");
+  assert.equal(url.searchParams.get("regions"), "5,9");
+  for (const bad of ["2609", "20260925", "261301", "260230", "26-09-25", ""]) {
+    const m = constantJson({ news: [], regional: [] });
+    await assert.rejects(
+      () => clientWith(m).news({ date: bad }),
+      (err) => err instanceof TagesschauError && err.message.startsWith(`Invalid date ${JSON.stringify(bad)}: expected YYMMDD`),
+      bad,
+    );
+    assert.equal(m.calls.length, 0);
+  }
+});

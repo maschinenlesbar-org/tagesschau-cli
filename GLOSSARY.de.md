@@ -83,8 +83,11 @@ als `--page-size` / `--result-page`. `pageSize` ist die Zahl der Treffer pro Sei
 die erste Seite, ein Index hinter der letzten Seite liefert keine Treffer. Beide sind
 höchstens `2147483647` (upstream eine 32-Bit-Ganzzahl; einen größeren Wert lehnt die CLI ab).
 
-**nextPage.** Eine Cursor-URL, die der News-Endpoint liefert und die auf die nächste
-Ergebnisseite zeigt, sofern vorhanden.
+**nextPage.** Eine URL, die der News-Endpoint liefert und die auf die nächste, ältere
+Ergebnisseite zeigt, sofern vorhanden: dieselben Filter plus ein Cursor **`date`** im Format
+`YYMMDD` (`…/api2u/news?date=260924&regions=9`). Mit `news --date 260924` und denselben
+Filtern folgt man ihr (Bibliothek: `news({ date: "260924" })`); ein fehlerhaftes oder
+unmögliches Datum wird vor jeder Anfrage abgelehnt.
 
 **news / regional.** Die beiden Listen, die die Feeds von Startseite und Nachrichten
 liefern: der Haupt-Feed und der Regionalblock. Jeder Eintrag ist eine **Meldung**.

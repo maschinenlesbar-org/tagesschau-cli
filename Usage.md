@@ -63,7 +63,16 @@ tagesschau news --ressort sport
 
 Valid Ressorts: `inland`, `ausland`, `wirtschaft`, `sport`, `video`,
 `investigativ`, `wissen`. The news feed returns `news`, `regional` and (when
-there are more results) a `nextPage` cursor URL.
+there are more results) a `nextPage` URL: the same filters plus a `date=YYMMDD`
+cursor, e.g. `https://www.tagesschau.de/api2u/news?date=260924&regions=9`. Pass
+that value to `--date`, with the same filters, to fetch the next, older page:
+
+```bash
+next=$(tagesschau --compact news --region 9 | jq -r '.nextPage | capture("date=(?<d>[0-9]{6})").d')
+tagesschau news --region 9 --date "$next"
+```
+
+Each page is one request; the API allows about 60 an hour.
 
 ### 4. Get regional news for one Bundesland
 

@@ -32,7 +32,11 @@ export interface NewsResult {
   regional: NewsItem[];
   newStoriesCountLink?: JsonValue;
   type?: string;
-  /** Cursor URL for the next page, when present. */
+  /**
+   * URL of the next (older) page, when present, e.g.
+   * `https://www.tagesschau.de/api2u/news?date=260925&regions=5,9`: the same filters
+   * plus a `date` (YYMMDD). Follow it with `news({ ..., date: "260925" })`.
+   */
   nextPage?: string;
 }
 
@@ -56,6 +60,11 @@ export interface NewsParams {
   /** Bundesland ids (1..16); serialised as a comma-separated `regions` value. */
   regions?: string[];
   ressort?: Ressort;
+  /**
+   * The page cursor from `nextPage`: a date as `YYMMDD` (e.g. `"260925"`). Checked
+   * for shape and a real calendar day before any request.
+   */
+  date?: string;
 }
 
 /** Parameters for the search endpoint. */

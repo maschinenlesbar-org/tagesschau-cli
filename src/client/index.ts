@@ -1,6 +1,6 @@
 // Public entry point for the API client library.
 
-export { TagesschauClient } from "./client.js";
+export { TagesschauClient, newsDateProblem } from "./client.js";
 export {
   RequestEngine,
   DEFAULT_BASE_URL,

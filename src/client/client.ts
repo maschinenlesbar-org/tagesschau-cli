@@ -20,6 +20,20 @@ import type {
 
 const API = "/api2u";
 
+/**
+ * Why a news `date` cursor is unusable, or `undefined` when it is a real calendar
+ * day written `YYMMDD` — the form the API puts into `nextPage` (`?date=260925`).
+ */
+export function newsDateProblem(date: string): string | undefined {
+  const m = /^(\d{2})(\d{2})(\d{2})$/.exec(date);
+  const problem = `Invalid date ${JSON.stringify(date)}: expected YYMMDD (e.g. 260925), as in the date parameter of nextPage.`;
+  if (!m) return problem;
+  const [yy, mm, dd] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const day = new Date(Date.UTC(2000 + yy, mm - 1, dd));
+  if (day.getUTCMonth() !== mm - 1 || day.getUTCDate() !== dd) return problem;
+  return undefined;
+}
+
 /** A non-null, non-array JSON object. */
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -62,7 +76,8 @@ export class TagesschauClient {
   /**
    * The news feed, optionally filtered by region(s) or by Ressort — not both: the
    * API applies the Ressort and silently ignores the regions, so the combination is
-   * rejected with a `TagesschauError` before any request.
+   * rejected with a `TagesschauError` before any request. `date` (YYMMDD) is the
+   * page cursor the API puts into `nextPage`; pass it to fetch that older page.
    */
   async news(params: NewsParams = {}): Promise<NewsResult> {
     const regions = params.regions ?? [];
@@ -72,7 +87,12 @@ export class TagesschauClient {
           "so every item would come back national (regionId 0). Fetch the region feed and filter it locally instead.",
       );
     }
+    if (params.date !== undefined) {
+      const problem = newsDateProblem(params.date);
+      if (problem !== undefined) throw new TagesschauError(problem);
+    }
     const query: QueryParams = {};
+    if (params.date !== undefined) query["date"] = params.date;
     if (regions.length > 0) query["regions"] = regions.join(",");
     if (params.ressort !== undefined) query["ressort"] = params.ressort;
     const path = `${API}/news/`;

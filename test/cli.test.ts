@@ -254,3 +254,16 @@ test("bidi formatting characters in server data are escaped in the JSON output",
   assert.match(cli.out.join(""), /a\\u202eb\\u2066c/);
   assert.deepEqual(JSON.parse(cli.out.join("")), served);
 });
+
+test("news --date follows the nextPage cursor; a malformed one is a usage error", async () => {
+  const cli = makeCli(() => jsonResponse({ news: [], regional: [] }));
+  assert.equal(await run(["news", "--ressort", "inland", "--date", "260920"], cli.deps), 0);
+  const url = new URL(cli.mt.last().url);
+  assert.equal(url.searchParams.get("date"), "260920");
+  assert.equal(url.searchParams.get("ressort"), "inland");
+
+  const bad = makeCli(() => jsonResponse({ news: [], regional: [] }));
+  assert.equal(await run(["news", "--date", "2026-09-20"], bad.deps), 1);
+  assert.equal(bad.mt.calls.length, 0);
+  assert.match(bad.err.join("\n"), /Invalid date "2026-09-20": expected YYMMDD/);
+});

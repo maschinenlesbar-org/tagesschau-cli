@@ -77,9 +77,10 @@ The numeric options must be integers in range — `timeoutMs` 0..`MAX_TIMEOUT_MS
 
 ### Methods
 
-`client.homepage()`, `client.news({ regions?, ressort? })` (one or the other: both together
-are rejected with a `TagesschauError` before any request: the API would apply the Ressort
-and silently drop the regions), `client.channels()`,
+`client.homepage()`, `client.news({ regions?, ressort?, date? })` (regions or ressort,
+not both: together they are rejected with a `TagesschauError` before any request, since
+the API would apply the Ressort and silently drop the regions; `date` is the `YYMMDD`
+cursor from `nextPage`, checked by the exported `newsDateProblem`), `client.channels()`,
 `client.search({ searchText?, pageSize?, resultPage? })`. `RessortValues` and
 `RegionValues` are exported for reference.
 
