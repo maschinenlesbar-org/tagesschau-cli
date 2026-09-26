@@ -3,7 +3,8 @@
 Real examples for the Claude Code skills of the `tagesschau` plugin, one per skill: a request,
 the `tagesschau` commands the skill ran, and the answer Claude gave.
 
-Every example ran against the live API on 15 September 2026 with `tagesschau` 0.0.6.
+Every example ran against the live API on 15 September 2026 with `tagesschau` 0.0.6,
+except tagesschau-topic-tracker, re-run on 26 September 2026 with 0.1.0.
 The data changes, so your results will differ; the ids and keys shown work for trying the
 requests yourself. Long lists are shortened.
 
@@ -105,46 +106,50 @@ Economy in Sachsen (filtered locally: the API can't combine region and Ressort)
 > Is Tagesschau covering the Landtagswahl in Mecklenburg-Vorpommern more and more?
 
 ```bash
-tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern"
-tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 1   # 33 hits, all 22.08.–07.09.
-tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 2   # 0 hits
-tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --result-page 0                  # exit 1: must be >= 1
-tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50                   # hits 1–50
+tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 0   # totalItemCount 276
+tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 1   # 50 hits
+tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 2   # 50 hits
+tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 3   # 50 hits
+tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 4   # 50 hits
+tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 5   # 26 hits
 ```
 
-The API counts `resultPage` from 0, so `--result-page 1` returned hits 51–83 instead of the
-first 50, and the CLI rejects `0`. Leaving the flag out returns the first page. Together the
-two pages gave all 83 hits. The search matches loosely: only 9 hits name MV or a town in MV in
-the title, and most older hits are about the Sachsen-Anhalt election.
+`--result-page` is 0-based, so `0` is the first page; `ceil(276 / 50) = 6` pages (0–5) gave all
+276 hits, with no duplicates on `sophoraId`. The search matches loosely: 85 of the 276 hits name
+MV, a town in MV or Schwesig in the title; the other 191 are loosely related — 26 name the Berlin
+election held the same day, most of the rest are federal fallout and regional news tickers.
 
 ```
-Tagesschau coverage of „Landtagswahl Mecklenburg-Vorpommern" — 83 Treffer
+Tagesschau coverage of „Landtagswahl Mecklenburg-Vorpommern" — 276 Treffer
 
 Timeline          hits   articles / videos   MV in title
-  today 15.09.       3        2 / 1               2
-  08.–14.09.        25       12 / 13              7
-  22.08.–07.09.     55       24 / 31              0
-→ MV itself only shows up in titles from 10.09. on, so coverage of the MV race is picking up.
+  today 26.09.       1        1 / 0               0
+  20.–25.09.       167       80 / 87             60
+  13.–19.09.        44       18 / 26             22
+  28.08.–12.09.     64       29 / 35              3
+→ Coverage peaked on election day and the day after (20.09.: 63 hits, 21.09.: 87) and has
+  dropped off since (22.09.: 11, 23.–26.09.: 7). Not "more and more" any longer — the race is decided.
 
 Newest articles on MV
-  • 15.09.  Wahlkampf zwischen Euphorie und Entgeisterung
-            tagesschau.de/inland/innenpolitik/landtagswahl-mecklenburg-vorpommern-104.html
-  • 11.09.  Wahl in Mecklenburg-Vorpommern: Brandenburger Déjà-vu?
-            rbb24.de/politik/beitrag/2026/09/brandenburg-politiker-zu-wahl-in-mecklenburg-vorpommern.html
-  • 10.09.  AfD liegt fünf Punkte vor der SPD — ARD-Befragung in Mecklenburg-Vorpommern
-            tagesschau.de/inland/deutschlandtrend/deutschlandtrend-vorwahl-mecklenburg-vorpommern-100.html
+  • 25.09.  Schwesig fordert mehr Selbstkritik von Merz
+            tagesschau.de/inland/innenpolitik/schwesig-kritik-merz-reformen-100.html
+  • 22.09.  Wer mit wem in Schwerin und Berlin?
+            tagesschau.de/inland/innenpolitik/regierungsbildung-berlin-mecklenburg-vorpommern-100.html
+  • 21.09.  ++ Schwesig-SPD will mit Linken und Grünen sondieren ++
+            tagesschau.de/newsticker/liveblog-nach-wahlen-berlin-mecklenburg-vorpommern-100.html
 
-Videos on MV (6, Video, kein Artikel-Link)
-  • 15.09.  Stimmung und wirtschaftliche Lage vor Landtagswahl in Mecklenburg-Vorpommern
-  • 14.09.  Stimmen aus Güstrow zur bevorstehenden Wahl in Mecklenburg-Vorpommern
-  • 14.09.  Rüstungsaufträge für Werft in Wismar führen zu gemischten Gefühlen bei Anwohnern
-  • 10.09.  Schwesig wirbt als "Frau gegen Blau" vor Landtagswahl in Mecklenburg-Vorpommern um Stimmen
-  … 2 more
+Videos on MV (70, Video, kein Artikel-Link)
+  • 25.09.  Ministerpräsidentin Schwesig rückt nach Landtagswahl stärker in den Fokus der SPD
+  • 22.09.  Parteiloser Landrat in Mecklenburg-Vorpommern fordert Abschaffung der Brandmauer
+  • 22.09.  Stimmung in Mecklenburg-Vorpommern nach den Landtagswahlen
+  • 21.09.  Die Stimmung in Mecklenburg-Vorpommern nach der Landtagswahl
+  … 66 more
 
-83 Treffer insgesamt · all 83 fetched (2 pages of 50).
+276 Treffer insgesamt · all 276 fetched (6 pages of 50).
 ```
 
-Next steps offered: a narrower search term, or the same check again in a few days.
+Next steps offered: a narrower search term (e.g. "Regierungsbildung Schwerin"), or the same
+check again in a week to follow the coalition talks.
 
 ## tagesschau-watch-live
 

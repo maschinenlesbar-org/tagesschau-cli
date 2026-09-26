@@ -3,7 +3,8 @@
 Echte Beispiele für die Claude-Code-Skills des Plugins `tagesschau`, eines pro Skill: eine
 Anfrage, die `tagesschau`-Befehle, die der Skill ausgeführt hat, und Claudes Antwort.
 
-Jedes Beispiel lief am 15. September 2026 mit `tagesschau` 0.0.6 gegen die Live-API.
+Jedes Beispiel lief am 15. September 2026 mit `tagesschau` 0.0.6 gegen die Live-API,
+außer tagesschau-topic-tracker, das am 26. September 2026 mit 0.1.0 neu lief.
 Die Daten ändern sich, Ihre Ergebnisse werden also abweichen; mit den gezeigten IDs und
 Schlüsseln können Sie die Anfragen selbst ausprobieren. Lange Listen sind gekürzt.
 
@@ -106,46 +107,52 @@ Wirtschaft in Sachsen (lokal gefiltert – die API kann Region und Ressort nicht
 > Berichtet die Tagesschau zunehmend über die Landtagswahl in Mecklenburg-Vorpommern?
 
 ```bash
-tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern"
-tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 1   # 33 Treffer, alle 22.08.–07.09.
-tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 2   # 0 Treffer
-tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --result-page 0                  # Exit 1: muss >= 1 sein
-tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50                   # Treffer 1–50
+tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 0   # totalItemCount 276
+tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 1   # 50 Treffer
+tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 2   # 50 Treffer
+tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 3   # 50 Treffer
+tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 4   # 50 Treffer
+tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 5   # 26 Treffer
 ```
 
-Die API zählt `resultPage` ab 0. `--result-page 1` lieferte deshalb die Treffer 51–83 statt der
-ersten 50, und die CLI lehnt `0` ab. Ohne die Option kommt die erste Seite. Beide Seiten zusammen
-ergaben alle 83 Treffer. Die Suche ist unscharf: Nur 9 Treffer nennen MV oder einen Ort in MV im
-Titel, und die älteren Treffer drehen sich überwiegend um die Wahl in Sachsen-Anhalt.
+`--result-page` zählt ab 0, `0` ist also die erste Seite; `ceil(276 / 50) = 6` Seiten (0–5)
+ergaben alle 276 Treffer, ohne Dubletten bei `sophoraId`. Die Suche ist unscharf: 85 der 276
+Treffer nennen MV, einen Ort in MV oder Schwesig im Titel; die übrigen 191 hängen nur lose
+damit zusammen – 26 nennen die Berliner Wahl am selben Tag, die meisten anderen sind
+bundespolitische Folgen und regionale Newsticker.
 
 ```
-Tagesschau-Berichterstattung zu „Landtagswahl Mecklenburg-Vorpommern" – 83 Treffer
+Tagesschau-Berichterstattung zu „Landtagswahl Mecklenburg-Vorpommern" – 276 Treffer
 
-Zeitverlauf       Treffer   Artikel / Videos   MV im Titel
-  heute 15.09.       3          2 / 1               2
-  08.–14.09.        25         12 / 13              7
-  22.08.–07.09.     55         24 / 31              0
-→ MV selbst taucht erst ab 10.09. in Titeln auf – die Berichterstattung zur MV-Wahl nimmt zu.
+Zeitraum          Treffer   Artikel / Videos   MV im Titel
+  heute 26.09.         1         1 / 0              0
+  20.–25.09.         167        80 / 87            60
+  13.–19.09.          44        18 / 26            22
+  28.08.–12.09.       64        29 / 35             3
+→ Die Berichterstattung erreichte am Wahltag und am Tag danach ihren Höhepunkt (20.09.: 63
+  Treffer, 21.09.: 87) und ist seitdem stark zurückgegangen (22.09.: 11, 23.–26.09.: 7).
+  „Zunehmend" stimmt nicht mehr – die Wahl ist entschieden.
 
 Neueste Artikel zu MV
-  • 15.09.  Wahlkampf zwischen Euphorie und Entgeisterung
-            tagesschau.de/inland/innenpolitik/landtagswahl-mecklenburg-vorpommern-104.html
-  • 11.09.  Wahl in Mecklenburg-Vorpommern: Brandenburger Déjà-vu?
-            rbb24.de/politik/beitrag/2026/09/brandenburg-politiker-zu-wahl-in-mecklenburg-vorpommern.html
-  • 10.09.  AfD liegt fünf Punkte vor der SPD – ARD-Befragung in Mecklenburg-Vorpommern
-            tagesschau.de/inland/deutschlandtrend/deutschlandtrend-vorwahl-mecklenburg-vorpommern-100.html
+  • 25.09.  Schwesig fordert mehr Selbstkritik von Merz
+            tagesschau.de/inland/innenpolitik/schwesig-kritik-merz-reformen-100.html
+  • 22.09.  Wer mit wem in Schwerin und Berlin?
+            tagesschau.de/inland/innenpolitik/regierungsbildung-berlin-mecklenburg-vorpommern-100.html
+  • 21.09.  ++ Schwesig-SPD will mit Linken und Grünen sondieren ++
+            tagesschau.de/newsticker/liveblog-nach-wahlen-berlin-mecklenburg-vorpommern-100.html
 
-Videos zu MV (6, Video, kein Artikel-Link)
-  • 15.09.  Stimmung und wirtschaftliche Lage vor Landtagswahl in Mecklenburg-Vorpommern
-  • 14.09.  Stimmen aus Güstrow zur bevorstehenden Wahl in Mecklenburg-Vorpommern
-  • 14.09.  Rüstungsaufträge für Werft in Wismar führen zu gemischten Gefühlen bei Anwohnern
-  • 10.09.  Schwesig wirbt als "Frau gegen Blau" vor Landtagswahl in Mecklenburg-Vorpommern um Stimmen
-  … 2 weitere
+Videos zu MV (70, Video, kein Artikel-Link)
+  • 25.09.  Ministerpräsidentin Schwesig rückt nach Landtagswahl stärker in den Fokus der SPD
+  • 22.09.  Parteiloser Landrat in Mecklenburg-Vorpommern fordert Abschaffung der Brandmauer
+  • 22.09.  Stimmung in Mecklenburg-Vorpommern nach den Landtagswahlen
+  • 21.09.  Die Stimmung in Mecklenburg-Vorpommern nach der Landtagswahl
+  … 66 weitere
 
-83 Treffer insgesamt · alle 83 abgerufen (2 Seiten zu je 50).
+276 Treffer insgesamt · alle 276 abgerufen (6 Seiten zu je 50).
 ```
 
-Als Nächstes angeboten: ein engerer Suchbegriff oder dieselbe Auswertung in ein paar Tagen erneut.
+Als Nächstes angeboten: ein engerer Suchbegriff (etwa „Regierungsbildung Schwerin") oder
+dieselbe Auswertung in einer Woche erneut, um die Koalitionsgespräche zu verfolgen.
 
 ## tagesschau-watch-live
 
