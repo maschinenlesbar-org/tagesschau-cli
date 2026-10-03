@@ -5,7 +5,7 @@
 import { CommanderError, type Command } from "commander";
 import { buildProgram, defaultDeps } from "./program.js";
 import type { CliDeps } from "./io.js";
-import { TagesschauApiError, TagesschauError } from "../client/errors.js";
+import { TagesschauApiError, TagesschauError, TagesschauValidationError } from "../client/errors.js";
 
 /**
  * Apply exitOverride + output redirection to every command in the tree.
@@ -45,6 +45,12 @@ export async function run(argv: string[], deps: CliDeps = defaultDeps): Promise<
       deps.io.err(`Error: ${err.message}`);
       // Map a few notable statuses to distinct exit codes for scripting.
       if (err.status === 404) return 4;
+      return 1;
+    }
+    if (err instanceof TagesschauValidationError) {
+      // A rejected input (a library rule raised during an action): the same exit
+      // code as a commander usage error.
+      deps.io.err(`Error: ${err.message}`);
       return 1;
     }
     if (err instanceof TagesschauError) {

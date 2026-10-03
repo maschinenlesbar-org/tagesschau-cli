@@ -16,12 +16,15 @@ export type { EngineOptions, RawResponse } from "./engine.js";
 export { MAX_TIMEOUT_MS, nodeHttpTransport } from "./http.js";
 export type { Transport, HttpRequest, HttpResponse } from "./http.js";
 export { buildQueryString } from "./query.js";
+export { assertValid } from "./validate.js";
+export type { Problem } from "./validate.js";
 export type { QueryParams, QueryValue } from "./query.js";
 export {
   TagesschauError,
   TagesschauApiError,
   TagesschauNetworkError,
   TagesschauParseError,
+  TagesschauValidationError,
   redactUrl,
 } from "./errors.js";
 

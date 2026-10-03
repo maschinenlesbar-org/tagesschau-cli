@@ -119,7 +119,8 @@ src/
     query.ts     # dependency-free query-string builder
     http.ts      # the Transport interface + default node:http/https transport
     engine.ts    # URL building, retry/backoff, JSON/raw decoding, error mapping
-    errors.ts    # TagesschauError / *ApiError / *NetworkError / *ParseError
+    errors.ts    # TagesschauError / *ApiError / *NetworkError / *ParseError / *ValidationError
+    validate.ts  # the Problem type + assertValid: input rules shared by library and CLI
     client.ts    # TagesschauClient — the news surface over the engine
   cli/
     io.ts        # injectable I/O seam (stdout/stderr/file)
@@ -171,9 +172,20 @@ onto one line, cut at `MAX_DETAIL_LENGTH` (500) characters; `body` keeps the ful
 `TagesschauParseError` (bad JSON, or a 2xx body without the documented envelope:
 `Unexpected response shape from /api2u/news/: expected a JSON object with a "news"
 array.` — each method checks its top-level array, `news`/`regional`, `channels`,
-`searchResults` and a non-negative `totalItemCount`; items are not checked), all
+`searchResults` and a non-negative `totalItemCount`; items are not checked) and
+`TagesschauValidationError` (a rejected input, thrown before any request), all
 extending `TagesschauError`. The CLI maps
 a `404` to exit code `4`, other errors to `1`.
+
+**Input validation.** The library owns every rule about what a request may contain;
+the CLI calls the same functions instead of keeping its own copy. A rule is a pure,
+exported `Problem` ([`validate.ts`](src/client/validate.ts)): it returns the reason a
+value is invalid, or `undefined`. The library enforces it with
+`assertValid(name, value, problem)`, which throws `TagesschauValidationError` with the
+message `Invalid <name>: <reason>` before any request (a constructor throws; a method
+returning a promise rejects). The CLI's commander parsers turn the same reason into a
+usage error (exit 1), and `run.ts` maps a `TagesschauValidationError` raised during an
+action to exit 1 too, printed as `Error: <message>`.
 
 **Retry / backoff.** Transient `429` (rate limit) and `503` responses are
 retried automatically, up to `maxRetries` (default `2`; CLI `--max-retries`,
@@ -201,6 +213,10 @@ npm test          # builds, then runs `node --test` over dist/test
 - **`client.test.ts`** — every endpoint's method/URL/query mapping — mocked transport.
 - **`cli.test.ts`** — end-to-end command parsing, validation and exit codes — mocked client.
 - **`io.test.ts`** — stdout/stderr write errors (a closed pipe exits quietly) — fake streams.
+- **`validate.test.ts`** — `assertValid`, the `run.ts` mapping of
+  `TagesschauValidationError`, and the `parity()` helper (`test/helpers.ts`), which sends
+  one input through `run()` and through the library on one recording mock transport so
+  a test can assert both give the same outcome.
 
 ## Continuous integration
 
