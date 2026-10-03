@@ -123,3 +123,21 @@ export function baseUrlProblem(value: unknown): string | undefined {
   if (/[?#]/.test(value)) return "A base URL cannot have a query (?) or fragment (#).";
   return undefined;
 }
+
+/**
+ * A value that ends up in an HTTP header (the User-Agent) must be a non-blank
+ * string of Latin-1 characters without control characters (tab is allowed, as in
+ * HTTP). A blank one would send an empty header; Node's HTTP layer would throw an
+ * opaque "Invalid character in header content" at request time for the others, and
+ * a custom transport would get a CR/LF through (header injection). Checked by char
+ * code so the source stays free of control bytes.
+ */
+export function headerValueProblem(value: unknown): string | undefined {
+  if (typeof value !== "string" || value.trim() === "") return "Expected a non-empty value.";
+  for (let i = 0; i < value.length; i++) {
+    const c = value.charCodeAt(i);
+    if ((c < 0x20 && c !== 0x09) || c === 0x7f) return "Value contains control characters.";
+    if (c > 0xff) return "Value contains characters outside Latin-1 (above U+00FF).";
+  }
+  return undefined;
+}

@@ -365,16 +365,27 @@ test("userinfo never reaches base-URL errors and is redacted in redirect errors"
   );
 });
 
-test("the engine refuses an unsendable userAgent with a typed error; blank falls back to the default", async () => {
-  assert.throws(() => new RequestEngine({ userAgent: "a\r\nb" }), /control characters are not allowed/);
+test("the engine refuses an unsendable or blank userAgent with a typed error; only an omitted one is the default", async () => {
+  assert.throws(
+    () => new RequestEngine({ userAgent: "a\r\nb" }),
+    (err: unknown) =>
+      err instanceof TagesschauValidationError && err.message === "Invalid userAgent: Value contains control characters.",
+  );
   assert.throws(
     () => new RequestEngine({ userAgent: "Tagesschau\u20ac" }),
-    (err: unknown) => err instanceof TagesschauError && /outside Latin-1/.test(err.message),
+    (err: unknown) => err instanceof TagesschauValidationError && /outside Latin-1/.test(err.message),
   );
+  for (const blank of ["", "   "]) {
+    assert.throws(
+      () => new RequestEngine({ userAgent: blank }),
+      (err: unknown) =>
+        err instanceof TagesschauValidationError && err.message === "Invalid userAgent: Expected a non-empty value.",
+    );
+  }
   new RequestEngine({ userAgent: "a\tb" });
   new RequestEngine({ userAgent: "M\u00fcller" });
   const mt = makeMockTransport(() => jsonResponse({}));
-  await new RequestEngine({ transport: mt.transport, userAgent: "   " }).getJson("/x");
+  await new RequestEngine({ transport: mt.transport }).getJson("/x");
   assert.equal(mt.last().headers?.["User-Agent"], "tagesschau-cli");
 });
 

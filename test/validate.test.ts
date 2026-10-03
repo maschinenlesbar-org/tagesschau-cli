@@ -4,6 +4,7 @@ import {
   assertValid,
   baseUrlProblem,
   baseUrlWhitespaceProblem,
+  headerValueProblem,
   MAX_SEARCH_INT,
   pageSizeProblem,
   regionProblem,
@@ -13,7 +14,7 @@ import {
   type Problem,
 } from "../src/client/validate.js";
 import * as lib from "../src/index.js";
-import { validateBaseUrl } from "../src/client/engine.js";
+import { assertHeaderValue, validateBaseUrl } from "../src/client/engine.js";
 import { TagesschauError, TagesschauValidationError } from "../src/client/errors.js";
 import { TagesschauClient } from "../src/client/client.js";
 import { run } from "../src/cli/run.js";
@@ -157,4 +158,27 @@ test("baseUrlProblem: every base-URL rule in order; validateBaseUrl strips trail
   );
   assert.equal(lib.baseUrlProblem, baseUrlProblem);
   assert.equal(lib.validateBaseUrl, validateBaseUrl);
+});
+
+test("headerValueProblem: blank, control characters (tab allowed) and above U+00FF are refused", () => {
+  for (const v of ["", "   ", "\t", undefined, 42]) {
+    assert.equal(headerValueProblem(v), "Expected a non-empty value.", JSON.stringify(v));
+  }
+  for (const v of ["a\r\nb", "a\u0000b", "a\u001bb", "a\u007fb"]) {
+    assert.equal(headerValueProblem(v), "Value contains control characters.", JSON.stringify(v));
+  }
+  for (const v of ["€", "aĀ", "😀"]) {
+    assert.equal(headerValueProblem(v), "Value contains characters outside Latin-1 (above U+00FF).", JSON.stringify(v));
+  }
+  for (const v of ["my-app/1.0", " padded ", "a\tb", "éÿ", "a\u0085b"]) {
+    assert.equal(headerValueProblem(v), undefined, JSON.stringify(v));
+  }
+  assert.equal(assertHeaderValue("userAgent", "x/1"), "x/1");
+  assert.throws(
+    () => assertHeaderValue("userAgent", ""),
+    (err: unknown) =>
+      err instanceof TagesschauValidationError && err.message === "Invalid userAgent: Expected a non-empty value.",
+  );
+  assert.equal(lib.headerValueProblem, headerValueProblem);
+  assert.equal(lib.assertHeaderValue, assertHeaderValue);
 });

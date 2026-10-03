@@ -68,7 +68,7 @@ new TagesschauClient({
                               // dropped on cross-origin hops
   maxResponseBytes: 50 << 20, // abort responses larger than this (0 = unlimited;
                               // default is 100 MiB when the option is omitted)
-  userAgent: "my-app/1.0",
+  userAgent: "my-app/1.0",    // default "tagesschau-cli" when omitted; a blank one is an error
   transport: customTransport, // inject your own HTTP transport
 });
 ```
@@ -78,6 +78,12 @@ The numeric options must be integers in range — `timeoutMs` 0..`MAX_TIMEOUT_MS
 `maxRedirects` 0..`MAX_REDIRECTS` (20), `maxResponseBytes` 0..2^53−1. Anything else
 (negative, fractional, `NaN`, `Infinity`) makes the constructor throw a `TagesschauError`
 (`Invalid option maxRedirects: expected an integer from 0 to 20, got NaN.`).
+`userAgent` must be a non-blank Latin-1 string without control characters (tab is
+allowed); only an omitted one selects the default `tagesschau-cli`. A blank one, a
+CR/LF or other control character, or a character above U+00FF makes the constructor
+throw a `TagesschauValidationError` (`Invalid userAgent: Expected a non-empty value.`).
+The rule is the exported `headerValueProblem` / `assertHeaderValue`, which the CLI's
+`--user-agent` parser calls too.
 
 ### Methods
 

@@ -214,3 +214,43 @@ test("parity: an invalid base URL is one rule set, a validation error on both si
     assert.ok(!(lib.ok === false && lib.error instanceof TagesschauNetworkError), `${label}: a network error`);
   }
 });
+
+test("parity: a blank User-Agent is rejected by the CLI and the library alike (finding #5)", async () => {
+  for (const userAgent of ["", " ", "   ", "\t"]) {
+    const { cli, lib } = await parity(["--compact", "--user-agent", userAgent, "channels"], (transport) =>
+      new TagesschauClient({ transport, userAgent }).channels(),
+    );
+    const label = JSON.stringify(userAgent);
+    assert.equal(cli.code, 1, label);
+    assert.equal(cli.requests.length, 0, label);
+    assert.match(cli.err, /is invalid\. Expected a non-empty value\./, label);
+    assertLibRejected(lib, "Invalid userAgent: Expected a non-empty value.", label);
+  }
+});
+
+test("parity: one header-value rule for the User-Agent on both sides (finding #5)", async () => {
+  for (const [userAgent, reason] of [
+    ["a\r\nb", "Value contains control characters."],
+    ["a\u0000b", "Value contains control characters."],
+    ["a\u007fb", "Value contains control characters."],
+    ["Tagesschau€", "Value contains characters outside Latin-1 (above U+00FF)."],
+  ] as const) {
+    const { cli, lib } = await parity(["--compact", "--user-agent", userAgent, "channels"], (transport) =>
+      new TagesschauClient({ transport, userAgent }).channels(),
+    );
+    const label = JSON.stringify(userAgent);
+    assert.equal(cli.code, 1, label);
+    assert.equal(cli.requests.length, 0, label);
+    assert.match(cli.err, new RegExp(`is invalid\\. ${reason.replace(/[.()+]/g, "\\$&")}`), label);
+    assertLibRejected(lib, `Invalid userAgent: ${reason}`, label);
+  }
+  for (const userAgent of [" my-app/1.0 ", "a\tb", "Müller"]) {
+    const { cli, lib } = await parity(["--compact", "--user-agent", userAgent, "channels"], (transport) =>
+      new TagesschauClient({ transport, userAgent }).channels(),
+    );
+    assert.equal(cli.code, 0, userAgent);
+    assert.equal(lib.ok, true, userAgent);
+    assert.equal(cli.requests[0]?.headers?.["User-Agent"], userAgent);
+    assert.equal(lib.requests[0]?.headers?.["User-Agent"], userAgent);
+  }
+});

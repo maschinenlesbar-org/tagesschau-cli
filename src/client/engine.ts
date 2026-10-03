@@ -11,7 +11,7 @@ import {
   TagesschauParseError,
   redactUrl,
 } from "./errors.js";
-import { assertValid, baseUrlProblem } from "./validate.js";
+import { assertValid, baseUrlProblem, headerValueProblem } from "./validate.js";
 
 export const DEFAULT_BASE_URL = "https://www.tagesschau.de";
 const DEFAULT_USER_AGENT = "tagesschau-cli";
@@ -44,7 +44,11 @@ export interface EngineOptions {
   baseUrl?: string;
   /** Swappable transport. Defaults to the built-in node http/https transport. */
   transport?: Transport;
-  /** Value of the User-Agent header. */
+  /**
+   * Value of the User-Agent header (default `tagesschau-cli`, only when omitted). A
+   * blank value, a control character other than tab, or a character above U+00FF
+   * throws a TagesschauValidationError.
+   */
   userAgent?: string;
   /**
    * Time limit per request in milliseconds, covering the whole response body, not
@@ -207,6 +211,15 @@ export function stripCredentialHeaders(
 }
 
 /**
+ * Check a value bound for an HTTP header (see {@link headerValueProblem}) and
+ * return it unchanged; anything else throws a TagesschauValidationError naming
+ * `name` ("Invalid userAgent: Value contains control characters.").
+ */
+export function assertHeaderValue(name: string, value: string): string {
+  return assertValid(name, value, headerValueProblem);
+}
+
+/**
  * Check a base URL against every rule of {@link baseUrlProblem} — blank, whitespace
  * or control characters, unparseable, a scheme other than `http:`/`https:`, a query
  * or fragment — and return it with trailing slashes stripped. A bad value throws a
@@ -237,22 +250,12 @@ export class RequestEngine {
     // would trim it silently, but the raw string is what each path is appended to.
     this.baseUrl = validateBaseUrl(options.baseUrl ?? DEFAULT_BASE_URL);
     this.transport = options.transport ?? nodeHttpTransport;
-    // An empty or whitespace-only User-Agent would send a blank header (rejected
-    // by some hosts); treat it like an unset value and fall back to the default.
+    // Only an omitted userAgent selects the default: a blank one is an error, not a
+    // silent fallback, and one Node's header validation would throw a raw TypeError
+    // for (control characters, CR/LF in particular, or characters above U+00FF)
+    // fails here with a typed error rather than at request time.
     this.userAgent =
-      options.userAgent !== undefined && options.userAgent.trim() !== ""
-        ? options.userAgent
-        : DEFAULT_USER_AGENT;
-    // Reject what Node's header validation would throw a raw TypeError for (it
-    // would surface as an "Unexpected error") with a typed error up front: control
-    // characters (CR/LF in particular, which also closes header injection; tab is
-    // allowed, as in HTTP) and characters above U+00FF.
-    if (/[\x00-\x08\x0a-\x1f\x7f]/.test(this.userAgent)) {
-      throw new TagesschauError("Invalid User-Agent: control characters are not allowed.");
-    }
-    if (/[^\x00-\xff]/.test(this.userAgent)) {
-      throw new TagesschauError("Invalid User-Agent: characters outside Latin-1 (above U+00FF) are not allowed.");
-    }
+      options.userAgent === undefined ? DEFAULT_USER_AGENT : assertHeaderValue("userAgent", options.userAgent);
     this.timeoutMs = intOption("timeoutMs", options.timeoutMs, 30_000, MAX_TIMEOUT_MS);
     this.maxRetries = intOption("maxRetries", options.maxRetries, 2, MAX_RETRIES);
     this.retryDelayMs = intOption("retryDelayMs", options.retryDelayMs, 200, MAX_RETRY_AFTER_MS);

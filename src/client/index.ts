@@ -3,6 +3,7 @@
 export { TagesschauClient, newsDateProblem } from "./client.js";
 export {
   RequestEngine,
+  assertHeaderValue,
   DEFAULT_BASE_URL,
   MAX_DETAIL_LENGTH,
   MAX_REDIRECTS,
@@ -21,6 +22,7 @@ export {
   assertValid,
   baseUrlProblem,
   baseUrlWhitespaceProblem,
+  headerValueProblem,
   MAX_SEARCH_INT,
   pageSizeProblem,
   regionProblem,
