@@ -77,14 +77,12 @@ export function registerNewsCommands(program: Command, deps: CliDeps): void {
     )
     .action(
       action(deps, async ({ client, global, opts }, [text]) => {
-        if (text === undefined || text.trim() === "") {
-          throw new TagesschauError("search text must not be empty.");
-        }
+        // A blank text is refused by client.search() itself (searchTextProblem).
         renderJson(
           deps,
           global,
           await client.search({
-            searchText: text,
+            searchText: text as string,
             pageSize: opts["pageSize"] as number | undefined,
             resultPage: opts["resultPage"] as number | undefined,
           }),

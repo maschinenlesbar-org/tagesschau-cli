@@ -8,7 +8,8 @@
 
 import { RequestEngine, type EngineOptions } from "./engine.js";
 import type { QueryParams } from "./query.js";
-import { TagesschauError, TagesschauParseError } from "./errors.js";
+import { TagesschauError, TagesschauParseError, TagesschauValidationError } from "./errors.js";
+import { searchTextProblem } from "./validate.js";
 import type {
   HomepageResult,
   NewsResult,
@@ -114,10 +115,16 @@ export class TagesschauClient {
    * sending: the API finds nothing for a decomposed umlaut ("Ko" + U+0308, as pasted
    * from macOS file names or PDFs), which looks identical to the composed "Köln"
    * with hundreds of hits; NFKC also folds fullwidth digits and ligatures.
+   *
+   * A blank or missing search text (`searchTextProblem`) is rejected with a
+   * `TagesschauValidationError` before any request: upstream answers an empty one
+   * with HTTP 400 and runs a whitespace-only one as is.
    */
-  async search(params: SearchParams = {}): Promise<SearchResult> {
+  async search(params: SearchParams): Promise<SearchResult> {
+    const problem = searchTextProblem(params?.searchText);
+    if (problem !== undefined) throw new TagesschauValidationError(problem);
     const query: QueryParams = {
-      searchText: params.searchText?.normalize("NFKC"),
+      searchText: params.searchText.normalize("NFKC"),
       pageSize: params.pageSize,
       resultPage: params.resultPage,
     };

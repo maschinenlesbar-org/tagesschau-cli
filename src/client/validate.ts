@@ -25,3 +25,16 @@ export function assertValid<T>(name: string, value: T, problem: Problem<T>): T {
   if (reason !== undefined) throw new TagesschauValidationError(`Invalid ${name}: ${reason}`);
   return value;
 }
+
+/**
+ * Why a search text is unusable, or `undefined` when it is not blank. Checked after
+ * the NFKC normalisation `search()` applies, so an ideographic space (U+3000) counts
+ * as blank too. Upstream answers an empty `searchText` with HTTP 400 and runs a
+ * whitespace-only one as is, so a blank or missing text never reaches the API.
+ */
+export function searchTextProblem(value: unknown): string | undefined {
+  if (typeof value !== "string" || value.normalize("NFKC").trim() === "") {
+    return "search text must not be empty.";
+  }
+  return undefined;
+}

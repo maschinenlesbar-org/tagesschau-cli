@@ -75,7 +75,9 @@ Die zulässigen IDs sind als `RegionValues` bereitgestellt.
 **searchText.** Der Freitext-Suchbegriff für den Such-Endpoint (das Positionsargument
 `<text>` von `search`). Wird wie eingegeben an die API gesendet, nur vorher auf Unicode-NFKC
 normalisiert (ein zerlegter Umlaut, etwa aus macOS-Dateinamen oder PDFs kopiert, fände sonst
-nichts); einen leeren Wert lehnt die CLI bereits clientseitig ab.
+nichts). Einen leeren, nur aus Leerraum bestehenden oder fehlenden Wert lehnt der Client
+vor jeder Anfrage ab (`searchTextProblem`, ein `TagesschauValidationError`) und damit auch
+die CLI.
 
 **pageSize / resultPage.** Die Paginierungsparameter des Such-Endpoints, bereitgestellt
 als `--page-size` / `--result-page`. `pageSize` ist die Zahl der Treffer pro Seite und muss

@@ -73,8 +73,9 @@ ids are exposed as `RegionValues`.
 **searchText.** The free-text query for the search endpoint (the positional
 `<text>` argument of `search`). Sent to the API as typed, except that it is
 normalised to Unicode NFKC first (a decomposed umlaut, as pasted from macOS file
-names or PDFs, otherwise finds nothing); an empty value is rejected client-side
-by the CLI.
+names or PDFs, otherwise finds nothing). A blank or missing value is rejected
+before any request by the client (`searchTextProblem`, a
+`TagesschauValidationError`) and so by the CLI.
 
 **pageSize / resultPage.** The search endpoint's paging parameters, exposed as
 `--page-size` / `--result-page`. `pageSize` is the number of hits per page and must

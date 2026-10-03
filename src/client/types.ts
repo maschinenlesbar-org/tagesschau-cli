@@ -80,7 +80,8 @@ export interface NewsParams {
 
 /** Parameters for the search endpoint. */
 export interface SearchParams {
-  searchText?: string;
+  /** The full-text query; required, and must not be blank. */
+  searchText: string;
   pageSize?: number;
   /** 0-based page index: 0 (or omitted) is the first page. */
   resultPage?: number;

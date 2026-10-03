@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { assertValid, type Problem } from "../src/client/validate.js";
+import { assertValid, searchTextProblem, type Problem } from "../src/client/validate.js";
 import * as lib from "../src/index.js";
 import { TagesschauError, TagesschauValidationError } from "../src/client/errors.js";
 import { TagesschauClient } from "../src/client/client.js";
@@ -56,4 +56,14 @@ test("parity() runs one input through the CLI and the library on one recording t
   assert.equal(l.requests.length, 1);
   assert.equal(cli.requests[0]!.url, l.requests[0]!.url);
   assert.deepEqual(JSON.parse(cli.out), l.ok ? l.value : undefined);
+});
+
+test("searchTextProblem: a blank or missing search text is refused, any other text passes", () => {
+  for (const v of ["", " ", "\t\n", "　", undefined, null, 42]) {
+    assert.equal(searchTextProblem(v), "search text must not be empty.", JSON.stringify(v));
+  }
+  for (const v of ["Wahl", " Wahl ", "Köln", "0"]) {
+    assert.equal(searchTextProblem(v), undefined, JSON.stringify(v));
+  }
+  assert.equal(lib.searchTextProblem, searchTextProblem);
 });

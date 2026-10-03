@@ -36,7 +36,11 @@ tagesschau --help
 ## Library usage
 
 ```ts
-import { TagesschauClient, TagesschauApiError } from "@maschinenlesbar.org/tagesschau-cli";
+import {
+  TagesschauClient,
+  TagesschauApiError,
+  TagesschauValidationError,
+} from "@maschinenlesbar.org/tagesschau-cli";
 
 const client = new TagesschauClient(); // defaults to https://www.tagesschau.de
 
@@ -45,11 +49,11 @@ const econ = await client.news({ ressort: "wirtschaft" });
 const hits = await client.search({ searchText: "Wahl", resultPage: 1 }); // 0-based: the second page
 
 try {
-  // An empty searchText is sent to the API as-is (not rejected client-side); the
-  // API may answer with a non-2xx, which surfaces as a TagesschauApiError.
-  await client.search({ searchText: "" });
+  // A blank searchText is rejected before any request (searchTextProblem).
+  await client.search({ searchText: "  " });
 } catch (err) {
-  if (err instanceof TagesschauApiError) console.error(err.status, err.detail);
+  if (err instanceof TagesschauValidationError) console.error(err.message); // search text must not be empty.
+  else if (err instanceof TagesschauApiError) console.error(err.status, err.detail);
 }
 ```
 
@@ -81,7 +85,9 @@ The numeric options must be integers in range — `timeoutMs` 0..`MAX_TIMEOUT_MS
 not both: together they are rejected with a `TagesschauError` before any request, since
 the API would apply the Ressort and silently drop the regions; `date` is the `YYMMDD`
 cursor from `nextPage`, checked by the exported `newsDateProblem`), `client.channels()`,
-`client.search({ searchText?, pageSize?, resultPage? })`. `RessortValues` and
+`client.search({ searchText, pageSize?, resultPage? })` (`searchText` is required; a
+blank one is rejected with a `TagesschauValidationError` before any request, checked by
+the exported `searchTextProblem` after NFKC normalisation). `RessortValues` and
 `RegionValues` are exported for reference.
 
 ## Authentication internals
