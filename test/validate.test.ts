@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   assertValid,
+  baseUrlProblem,
   baseUrlWhitespaceProblem,
   MAX_SEARCH_INT,
   pageSizeProblem,
@@ -12,6 +13,7 @@ import {
   type Problem,
 } from "../src/client/validate.js";
 import * as lib from "../src/index.js";
+import { validateBaseUrl } from "../src/client/engine.js";
 import { TagesschauError, TagesschauValidationError } from "../src/client/errors.js";
 import { TagesschauClient } from "../src/client/client.js";
 import { run } from "../src/cli/run.js";
@@ -128,4 +130,31 @@ test("baseUrlWhitespaceProblem: surrounding or inner whitespace and controls are
     assert.equal(baseUrlWhitespaceProblem(v), undefined, v);
   }
   assert.equal(lib.baseUrlWhitespaceProblem, baseUrlWhitespaceProblem);
+});
+
+test("baseUrlProblem: every base-URL rule in order; validateBaseUrl strips trailing slashes", () => {
+  const cases: [unknown, string | undefined][] = [
+    ["https://www.tagesschau.de", undefined],
+    ["http://u:pw@mirror.test/ts/", undefined],
+    ["", "Expected an absolute http(s) URL."],
+    ["   ", "Expected an absolute http(s) URL."],
+    [undefined, "Expected an absolute http(s) URL."],
+    [" https://h", "A base URL cannot have surrounding whitespace."],
+    [" ftp://h", "A base URL cannot have surrounding whitespace."],
+    ["https://h/a b", "A base URL cannot contain whitespace or control characters."],
+    ["not-a-url", "Expected an absolute http(s) URL."],
+    ["ftp://h", 'Unsupported scheme "ftp:". Expected an http(s) URL.'],
+    ["https://h/?q", "A base URL cannot have a query (?) or fragment (#)."],
+    ["https://h/#", "A base URL cannot have a query (?) or fragment (#)."],
+  ];
+  for (const [v, reason] of cases) assert.equal(baseUrlProblem(v), reason, JSON.stringify(v));
+  assert.equal(validateBaseUrl("https://mirror.test/ts//"), "https://mirror.test/ts");
+  assert.throws(
+    () => validateBaseUrl("ftp://u:pw@h"),
+    (err: unknown) =>
+      err instanceof TagesschauValidationError &&
+      err.message === 'Invalid baseUrl: Unsupported scheme "ftp:". Expected an http(s) URL.',
+  );
+  assert.equal(lib.baseUrlProblem, baseUrlProblem);
+  assert.equal(lib.validateBaseUrl, validateBaseUrl);
 });

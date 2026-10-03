@@ -5,7 +5,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { TagesschauClient } from "../src/client/client.js";
-import { TagesschauValidationError } from "../src/client/errors.js";
+import { TagesschauNetworkError, TagesschauValidationError } from "../src/client/errors.js";
 import { parity, type LibOutcome } from "./helpers.js";
 
 /** The library rejected with TagesschauValidationError and sent nothing. */
@@ -189,5 +189,28 @@ test("parity: a base URL with inner whitespace or controls is rejected by the CL
     assert.equal(cli.requests.length, 0, label);
     assert.match(cli.err, /A base URL cannot contain whitespace or control characters\./, label);
     assertLibRejected(lib, "Invalid baseUrl: A base URL cannot contain whitespace or control characters.", label);
+  }
+});
+
+test("parity: an invalid base URL is one rule set, a validation error on both sides (finding #6)", async () => {
+  for (const [baseUrl, reason] of [
+    ["ftp://h.example", 'Unsupported scheme "ftp:". Expected an http(s) URL.'],
+    ["file:///etc/passwd", 'Unsupported scheme "file:". Expected an http(s) URL.'],
+    ["https://h.example/?q=1", "A base URL cannot have a query (?) or fragment (#)."],
+    ["https://h.example/#f", "A base URL cannot have a query (?) or fragment (#)."],
+    ["notaurl", "Expected an absolute http(s) URL."],
+    ["not a url", "A base URL cannot contain whitespace or control characters."],
+    ["", "Expected an absolute http(s) URL."],
+    ["   ", "Expected an absolute http(s) URL."],
+  ] as const) {
+    const { cli, lib } = await parity(["--compact", "--base-url", baseUrl, "channels"], (transport) =>
+      new TagesschauClient({ transport, baseUrl }).channels(),
+    );
+    const label = JSON.stringify(baseUrl);
+    assert.equal(cli.code, 1, label);
+    assert.equal(cli.requests.length, 0, label);
+    assert.match(cli.err, new RegExp(`is invalid\\. ${reason.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`), label);
+    assertLibRejected(lib, `Invalid baseUrl: ${reason}`, label);
+    assert.ok(!(lib.ok === false && lib.error instanceof TagesschauNetworkError), `${label}: a network error`);
   }
 });

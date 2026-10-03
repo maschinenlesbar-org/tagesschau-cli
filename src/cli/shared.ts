@@ -6,7 +6,7 @@ import { InvalidArgumentError } from "commander";
 import type { CliDeps } from "./io.js";
 import { TagesschauError } from "../client/errors.js";
 import { isBidiControl, type EngineOptions } from "../client/engine.js";
-import { MAX_SEARCH_INT, baseUrlWhitespaceProblem } from "../client/validate.js";
+import { MAX_SEARCH_INT, baseUrlProblem } from "../client/validate.js";
 
 /**
  * commander value-parser: a non-negative integer in plain decimal notation.
@@ -81,31 +81,15 @@ export function parseHeaderValue(value: string): string {
 }
 
 /**
- * commander value-parser for --base-url: an absolute http(s) URL. Anything else
- * (a `file:`/`ftp:` URL, or text that is not a URL at all) is a usage error at
- * parse time instead of reaching the transport.
+ * commander value-parser for --base-url. The value must pass the library's
+ * {@link baseUrlProblem} (non-blank, no whitespace or control characters, an
+ * absolute `http:`/`https:` URL, no query or fragment), the same rule the engine
+ * enforces, so a bad value is a usage error at parse time instead of reaching the
+ * transport. The CLI keeps no rules of its own.
  */
 export function parseBaseUrl(value: string): string {
-  let url: URL;
-  try {
-    url = new URL(value);
-  } catch {
-    throw new InvalidArgumentError("Expected an absolute http(s) URL.");
-  }
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new InvalidArgumentError(
-      `Unsupported scheme "${url.protocol}". Expected an http(s) URL.`,
-    );
-  }
-  // Paths are appended to the base URL as a string, so a query or fragment would
-  // swallow every request path ("http://h/#f" requests "/" for every command).
-  if (/[?#]/.test(value)) {
-    throw new InvalidArgumentError("A base URL cannot have a query (?) or fragment (#).");
-  }
-  // The library's rule (the engine checks it too): no surrounding or inner
-  // whitespace and no control characters.
-  const spacing = baseUrlWhitespaceProblem(value);
-  if (spacing !== undefined) throw new InvalidArgumentError(spacing);
+  const problem = baseUrlProblem(value);
+  if (problem !== undefined) throw new InvalidArgumentError(problem);
   return value;
 }
 

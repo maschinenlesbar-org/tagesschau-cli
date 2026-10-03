@@ -113,20 +113,23 @@ a redirect `Location` resolves to an `http:`/`https:` URL, rejecting any other
 scheme (e.g. `file:`, `ftp:`, `data:`) as a typed `TagesschauNetworkError` — this
 guard lives in the engine, so it holds even when a custom `transport` is injected
 that does no scheme checking of its own. The same holds for the configured base
-URL: the `RequestEngine` constructor rejects a non-`http(s)` or malformed base URL,
-or one with a query or fragment (request paths are appended to it as a string), with a
-`TagesschauNetworkError` before any request, and the CLI's `--base-url`
-parser (`parseBaseUrl`) already turns one into a usage error at parse time. A base URL
-with surrounding or inner whitespace or a control character is rejected too, on the raw
-value before the trailing-slash strip, with a `TagesschauValidationError`
-(`Invalid baseUrl: A base URL cannot have surrounding whitespace.`): `new URL()` would
-trim it silently, but the raw string is what each path is appended to, so
-`"https://h/ "` would request `/%20/api2u/...`. The rule is the exported
-`baseUrlWhitespaceProblem`, which `parseBaseUrl` calls too.
+URL: the `RequestEngine` constructor runs the exported `validateBaseUrl` on the raw
+value, before the trailing-slash strip, and rejects a blank, non-`http(s)` or malformed
+base URL, one with surrounding or inner whitespace or a control character, or one with a
+query or fragment (request paths are appended to it as a string), with a
+`TagesschauValidationError` before any request (`Invalid baseUrl: Unsupported scheme
+"ftp:". Expected an http(s) URL.`). It is a configuration error, not a transport
+failure, so it is not a `TagesschauNetworkError`; that class stays for the default
+transport's per-hop scheme check and for redirect targets. Whitespace matters because
+`new URL()` would trim it silently while the raw string is what each path is appended
+to: `"https://h/ "` would request `/%20/api2u/...`. The rules are the exported
+`baseUrlProblem` (and its part `baseUrlWhitespaceProblem`); the CLI's `--base-url`
+parser (`parseBaseUrl`) calls the same `baseUrlProblem` and turns its reason into a
+usage error at parse time, with no rules of its own.
 Userinfo in the base URL (`https://user:pw@mirror/`) is allowed — Node sends it as
 Basic auth — but every error message shows it as `***` (the exported `redactUrl`):
-`TagesschauApiError` (message and `url`), the base-URL, redirect and transport URL
-errors.
+`TagesschauApiError` (message and `url`), the redirect and transport URL errors; the
+base-URL errors never echo the URL at all.
 
 ## Architecture
 

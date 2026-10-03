@@ -97,3 +97,29 @@ export function baseUrlWhitespaceProblem(value: unknown): string | undefined {
   if (/[\s\u0000-\u001f\u007f]/.test(value)) return "A base URL cannot contain whitespace or control characters.";
   return undefined;
 }
+
+/**
+ * Every rule for a base URL, in order: a non-blank string, no whitespace or control
+ * characters (see {@link baseUrlWhitespaceProblem}), a parseable absolute URL, the
+ * `http:` or `https:` scheme, and no query or fragment — request paths are appended
+ * to the base URL as a string, so a `?` or `#` would swallow every path
+ * (`http://h/?x=1` requests `/?x=1/api2u/news/`, `http://h/#f` requests `/`).
+ * Userinfo is allowed (Node sends it as Basic auth). The reasons never echo the
+ * URL, so a credential in it cannot leak.
+ */
+export function baseUrlProblem(value: unknown): string | undefined {
+  if (typeof value !== "string" || value.trim() === "") return "Expected an absolute http(s) URL.";
+  const spacing = baseUrlWhitespaceProblem(value);
+  if (spacing !== undefined) return spacing;
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return "Expected an absolute http(s) URL.";
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return `Unsupported scheme "${url.protocol}". Expected an http(s) URL.`;
+  }
+  if (/[?#]/.test(value)) return "A base URL cannot have a query (?) or fragment (#).";
+  return undefined;
+}

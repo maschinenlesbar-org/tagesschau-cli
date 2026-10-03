@@ -12,6 +12,7 @@ import {
   TagesschauError,
   TagesschauNetworkError,
   TagesschauParseError,
+  TagesschauValidationError,
 } from "../src/client/errors.js";
 import { makeMockTransport, jsonResponse, rawResponse } from "./helpers.js";
 
@@ -222,7 +223,10 @@ test("a non-http(s) base URL is rejected in the constructor, before any request"
     const mt = makeMockTransport(() => jsonResponse({ ok: 1 }));
     assert.throws(
       () => new RequestEngine({ baseUrl: bad, transport: mt.transport }),
-      TagesschauNetworkError,
+      (err: unknown) =>
+        err instanceof TagesschauValidationError &&
+        !(err instanceof TagesschauNetworkError) &&
+        err.message.startsWith("Invalid baseUrl: "),
     );
     assert.equal(mt.calls.length, 0);
   }
@@ -332,19 +336,20 @@ test("the engine refuses a base URL with a query or fragment", () => {
     assert.throws(
       () => new RequestEngine({ baseUrl }),
       (err: unknown) =>
-        err instanceof TagesschauNetworkError && /^Base URL must not contain a query or fragment: /.test(err.message),
+        err instanceof TagesschauValidationError &&
+        err.message === "Invalid baseUrl: A base URL cannot have a query (?) or fragment (#).",
     );
   }
 });
 
-test("userinfo is redacted in base-URL and redirect errors", async () => {
+test("userinfo never reaches base-URL errors and is redacted in redirect errors", async () => {
   assert.throws(
     () => new RequestEngine({ baseUrl: "http://u:pw@h.test/#f" }),
-    (err: unknown) => err instanceof TagesschauNetworkError && err.message.includes("http://***@h.test/") && !err.message.includes("pw"),
+    (err: unknown) => err instanceof TagesschauValidationError && !err.message.includes("pw"),
   );
   assert.throws(
     () => new RequestEngine({ baseUrl: "ftp://u:pw@h.test" }),
-    (err: unknown) => err instanceof Error && err.message.includes("ftp://***@h.test") && !err.message.includes("pw"),
+    (err: unknown) => err instanceof TagesschauValidationError && !err.message.includes("pw"),
   );
   const loop = makeMockTransport(() => ({ status: 302, headers: { location: "/again" }, body: Buffer.from("") }));
   const e = new RequestEngine({ baseUrl: "http://u:pw@h.test", transport: loop.transport, maxRedirects: 1 });

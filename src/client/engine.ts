@@ -11,7 +11,7 @@ import {
   TagesschauParseError,
   redactUrl,
 } from "./errors.js";
-import { assertValid, baseUrlWhitespaceProblem } from "./validate.js";
+import { assertValid, baseUrlProblem } from "./validate.js";
 
 export const DEFAULT_BASE_URL = "https://www.tagesschau.de";
 const DEFAULT_USER_AGENT = "tagesschau-cli";
@@ -37,8 +37,9 @@ export interface RawResponse {
  */
 export interface EngineOptions {
   /**
-   * Base URL of the API. Defaults to https://www.tagesschau.de. Surrounding or inner
-   * whitespace and control characters throw a TagesschauValidationError.
+   * Base URL of the API. Defaults to https://www.tagesschau.de. A value that breaks
+   * a rule of {@link validateBaseUrl} (blank, whitespace or control characters, not
+   * an http(s) URL, a query or fragment) throws a TagesschauValidationError.
    */
   baseUrl?: string;
   /** Swappable transport. Defaults to the built-in node http/https transport. */
@@ -206,29 +207,17 @@ export function stripCredentialHeaders(
 }
 
 /**
- * Reject a base URL whose scheme is not http(s), or that has a query or fragment.
- * The default transport already gates the scheme per hop, but the engine is
- * exported as a library and may be handed a custom transport that does no such
- * check, so gate the configured base URL here too (a `file:`/`ftp:` base URL fails
- * fast with a typed error). Request paths are appended to the base URL as a string,
- * so a `?` or `#` in it would swallow every path: `http://h/?x=1` requests
- * `/?x=1/api2u/news/` and `http://h/#f` requests `/`.
+ * Check a base URL against every rule of {@link baseUrlProblem} — blank, whitespace
+ * or control characters, unparseable, a scheme other than `http:`/`https:`, a query
+ * or fragment — and return it with trailing slashes stripped. A bad value throws a
+ * TagesschauValidationError ("Invalid baseUrl: <reason>"): it is a configuration
+ * error, not a transport failure. The default transport still gates the scheme per
+ * hop (and redirect targets stay TagesschauNetworkErrors), but the engine may be
+ * handed a custom transport that does no such check, so the configured value is
+ * checked here, on the raw string, before the slash strip.
  */
-function assertHttpScheme(baseUrl: string): void {
-  let url: URL;
-  try {
-    url = new URL(baseUrl);
-  } catch {
-    throw new TagesschauNetworkError(`Invalid base URL: ${redactUrl(baseUrl)}`);
-  }
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new TagesschauNetworkError(
-      `Unsupported protocol "${url.protocol}" in base URL: ${redactUrl(baseUrl)}`,
-    );
-  }
-  if (/[?#]/.test(baseUrl)) {
-    throw new TagesschauNetworkError(`Base URL must not contain a query or fragment: ${redactUrl(baseUrl)}`);
-  }
+export function validateBaseUrl(raw: string): string {
+  return assertValid("baseUrl", raw, baseUrlProblem).replace(/\/+$/, "");
 }
 
 export class RequestEngine {
@@ -243,18 +232,10 @@ export class RequestEngine {
   private readonly sleep: (ms: number) => Promise<void>;
 
   constructor(options: EngineOptions = {}) {
-    if (options.baseUrl !== undefined && options.baseUrl.trim() === "") {
-      throw new TagesschauError("Base URL must not be empty.");
-    }
-    // The raw value is checked before the trailing-slash strip, so "https://h/ "
-    // cannot slip past it: new URL() would trim it silently, but the raw string is
-    // what each request path is appended to.
-    if (options.baseUrl !== undefined) assertValid("baseUrl", options.baseUrl, baseUrlWhitespaceProblem);
-    this.baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
-    // Re-check the base-URL scheme here, not only in the default transport: a
-    // library consumer that injects a custom transport would otherwise get no
-    // gating at all, and could be steered to a non-http(s) scheme.
-    assertHttpScheme(this.baseUrl);
+    // Only an omitted baseUrl selects the default. The raw value is checked before
+    // the trailing-slash strip, so "https://h/ " cannot slip past it: new URL()
+    // would trim it silently, but the raw string is what each path is appended to.
+    this.baseUrl = validateBaseUrl(options.baseUrl ?? DEFAULT_BASE_URL);
     this.transport = options.transport ?? nodeHttpTransport;
     // An empty or whitespace-only User-Agent would send a blank header (rejected
     // by some hosts); treat it like an unset value and fall back to the default.
