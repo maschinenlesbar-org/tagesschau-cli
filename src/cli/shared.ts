@@ -6,6 +6,7 @@ import { InvalidArgumentError } from "commander";
 import type { CliDeps } from "./io.js";
 import { TagesschauError } from "../client/errors.js";
 import { isBidiControl, type EngineOptions } from "../client/engine.js";
+import { MAX_SEARCH_INT } from "../client/validate.js";
 
 /**
  * commander value-parser: a non-negative integer in plain decimal notation.
@@ -44,14 +45,8 @@ export function parseBoundedInt(min: number, max: number): (value: string) => nu
 }
 
 /**
- * The largest value the search endpoint accepts for `pageSize` / `resultPage`
- * (a 32-bit int upstream): `--result-page 2147483648` came back as a bare HTTP 400.
- */
-export const MAX_SEARCH_INT = 2_147_483_647;
-
-/**
- * commander value-parser for --page-size: 1..MAX_SEARCH_INT, since a page of zero
- * hits is meaningless.
+ * commander value-parser for --page-size: 1..MAX_SEARCH_INT (the library's bound,
+ * which `search()` enforces too), since a page of zero hits is meaningless.
  */
 export const parsePagingArg = parseBoundedInt(1, MAX_SEARCH_INT);
 

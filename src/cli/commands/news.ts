@@ -4,7 +4,7 @@ import { action, parsePagingArg, parseResultPage, renderJson } from "../shared.j
 import { RessortValues, type Region, type Ressort } from "../../client/enums.js";
 import { TagesschauError, TagesschauValidationError } from "../../client/errors.js";
 import { newsDateProblem } from "../../client/client.js";
-import { regionProblem, ressortProblem } from "../../client/validate.js";
+import { MAX_SEARCH_INT, regionProblem, ressortProblem } from "../../client/validate.js";
 import type { NewsParams } from "../../client/types.js";
 
 /**
@@ -78,10 +78,10 @@ export function registerNewsCommands(program: Command, deps: CliDeps): void {
   program
     .command("search <text>")
     .description("Full-text search across articles")
-    .option("--page-size <n>", "pageSize parameter (1..2147483647)", parsePagingArg)
+    .option("--page-size <n>", `pageSize parameter (1..${MAX_SEARCH_INT})`, parsePagingArg)
     .option(
       "--result-page <n>",
-      "resultPage parameter (0-based; 0 = first page; at most 2147483647)",
+      `resultPage parameter (0-based; 0 = first page; at most ${MAX_SEARCH_INT})`,
       parseResultPage,
     )
     .action(

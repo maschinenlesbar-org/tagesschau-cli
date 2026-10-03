@@ -87,7 +87,9 @@ die CLI.
 als `--page-size` / `--result-page`. `pageSize` ist die Zahl der Treffer pro Seite und muss
 `>= 1` sein. `resultPage` ist ein **ab 0** gezählter Seitenindex: `0` (der Standard) ist
 die erste Seite, ein Index hinter der letzten Seite liefert keine Treffer. Beide sind
-höchstens `2147483647` (upstream eine 32-Bit-Ganzzahl; einen größeren Wert lehnt die CLI ab).
+höchstens `2147483647` (`MAX_SEARCH_INT`, upstream eine 32-Bit-Ganzzahl). Einen Wert
+außerhalb des Bereichs oder eine Nicht-Ganzzahl lehnt der Client vor jeder Anfrage ab
+(`pageSizeProblem` / `resultPageProblem`) und damit auch die CLI.
 
 **nextPage.** Eine URL, die der News-Endpoint liefert und die auf die nächste, ältere
 Ergebnisseite zeigt, sofern vorhanden: dieselben Filter plus ein Cursor **`date`** im Format

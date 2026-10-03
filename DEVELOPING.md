@@ -91,7 +91,10 @@ is the `YYMMDD` cursor from `nextPage`, checked by the exported `newsDateProblem
 `client.channels()`,
 `client.search({ searchText, pageSize?, resultPage? })` (`searchText` is required; a
 blank one is rejected with a `TagesschauValidationError` before any request, checked by
-the exported `searchTextProblem` after NFKC normalisation). `RessortValues` and
+the exported `searchTextProblem` after NFKC normalisation; so is a `pageSize` that is not
+an integer in 1..`MAX_SEARCH_INT` (2147483647, a 32-bit int upstream) or a `resultPage`
+that is not one in 0..`MAX_SEARCH_INT` — `Invalid pageSize: expected an integer from 1 to
+2147483647, got 0.` — checked by the exported `pageSizeProblem` / `resultPageProblem`). `RessortValues` and
 `RegionValues` are exported; they are the allow-lists `news()` checks.
 
 ## Authentication internals

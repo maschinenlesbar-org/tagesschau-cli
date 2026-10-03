@@ -9,7 +9,14 @@
 import { RequestEngine, type EngineOptions } from "./engine.js";
 import type { QueryParams } from "./query.js";
 import { TagesschauError, TagesschauParseError, TagesschauValidationError } from "./errors.js";
-import { regionProblem, ressortProblem, searchTextProblem } from "./validate.js";
+import {
+  assertValid,
+  pageSizeProblem,
+  regionProblem,
+  ressortProblem,
+  resultPageProblem,
+  searchTextProblem,
+} from "./validate.js";
 import type {
   HomepageResult,
   NewsResult,
@@ -130,11 +137,15 @@ export class TagesschauClient {
    *
    * A blank or missing search text (`searchTextProblem`) is rejected with a
    * `TagesschauValidationError` before any request: upstream answers an empty one
-   * with HTTP 400 and runs a whitespace-only one as is.
+   * with HTTP 400 and runs a whitespace-only one as is. So is a `pageSize` outside
+   * 1..`MAX_SEARCH_INT` or a `resultPage` outside 0..`MAX_SEARCH_INT` (integers
+   * only; `pageSizeProblem` / `resultPageProblem`).
    */
   async search(params: SearchParams): Promise<SearchResult> {
     const problem = searchTextProblem(params?.searchText);
     if (problem !== undefined) throw new TagesschauValidationError(problem);
+    assertValid("pageSize", params.pageSize, pageSizeProblem);
+    assertValid("resultPage", params.resultPage, resultPageProblem);
     const query: QueryParams = {
       searchText: params.searchText.normalize("NFKC"),
       pageSize: params.pageSize,

@@ -2,7 +2,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   assertValid,
+  MAX_SEARCH_INT,
+  pageSizeProblem,
   regionProblem,
+  resultPageProblem,
   ressortProblem,
   searchTextProblem,
   type Problem,
@@ -85,4 +88,26 @@ test("regionProblem / ressortProblem: only the documented ids and Ressorts pass"
   }
   assert.equal(lib.regionProblem, regionProblem);
   assert.equal(lib.ressortProblem, ressortProblem);
+});
+
+test("pageSizeProblem / resultPageProblem: undefined or a safe integer in range passes", () => {
+  assert.equal(lib.MAX_SEARCH_INT, 2147483647);
+  for (const v of [undefined, 1, 25, MAX_SEARCH_INT]) assert.equal(pageSizeProblem(v), undefined, String(v));
+  for (const v of [undefined, 0, 3, MAX_SEARCH_INT]) assert.equal(resultPageProblem(v), undefined, String(v));
+  for (const v of [0, -1, 1.5, NaN, Infinity, MAX_SEARCH_INT + 1, "5"]) {
+    assert.equal(
+      pageSizeProblem(v),
+      `expected an integer from 1 to 2147483647, got ${String(v)}.`,
+      String(v),
+    );
+  }
+  for (const v of [-1, 0.5, NaN, -Infinity, MAX_SEARCH_INT + 1, null]) {
+    assert.equal(
+      resultPageProblem(v),
+      `expected an integer from 0 to 2147483647, got ${String(v)}.`,
+      String(v),
+    );
+  }
+  assert.equal(lib.pageSizeProblem, pageSizeProblem);
+  assert.equal(lib.resultPageProblem, resultPageProblem);
 });

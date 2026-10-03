@@ -60,3 +60,26 @@ export function regionProblem(value: unknown): string | undefined {
 export function ressortProblem(value: unknown): string | undefined {
   return oneOfProblem("ressort", value, RessortValues);
 }
+
+/**
+ * The largest value the search endpoint accepts for `pageSize` / `resultPage` (a
+ * 32-bit int upstream): `resultPage=2147483648` came back as a bare HTTP 400.
+ */
+export const MAX_SEARCH_INT = 2_147_483_647;
+
+/** `undefined` (omitted) or a safe integer in [min, max]; otherwise the reason. */
+function intRangeProblem(value: unknown, min: number, max: number): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value === "number" && Number.isSafeInteger(value) && value >= min && value <= max) return undefined;
+  return `expected an integer from ${min} to ${max}, got ${String(value)}.`;
+}
+
+/** Why a search `pageSize` is unusable: it must be an integer in 1..MAX_SEARCH_INT. */
+export function pageSizeProblem(value: unknown): string | undefined {
+  return intRangeProblem(value, 1, MAX_SEARCH_INT);
+}
+
+/** Why a search `resultPage` (0-based) is unusable: it must be an integer in 0..MAX_SEARCH_INT. */
+export function resultPageProblem(value: unknown): string | undefined {
+  return intRangeProblem(value, 0, MAX_SEARCH_INT);
+}

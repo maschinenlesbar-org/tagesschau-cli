@@ -104,3 +104,58 @@ test("parity: valid regions and ressorts send the same request on both sides (fi
     );
   }
 });
+
+test("parity: pageSize outside 1..2^31-1 is rejected by the CLI and the library alike (finding #2)", async () => {
+  for (const [arg, value] of [
+    ["0", 0],
+    ["-1", -1],
+    ["1.5", 1.5],
+    ["NaN", NaN],
+    ["Infinity", Infinity],
+    ["2147483648", 2147483648],
+  ] as const) {
+    const { cli, lib } = await parity(["--compact", "search", "Wahl", `--page-size=${arg}`], (transport) =>
+      new TagesschauClient({ transport }).search({ searchText: "Wahl", pageSize: value }),
+    );
+    assert.equal(cli.code, 1, arg);
+    assert.equal(cli.requests.length, 0, arg);
+    assertLibRejected(
+      lib,
+      `Invalid pageSize: expected an integer from 1 to 2147483647, got ${String(value)}.`,
+      arg,
+    );
+  }
+});
+
+test("parity: resultPage outside 0..2^31-1 is rejected by the CLI and the library alike (finding #2)", async () => {
+  for (const [arg, value] of [
+    ["-1", -1],
+    ["1.5", 1.5],
+    ["2147483648", 2147483648],
+    ["99999999999999999999", 99999999999999999999],
+  ] as const) {
+    const { cli, lib } = await parity(["--compact", "search", "Wahl", `--result-page=${arg}`], (transport) =>
+      new TagesschauClient({ transport }).search({ searchText: "Wahl", resultPage: value }),
+    );
+    assert.equal(cli.code, 1, arg);
+    assert.equal(cli.requests.length, 0, arg);
+    assertLibRejected(lib, /^Invalid resultPage: expected an integer from 0 to 2147483647, got /, arg);
+  }
+});
+
+test("parity: in-range paging sends the same request on both sides (finding #2 control)", async () => {
+  for (const [argv, params] of [
+    [["--page-size=1", "--result-page=0"], { pageSize: 1, resultPage: 0 }],
+    [["--page-size=2147483647", "--result-page=2147483647"], { pageSize: 2147483647, resultPage: 2147483647 }],
+  ] as const) {
+    const { cli, lib } = await parity(["--compact", "search", "Wahl", ...argv], (transport) =>
+      new TagesschauClient({ transport }).search({ searchText: "Wahl", ...params }),
+    );
+    assert.equal(cli.code, 0, argv.join(" "));
+    assert.equal(lib.ok, true, argv.join(" "));
+    assert.deepEqual(
+      cli.requests.map((r) => r.url),
+      lib.requests.map((r) => r.url),
+    );
+  }
+});
