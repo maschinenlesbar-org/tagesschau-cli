@@ -83,12 +83,16 @@ The numeric options must be integers in range — `timeoutMs` 0..`MAX_TIMEOUT_MS
 
 `client.homepage()`, `client.news({ regions?, ressort?, date? })` (regions or ressort,
 not both: together they are rejected with a `TagesschauError` before any request, since
-the API would apply the Ressort and silently drop the regions; `date` is the `YYMMDD`
-cursor from `nextPage`, checked by the exported `newsDateProblem`), `client.channels()`,
+the API would apply the Ressort and silently drop the regions; each region must be one
+of `RegionValues` and the ressort one of `RessortValues`, exactly as written there —
+anything else, blank, padded or wrong-case included, is a `TagesschauValidationError`
+before any request, checked by the exported `regionProblem` / `ressortProblem`; `date`
+is the `YYMMDD` cursor from `nextPage`, checked by the exported `newsDateProblem`),
+`client.channels()`,
 `client.search({ searchText, pageSize?, resultPage? })` (`searchText` is required; a
 blank one is rejected with a `TagesschauValidationError` before any request, checked by
 the exported `searchTextProblem` after NFKC normalisation). `RessortValues` and
-`RegionValues` are exported for reference.
+`RegionValues` are exported; they are the allow-lists `news()` checks.
 
 ## Authentication internals
 

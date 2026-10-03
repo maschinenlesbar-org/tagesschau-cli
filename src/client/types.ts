@@ -4,7 +4,7 @@
 // metadata) and the shape varies by item type, so the envelopes are typed
 // precisely while individual items are exposed as faithful raw `JsonObject`s.
 
-import type { Ressort } from "./enums.js";
+import type { Region, Ressort } from "./enums.js";
 
 export type JsonValue =
   | string
@@ -68,8 +68,11 @@ export interface SearchResult {
 
 /** Parameters for the news endpoint. */
 export interface NewsParams {
-  /** Bundesland ids (1..16); serialised as a comma-separated `regions` value. */
-  regions?: string[];
+  /**
+   * Bundesland ids (`RegionValues`, "1".."16"); serialised as a comma-separated
+   * `regions` value. Anything else is rejected before any request.
+   */
+  regions?: Region[];
   ressort?: Ressort;
   /**
    * The page cursor from `nextPage`: a date as `YYMMDD` (e.g. `"260925"`). Checked

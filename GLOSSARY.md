@@ -63,12 +63,15 @@ the echoed `searchText`/`pageSize`/`resultPage`, and `type`/`details`).
 news category. The news endpoint accepts one Ressort via `--ressort`. The values
 the client surfaces (`RessortValues`) are:
 `inland`, `ausland`, `wirtschaft`, `sport`, `video`, `investigativ`, `wissen`.
+Any other value (wrong case, padded or blank included) is rejected before any request
+by the client (`ressortProblem`) and so by the CLI.
 
 **Region (Bundesland id).** A German federal state, identified by a numeric id
 **`1`–`16`** in the order the API documents the Bundesländer. Passed to the news
 endpoint via the repeatable `--region` flag; the client joins multiple ids into a
 single comma-separated `regions` query value (e.g. `?regions=5,9`). The accepted
-ids are exposed as `RegionValues`.
+ids are exposed as `RegionValues`; any other value (`17`, `09`, ` 9`, `9,10`, blank)
+is rejected before any request by the client (`regionProblem`) and so by the CLI.
 
 **searchText.** The free-text query for the search endpoint (the positional
 `<text>` argument of `search`). Sent to the API as typed, except that it is

@@ -9,7 +9,7 @@
 import { RequestEngine, type EngineOptions } from "./engine.js";
 import type { QueryParams } from "./query.js";
 import { TagesschauError, TagesschauParseError, TagesschauValidationError } from "./errors.js";
-import { searchTextProblem } from "./validate.js";
+import { regionProblem, ressortProblem, searchTextProblem } from "./validate.js";
 import type {
   HomepageResult,
   NewsResult,
@@ -79,9 +79,21 @@ export class TagesschauClient {
    * API applies the Ressort and silently ignores the regions, so the combination is
    * rejected with a `TagesschauError` before any request. `date` (YYMMDD) is the
    * page cursor the API puts into `nextPage`; pass it to fetch that older page.
+   * Each region must be one of `RegionValues` and the ressort one of
+   * `RessortValues` (`regionProblem` / `ressortProblem`): the API does not reject
+   * an unknown value, so anything else is a `TagesschauValidationError` before any
+   * request.
    */
   async news(params: NewsParams = {}): Promise<NewsResult> {
-    const regions = params.regions ?? [];
+    const regions: readonly unknown[] = params.regions ?? [];
+    for (const region of regions) {
+      const problem = regionProblem(region);
+      if (problem !== undefined) throw new TagesschauValidationError(problem);
+    }
+    if (params.ressort !== undefined) {
+      const problem = ressortProblem(params.ressort);
+      if (problem !== undefined) throw new TagesschauValidationError(problem);
+    }
     if (regions.length > 0 && params.ressort !== undefined) {
       throw new TagesschauError(
         "ressort and regions cannot be combined: the API applies the Ressort and silently ignores the regions, " +

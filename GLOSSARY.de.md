@@ -65,12 +65,16 @@ zurückgegebenen `searchText`/`pageSize`/`resultPage` sowie `type`/`details`).
 Nachrichtenredaktion für eine Nachrichtenkategorie. Der News-Endpoint akzeptiert ein
 Ressort über `--ressort`. Die Werte, die der Client bereitstellt (`RessortValues`), sind:
 `inland`, `ausland`, `wirtschaft`, `sport`, `video`, `investigativ`, `wissen`.
+Jeden anderen Wert (auch falsch geschrieben, mit Leerraum oder leer) lehnt der Client vor
+jeder Anfrage ab (`ressortProblem`) und damit auch die CLI.
 
 **Region (Bundesland-ID).** Ein Bundesland, bezeichnet durch eine numerische ID
 **`1`–`16`** in der Reihenfolge, in der die API die Bundesländer dokumentiert. Wird dem
 News-Endpoint über die wiederholbare Option `--region` übergeben; der Client fügt mehrere
 IDs zu einem einzigen kommagetrennten Query-Wert `regions` zusammen (z. B. `?regions=5,9`).
-Die zulässigen IDs sind als `RegionValues` bereitgestellt.
+Die zulässigen IDs sind als `RegionValues` bereitgestellt; jeden anderen Wert (`17`, `09`,
+` 9`, `9,10`, leer) lehnt der Client vor jeder Anfrage ab (`regionProblem`) und damit auch
+die CLI.
 
 **searchText.** Der Freitext-Suchbegriff für den Such-Endpoint (das Positionsargument
 `<text>` von `search`). Wird wie eingegeben an die API gesendet, nur vorher auf Unicode-NFKC

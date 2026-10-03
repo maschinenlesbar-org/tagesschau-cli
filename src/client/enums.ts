@@ -1,5 +1,6 @@
-// Enum-like value sets. These const arrays double as runtime CLI choice
-// validators and as TS union types.
+// Enum-like value sets. These const arrays double as the runtime allow-lists the
+// library checks (regionProblem / ressortProblem in validate.ts, which the CLI
+// calls too) and as TS union types.
 
 /** Topic categories ("Ressorts") accepted by the news endpoint. */
 export const RessortValues = [

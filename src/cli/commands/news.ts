@@ -1,14 +1,20 @@
 import { InvalidArgumentError, type Command } from "commander";
 import type { CliDeps } from "../io.js";
-import { action, assertEnum, parsePagingArg, parseResultPage, renderJson } from "../shared.js";
-import { RegionValues, RessortValues } from "../../client/enums.js";
-import { TagesschauError } from "../../client/errors.js";
+import { action, parsePagingArg, parseResultPage, renderJson } from "../shared.js";
+import { RessortValues, type Region, type Ressort } from "../../client/enums.js";
+import { TagesschauError, TagesschauValidationError } from "../../client/errors.js";
 import { newsDateProblem } from "../../client/client.js";
+import { regionProblem, ressortProblem } from "../../client/validate.js";
 import type { NewsParams } from "../../client/types.js";
 
-/** commander accumulator for repeatable --region, validated against 1..16. */
-function collectRegion(value: string, previous: string[] = []): string[] {
-  return previous.concat([assertEnum(value, RegionValues, "region")]);
+/**
+ * commander accumulator for repeatable --region, checked by the library's
+ * regionProblem (1..16) at parse time, with the library's error and message.
+ */
+function collectRegion(value: string, previous: Region[] = []): Region[] {
+  const problem = regionProblem(value);
+  if (problem !== undefined) throw new TagesschauValidationError(problem);
+  return previous.concat([value as Region]);
 }
 
 /** commander value-parser for --date: YYMMDD, a real calendar day. */
@@ -42,9 +48,12 @@ export function registerNewsCommands(program: Command, deps: CliDeps): void {
       action(deps, async ({ client, global, opts }) => {
         const params: NewsParams = {};
         if (opts["ressort"] !== undefined) {
-          params.ressort = assertEnum(String(opts["ressort"]), RessortValues, "ressort");
+          // The library's rule, checked before the combination rule below.
+          const problem = ressortProblem(opts["ressort"]);
+          if (problem !== undefined) throw new TagesschauValidationError(problem);
+          params.ressort = opts["ressort"] as Ressort;
         }
-        if (opts["region"] !== undefined) params.regions = opts["region"] as string[];
+        if (opts["region"] !== undefined) params.regions = opts["region"] as Region[];
         if (opts["date"] !== undefined) params.date = opts["date"] as string;
         if (params.ressort !== undefined && params.regions !== undefined) {
           throw new TagesschauError(

@@ -55,3 +55,52 @@ test("parity: a padded search text is sent the same way by both (finding #3 cont
     lib.requests.map((r) => r.url),
   );
 });
+
+const REGION_MSG = (v: string) =>
+  `Invalid region "${v}". Expected one of: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16.`;
+const RESSORT_MSG = (v: string) =>
+  `Invalid ressort "${v}". Expected one of: inland, ausland, wirtschaft, sport, video, investigativ, wissen.`;
+
+test("parity: a region outside 1..16 is rejected by the CLI and the library alike (finding #1)", async () => {
+  for (const region of ["17", "0", "", " 9", "09", "9,10", "1e1"]) {
+    const { cli, lib } = await parity(["--compact", "news", `--region=${region}`], (transport) =>
+      new TagesschauClient({ transport }).news({ regions: [region] as never }),
+    );
+    const label = JSON.stringify(region);
+    assert.equal(cli.code, 1, label);
+    assert.equal(cli.requests.length, 0, label);
+    assert.equal(cli.err, `Error: ${REGION_MSG(region)}`, label);
+    assertLibRejected(lib, REGION_MSG(region), label);
+  }
+});
+
+test("parity: a ressort outside the seven Ressorts is rejected by the CLI and the library alike (finding #1)", async () => {
+  for (const ressort of ["Wirtschaft", "", "  ", " wirtschaft", "bogus"]) {
+    const { cli, lib } = await parity(["--compact", "news", `--ressort=${ressort}`], (transport) =>
+      new TagesschauClient({ transport }).news({ ressort: ressort as never }),
+    );
+    const label = JSON.stringify(ressort);
+    assert.equal(cli.code, 1, label);
+    assert.equal(cli.requests.length, 0, label);
+    assert.equal(cli.err, `Error: ${RESSORT_MSG(ressort)}`, label);
+    assertLibRejected(lib, RESSORT_MSG(ressort), label);
+  }
+});
+
+test("parity: valid regions and ressorts send the same request on both sides (finding #1 control)", async () => {
+  for (const [argv, params] of [
+    [["news", "--region=9"], { regions: ["9"] }],
+    [["news", "--region=5", "--region=16"], { regions: ["5", "16"] }],
+    [["news", "--ressort=wirtschaft"], { ressort: "wirtschaft" }],
+  ] as const) {
+    const { cli, lib } = await parity(["--compact", ...argv], (transport) =>
+      new TagesschauClient({ transport }).news(params as never),
+    );
+    assert.equal(cli.code, 0, argv.join(" "));
+    assert.equal(lib.ok, true, argv.join(" "));
+    assert.deepEqual(
+      cli.requests.map((r) => r.url),
+      lib.requests.map((r) => r.url),
+    );
+  }
+});

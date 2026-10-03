@@ -1,6 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { assertValid, searchTextProblem, type Problem } from "../src/client/validate.js";
+import {
+  assertValid,
+  regionProblem,
+  ressortProblem,
+  searchTextProblem,
+  type Problem,
+} from "../src/client/validate.js";
 import * as lib from "../src/index.js";
 import { TagesschauError, TagesschauValidationError } from "../src/client/errors.js";
 import { TagesschauClient } from "../src/client/client.js";
@@ -66,4 +72,17 @@ test("searchTextProblem: a blank or missing search text is refused, any other te
     assert.equal(searchTextProblem(v), undefined, JSON.stringify(v));
   }
   assert.equal(lib.searchTextProblem, searchTextProblem);
+});
+
+test("regionProblem / ressortProblem: only the documented ids and Ressorts pass", () => {
+  for (const v of ["1", "9", "16"]) assert.equal(regionProblem(v), undefined, v);
+  for (const v of ["17", "0", "", " 9", "09", "9,10", "1e1", 9, undefined, "toString"]) {
+    assert.match(String(regionProblem(v)), /^Invalid region ".*"\. Expected one of: 1, 2, .*, 16\.$/, String(v));
+  }
+  for (const v of ["inland", "wissen"]) assert.equal(ressortProblem(v), undefined, v);
+  for (const v of ["Wirtschaft", "", "  ", " wirtschaft", "bogus", undefined, "constructor"]) {
+    assert.match(String(ressortProblem(v)), /^Invalid ressort ".*"\. Expected one of: inland, .*, wissen\.$/, String(v));
+  }
+  assert.equal(lib.regionProblem, regionProblem);
+  assert.equal(lib.ressortProblem, ressortProblem);
 });

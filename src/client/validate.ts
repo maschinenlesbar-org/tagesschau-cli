@@ -10,6 +10,7 @@
 //   made. Methods that return a promise call it inside the async body, so they
 //   reject rather than throw synchronously; constructors throw.
 
+import { RegionValues, RessortValues } from "./enums.js";
 import { TagesschauValidationError } from "./errors.js";
 
 /** A validation rule: the reason `value` is invalid, or `undefined` when it is valid. */
@@ -37,4 +38,25 @@ export function searchTextProblem(value: unknown): string | undefined {
     return "search text must not be empty.";
   }
   return undefined;
+}
+
+/** `Invalid <name> "<value>". Expected one of: …`, or `undefined` for an allowed value. */
+function oneOfProblem(name: string, value: unknown, allowed: readonly string[]): string | undefined {
+  // includes(), never a keyed lookup: "toString" must not pass as a known value.
+  if ((allowed as readonly unknown[]).includes(value)) return undefined;
+  return `Invalid ${name} "${String(value)}". Expected one of: ${allowed.join(", ")}.`;
+}
+
+/**
+ * Why a `regions` entry is unusable, or `undefined` when it is one of the Bundesland
+ * ids `RegionValues` ("1".."16", exactly as written there: no padding, no leading
+ * zero, one id per entry). The API does not reject an unknown id.
+ */
+export function regionProblem(value: unknown): string | undefined {
+  return oneOfProblem("region", value, RegionValues);
+}
+
+/** Why a `ressort` is unusable, or `undefined` when it is one of `RessortValues`. */
+export function ressortProblem(value: unknown): string | undefined {
+  return oneOfProblem("ressort", value, RessortValues);
 }
