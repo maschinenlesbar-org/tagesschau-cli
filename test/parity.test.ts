@@ -159,3 +159,35 @@ test("parity: in-range paging sends the same request on both sides (finding #2 c
     );
   }
 });
+
+test("parity: a base URL with surrounding whitespace is rejected by the CLI and the library alike (finding #4)", async () => {
+  for (const baseUrl of [
+    "https://www.tagesschau.de/ ",
+    "https://www.tagesschau.de ",
+    " https://www.tagesschau.de",
+    "https://h.example/p\t",
+    "https://h.example/p\n",
+  ]) {
+    const { cli, lib } = await parity(["--compact", "--base-url", baseUrl, "channels"], (transport) =>
+      new TagesschauClient({ transport, baseUrl }).channels(),
+    );
+    const label = JSON.stringify(baseUrl);
+    assert.equal(cli.code, 1, label);
+    assert.equal(cli.requests.length, 0, label);
+    assert.match(cli.err, /A base URL cannot have surrounding whitespace\./, label);
+    assertLibRejected(lib, "Invalid baseUrl: A base URL cannot have surrounding whitespace.", label);
+  }
+});
+
+test("parity: a base URL with inner whitespace or controls is rejected by the CLI and the library alike (finding #4)", async () => {
+  for (const baseUrl of ["https://h.example/a b", "https://h.example/a\tb", "https://h.example/a\u0000b"]) {
+    const { cli, lib } = await parity(["--compact", "--base-url", baseUrl, "channels"], (transport) =>
+      new TagesschauClient({ transport, baseUrl }).channels(),
+    );
+    const label = JSON.stringify(baseUrl);
+    assert.equal(cli.code, 1, label);
+    assert.equal(cli.requests.length, 0, label);
+    assert.match(cli.err, /A base URL cannot contain whitespace or control characters\./, label);
+    assertLibRejected(lib, "Invalid baseUrl: A base URL cannot contain whitespace or control characters.", label);
+  }
+});

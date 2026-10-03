@@ -6,7 +6,7 @@ import { InvalidArgumentError } from "commander";
 import type { CliDeps } from "./io.js";
 import { TagesschauError } from "../client/errors.js";
 import { isBidiControl, type EngineOptions } from "../client/engine.js";
-import { MAX_SEARCH_INT } from "../client/validate.js";
+import { MAX_SEARCH_INT, baseUrlWhitespaceProblem } from "../client/validate.js";
 
 /**
  * commander value-parser: a non-negative integer in plain decimal notation.
@@ -102,11 +102,10 @@ export function parseBaseUrl(value: string): string {
   if (/[?#]/.test(value)) {
     throw new InvalidArgumentError("A base URL cannot have a query (?) or fragment (#).");
   }
-  // new URL() trims surrounding whitespace silently; the raw value is what the
-  // engine uses, so reject it rather than guess.
-  if (value !== value.trim()) {
-    throw new InvalidArgumentError("A base URL cannot have surrounding whitespace.");
-  }
+  // The library's rule (the engine checks it too): no surrounding or inner
+  // whitespace and no control characters.
+  const spacing = baseUrlWhitespaceProblem(value);
+  if (spacing !== undefined) throw new InvalidArgumentError(spacing);
   return value;
 }
 

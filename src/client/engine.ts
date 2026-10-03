@@ -11,6 +11,7 @@ import {
   TagesschauParseError,
   redactUrl,
 } from "./errors.js";
+import { assertValid, baseUrlWhitespaceProblem } from "./validate.js";
 
 export const DEFAULT_BASE_URL = "https://www.tagesschau.de";
 const DEFAULT_USER_AGENT = "tagesschau-cli";
@@ -35,7 +36,10 @@ export interface RawResponse {
  * NaN, Infinity, too large) makes the constructor throw a TagesschauError.
  */
 export interface EngineOptions {
-  /** Base URL of the API. Defaults to https://www.tagesschau.de */
+  /**
+   * Base URL of the API. Defaults to https://www.tagesschau.de. Surrounding or inner
+   * whitespace and control characters throw a TagesschauValidationError.
+   */
   baseUrl?: string;
   /** Swappable transport. Defaults to the built-in node http/https transport. */
   transport?: Transport;
@@ -242,6 +246,10 @@ export class RequestEngine {
     if (options.baseUrl !== undefined && options.baseUrl.trim() === "") {
       throw new TagesschauError("Base URL must not be empty.");
     }
+    // The raw value is checked before the trailing-slash strip, so "https://h/ "
+    // cannot slip past it: new URL() would trim it silently, but the raw string is
+    // what each request path is appended to.
+    if (options.baseUrl !== undefined) assertValid("baseUrl", options.baseUrl, baseUrlWhitespaceProblem);
     this.baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
     // Re-check the base-URL scheme here, not only in the default transport: a
     // library consumer that injects a custom transport would otherwise get no

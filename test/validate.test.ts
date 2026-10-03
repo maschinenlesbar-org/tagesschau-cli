@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   assertValid,
+  baseUrlWhitespaceProblem,
   MAX_SEARCH_INT,
   pageSizeProblem,
   regionProblem,
@@ -110,4 +111,21 @@ test("pageSizeProblem / resultPageProblem: undefined or a safe integer in range 
   }
   assert.equal(lib.pageSizeProblem, pageSizeProblem);
   assert.equal(lib.resultPageProblem, resultPageProblem);
+});
+
+test("baseUrlWhitespaceProblem: surrounding or inner whitespace and controls are refused", () => {
+  for (const v of ["https://h/ ", " https://h", "https://h/p\t", "https://h/p\n"]) {
+    assert.equal(baseUrlWhitespaceProblem(v), "A base URL cannot have surrounding whitespace.", JSON.stringify(v));
+  }
+  for (const v of ["https://h/a b", "https://h/a\tb", "https://h/a\u0000b", "https://h/a\u007fb", "https://h/a b"]) {
+    assert.equal(
+      baseUrlWhitespaceProblem(v),
+      "A base URL cannot contain whitespace or control characters.",
+      JSON.stringify(v),
+    );
+  }
+  for (const v of ["https://www.tagesschau.de", "http://localhost:8080/prefix/"]) {
+    assert.equal(baseUrlWhitespaceProblem(v), undefined, v);
+  }
+  assert.equal(lib.baseUrlWhitespaceProblem, baseUrlWhitespaceProblem);
 });

@@ -116,7 +116,13 @@ that does no scheme checking of its own. The same holds for the configured base
 URL: the `RequestEngine` constructor rejects a non-`http(s)` or malformed base URL,
 or one with a query or fragment (request paths are appended to it as a string), with a
 `TagesschauNetworkError` before any request, and the CLI's `--base-url`
-parser (`parseBaseUrl`) already turns one into a usage error at parse time.
+parser (`parseBaseUrl`) already turns one into a usage error at parse time. A base URL
+with surrounding or inner whitespace or a control character is rejected too, on the raw
+value before the trailing-slash strip, with a `TagesschauValidationError`
+(`Invalid baseUrl: A base URL cannot have surrounding whitespace.`): `new URL()` would
+trim it silently, but the raw string is what each path is appended to, so
+`"https://h/ "` would request `/%20/api2u/...`. The rule is the exported
+`baseUrlWhitespaceProblem`, which `parseBaseUrl` calls too.
 Userinfo in the base URL (`https://user:pw@mirror/`) is allowed — Node sends it as
 Basic auth — but every error message shows it as `***` (the exported `redactUrl`):
 `TagesschauApiError` (message and `url`), the base-URL, redirect and transport URL
