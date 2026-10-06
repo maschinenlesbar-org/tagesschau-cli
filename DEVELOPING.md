@@ -248,6 +248,12 @@ returning a promise rejects). The CLI's commander parsers turn the same reason i
 usage error (exit 1), and `run.ts` maps a `TagesschauValidationError` raised during an
 action to exit 1 too, printed as `Error: <message>`.
 
+**Charset.** JSON bodies are decoded by the charset their `Content-Type` names (UTF-8
+when it names none, as the live API sends `application/json`), with `TextDecoder`: a
+Latin-1 body from a proxy or mirror reads correctly instead of turning umlauts into
+U+FFFD, and a leading byte order mark is dropped. An unknown charset label is a
+`TagesschauParseError` (`Unsupported response charset "…" from /api2u/news/.`).
+
 **Retry / backoff.** Transient `429` (rate limit) and `503` responses are
 retried automatically (transport failures — a refused or reset connection, a DNS
 failure, a timeout — are not: with 60 requests an hour, a broken connection is

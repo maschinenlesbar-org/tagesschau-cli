@@ -437,3 +437,18 @@ test("Location and Retry-After are read in any case and from a Headers object or
   assert.equal(calls, 1);
   assert.deepEqual(delays, []);
 });
+
+test("getJson decodes the body by its declared charset and drops a BOM", async () => {
+  const text = "Köln Straße";
+  const latin1 = makeMockTransport(() =>
+    rawResponse(Buffer.from(JSON.stringify({ title: text }), "latin1"), "application/json; charset=iso-8859-1"),
+  );
+  assert.deepEqual(await new RequestEngine({ transport: latin1.transport }).getJson("/x"), { title: text });
+  const bom = makeMockTransport(() => rawResponse(Buffer.from(`﻿${JSON.stringify({ title: text })}`), "application/json"));
+  assert.deepEqual(await new RequestEngine({ transport: bom.transport }).getJson("/x"), { title: text });
+  const unknown = makeMockTransport(() => rawResponse("{}", "application/json; charset=x-no-such"));
+  await assert.rejects(
+    () => new RequestEngine({ transport: unknown.transport }).getJson("/x"),
+    (err) => err instanceof TagesschauParseError && /Unsupported response charset "x-no-such"/.test(err.message),
+  );
+});
