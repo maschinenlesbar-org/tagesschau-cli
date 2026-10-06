@@ -4,6 +4,7 @@ export { TagesschauClient, newsDateProblem } from "./client.js";
 export {
   RequestEngine,
   assertHeaderValue,
+  cleartextProblem,
   DEFAULT_BASE_URL,
   MAX_DETAIL_LENGTH,
   MAX_REDIRECTS,

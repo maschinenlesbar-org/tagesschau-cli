@@ -177,6 +177,15 @@ wraps whatever a custom transport throws in a `TagesschauNetworkError` (the orig
 scrubbed, as `cause`); `test/conformance-p2-library-redaction.test.ts` checks it. `test/conformance-p1-cli-redaction.test.ts` checks ten passwords, seven
 URL shapes and every echo path.
 
+**Plain `http:` warning.** `cleartextProblem(baseUrl, secrets?)` (`engine.ts`, exported)
+returns one sentence when requests to `baseUrl` would travel unencrypted — `requests to
+<host> are sent unencrypted (http:, not https:)`, or `the base URL's credentials are sent
+unencrypted to <host> (http:, not https:)` with userinfo — and `undefined` for `https:`, an
+unparseable URL and loopback hosts. `<host>` is `url.host`, never the userinfo. The CLI's
+`action()` wrapper writes `warning: <sentence>` to stderr once per run, before the client is
+built; help, version and usage errors never warn, stdout and the exit code are unchanged,
+and the library never warns. `test/conformance-p20-cleartext-warning.test.ts` checks it.
+
 ## Architecture
 
 ```
@@ -318,7 +327,8 @@ npm test          # builds, then runs `node --test` over dist/test
   P4 base-URL validation (its P19 part is skipped: no environment variable here), P5 the
   transport contract (`timeoutMs`, `maxResponseBytes`, headers, bodies), P6 the retry policy,
   P7 pipes and exit codes (spawns the built bin), P8/P9/P13 charset, 2xx shapes and error
-  classes, P10 strict parameters and repeated flags. They use mock transports and local
+  classes, P10 strict parameters and repeated flags, P20 the stderr warning for a plain-`http:`
+  base URL. They use mock transports and local
   servers only; none reaches www.tagesschau.de.
 
 ## Continuous integration
