@@ -74,14 +74,15 @@ export interface EngineOptions {
   timeoutMs?: number;
   /**
    * Number of automatic retries for transient (429/503) responses, 0..`MAX_RETRIES`
-   * (10). Each waits the
-   * response's `Retry-After` (up to `MAX_RETRY_AFTER_MS`; a longer one is not
-   * retried), or else `retryDelayMs * attempt`.
+   * (10). Each waits `retryDelayMs * attempt`, or the response's `Retry-After` when that
+   * is longer (up to `MAX_RETRY_AFTER_MS`; a longer one is not retried, and the
+   * TagesschauApiError says so).
    */
   maxRetries?: number;
   /**
-   * Base backoff between retries in milliseconds (grows linearly); used without a
-   * Retry-After. At most `MAX_RETRY_AFTER_MS`.
+   * Base backoff between retries in milliseconds (grows linearly), 0..`MAX_RETRY_AFTER_MS`.
+   * Defaults to 200. It is also the floor under a `Retry-After`: the header can lengthen
+   * a wait, never shorten it.
    */
   retryDelayMs?: number;
   /** Number of HTTP redirects (301/302/303/307/308) to follow, 0..`MAX_REDIRECTS` (20). Defaults to 5. */
@@ -541,15 +542,19 @@ export class RequestEngine {
         throw new TagesschauNetworkError(sizeLimitMessage(this.maxResponseBytes));
       }
       const retryable = status === 429 || status === 503;
-      if (idempotent && retryable && attempt < this.maxRetries) {
-        // Honour Retry-After; without a usable one, back off linearly. A Retry-After
-        // beyond MAX_RETRY_AFTER_MS is not retried: the error below surfaces at once.
-        const retryAfter = parseRetryAfter(responseHeaders["retry-after"]);
-        if (retryAfter === undefined || retryAfter <= MAX_RETRY_AFTER_MS) {
-          attempt += 1;
-          await this.sleep(retryAfter ?? this.retryDelayMs * attempt);
-          continue;
-        }
+      // A Retry-After beyond MAX_RETRY_AFTER_MS is not retried: the error below surfaces at
+      // once and names the wait the server asked for.
+      const retryAfter = retryable ? parseRetryAfter(responseHeaders["retry-after"]) : undefined;
+      const tooLong = retryAfter !== undefined && retryAfter > MAX_RETRY_AFTER_MS;
+      if (idempotent && retryable && !tooLong && attempt < this.maxRetries) {
+        attempt += 1;
+        // Back off linearly from retryDelayMs. A Retry-After can ask for longer, never for
+        // less: `Retry-After: 0` or a date in the past turned the retries into a zero-delay
+        // burst (11 requests in 124 ms with --max-retries 10) against an API documented at
+        // 60 requests an hour.
+        const backoff = this.retryDelayMs * attempt;
+        await this.sleep(retryAfter === undefined ? backoff : Math.max(retryAfter, backoff));
+        continue;
       }
 
       // Follow redirects, resolving the Location relative to the current URL.
@@ -607,7 +612,10 @@ export class RequestEngine {
 
       const contentType = String(firstHeader(responseHeaders["content-type"]) ?? "");
       if (status < 200 || status >= 300) {
-        throw this.toApiError(method, url, status, body, status === 401 || status === 403 ? dropped : undefined);
+        throw this.toApiError(method, url, status, body, status === 401 || status === 403 ? dropped : undefined, {
+          retries: attempt,
+          ...(tooLong ? { retryAfterMs: retryAfter } : {}),
+        });
       }
 
       return { data: body, contentType, status };
@@ -625,7 +633,14 @@ export class RequestEngine {
     }
   }
 
-  private toApiError(method: string, url: string, status: number, body: Buffer, hint?: string): TagesschauApiError {
+  private toApiError(
+    method: string,
+    url: string,
+    status: number,
+    body: Buffer,
+    hint: string | undefined,
+    retry: { retries: number; retryAfterMs?: number },
+  ): TagesschauApiError {
     // The body is kept on the error (`body`) and may echo the request URL: scrub it.
     const text = this.scrub(body.toString("utf8"));
     let detail: string | undefined;
@@ -644,6 +659,14 @@ export class RequestEngine {
     // characters, fold it onto one line and cap its length before it leaves the engine.
     if (detail !== undefined) detail = cleanDetail(detail);
     if (hint !== undefined) detail = detail === undefined ? hint : `${detail}; ${hint}`;
-    return new TagesschauApiError({ status, url, method, body: text, detail });
+    return new TagesschauApiError({
+      status,
+      url,
+      method,
+      body: text,
+      detail,
+      retries: retry.retries,
+      ...(retry.retryAfterMs === undefined ? {} : { retryAfterMs: retry.retryAfterMs, maxRetryAfterMs: MAX_RETRY_AFTER_MS }),
+    });
   }
 }

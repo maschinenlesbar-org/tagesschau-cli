@@ -175,7 +175,7 @@ name (e.g. `tagesschau --compact news --ressort sport` or
 | `--base-url <url>` | API base URL (default `https://www.tagesschau.de`); an `http(s)` URL, optionally with a path prefix, without a query (`?`), fragment (`#`), whitespace or control characters. Credentials (`https://user:pw@host`) are sent as Basic auth, to that origin only (not across a redirect to another host or scheme); write a literal `%` in them as `%25`. |
 | `--timeout <ms>` | Time limit per request in milliseconds, whole response included (at most `2147483647`). |
 | `--user-agent <ua>` | `User-Agent` header value (not blank; no control characters or characters above U+00FF). |
-| `--max-retries <n>` | Retries for transient `429`/`503` responses, `0`–`10` (default `2`); each waits the server's `Retry-After` (up to 30 s; a longer one is not retried), else 200 ms × attempt. |
+| `--max-retries <n>` | Retries for transient `429`/`503` responses, `0`–`10` (default `2`); each waits 200 ms × attempt, or the server's `Retry-After` when that is longer (up to 30 s; a longer one is not retried, and the error names the wait). |
 | `--max-redirects <n>` | Max HTTP redirects to follow, `0`–`20` (default `5`; credential headers are dropped on cross-origin hops). |
 | `--max-response-bytes <n>` | Cap response body size in bytes (`0` = unlimited; default 100 MiB). |
 | `--compact` | Print JSON on a single line instead of pretty-printed. |

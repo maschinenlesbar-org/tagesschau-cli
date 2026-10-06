@@ -115,10 +115,11 @@ sendet weder Schlüssel noch Token noch Cookie. Er stellt nur lesende `GET`-Anfr
 **Rate-Limiting / vorübergehende Fehler.** Die API erlaubt etwa **60 Anfragen pro
 Stunde**. Antwortet sie mit einem vorübergehenden Status (**429** Too Many Requests,
 **503** Service Unavailable), wiederholt der Client die Anfrage automatisch, bis zu
-`--max-retries`-mal (Standard `2`, höchstens `10`). Jede Wiederholung wartet das
-`Retry-After` der Antwort ab (Sekunden oder HTTP-Datum), sofern es höchstens 30 s
-beträgt (`MAX_RETRY_AFTER_MS`); ein längeres wird nicht wiederholt, der Fehler kommt
-sofort. Ohne brauchbares `Retry-After` wächst die Wartezeit linear (200 ms × Versuch).
+`--max-retries`-mal (Standard `2`, höchstens `10`). Jede Wiederholung wartet 200 ms ×
+Versuch, oder das `Retry-After` der Antwort (Sekunden oder HTTP-Datum), wenn es länger ist
+und höchstens 30 s beträgt (`MAX_RETRY_AFTER_MS`): `Retry-After: 0` lässt den Client nie
+sofort wiederholen. Ein längeres wird nicht wiederholt; der Fehler kommt sofort und nennt
+die Wartezeit, die der Server verlangt hat.
 
 **Weiterleitungen.** Der Client folgt bis zu `--max-redirects` Weiterleitungen (Standard
 `5`). Zugangsdaten in `--base-url` (`https://user:pw@host`) gehen als

@@ -63,7 +63,7 @@ try {
 new TagesschauClient({
   baseUrl: "https://www.tagesschau.de",
   timeoutMs: 15_000,          // time limit per request, whole response included; 0 disables it
-  maxRetries: 3,              // 429 / 503: waits Retry-After (<= 30 s), else linear backoff
+  maxRetries: 3,              // 429 / 503: linear backoff, or Retry-After when longer (<= 30 s)
   maxRedirects: 5,            // follow up to N redirects; credential headers are
                               // dropped on cross-origin hops
   maxResponseBytes: 50 << 20, // abort responses larger than this (0 = unlimited;
@@ -252,10 +252,14 @@ action to exit 1 too, printed as `Error: <message>`.
 retried automatically (transport failures — a refused or reset connection, a DNS
 failure, a timeout — are not: with 60 requests an hour, a broken connection is
 reported, not asked again at once), up to `maxRetries` (default `2`; CLI `--max-retries`,
-`0`–`10`). Each retry waits the response's `Retry-After` (`parseRetryAfter`:
-delay-seconds or an IMF-fixdate, anything else is ignored) when it is at most
-`MAX_RETRY_AFTER_MS` (30 s); a longer one is not retried and the error surfaces
-at once. Without a usable header the wait is `retryDelayMs * attempt`.
+`0`–`10`). Each retry waits `retryDelayMs * attempt` (200 ms, 400 ms, …), or the
+response's `Retry-After` (`parseRetryAfter`: delay-seconds or an IMF-fixdate, anything
+else is ignored) when that is longer: the header can lengthen a wait, never shorten it,
+so `Retry-After: 0` or a past date doesn't make a burst. A `Retry-After` above
+`MAX_RETRY_AFTER_MS` (30 s) is not retried: the error surfaces at once and says so
+(`HTTP 429 for GET …: the server asked to retry after 100 s, longer than the 30 s the
+client waits; not retried — try again after that`; `retryAfterMs` holds the wait).
+After spent retries the message ends `(after 2 retries)` and `retries` holds the count.
 `TagesschauApiError` exposes `isRetryable` (true for `429`/`503`).
 
 **maxResponseBytes.** A cap on the response body size in bytes (`0` = unlimited;
