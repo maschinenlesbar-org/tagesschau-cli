@@ -135,7 +135,16 @@ usage error at parse time, with no rules of its own.
 Userinfo in the base URL (`https://user:pw@mirror/`) is allowed — Node sends it as
 Basic auth — but every error message shows it as `***` (the exported `redactUrl`):
 `TagesschauApiError` (message and `url`), the redirect and transport URL errors; the
-base-URL errors never echo the URL at all.
+base-URL errors never echo the URL at all. The CLI also redacts on output: `run.ts`
+(`withRedactedOutput`) takes the exact userinfo of every argument (`credentialsIn`,
+exported) and replaces it with `***` in everything it prints — commander's usage errors,
+which echo a rejected `--base-url` value, a mistyped option name in `=` form
+(`--base-ur=…`) or a URL typed without the flag (`unknown command '…'`), and the
+library's messages that name a rejected region or date — so a password with spaces,
+quotes, `#`, `?` or `/` is caught as well as an ordinary one. `redactUrl` (exported)
+falls back to the same text-based cut (`redactCredentials`) for a value that doesn't
+parse as a URL. `test/conformance-p1-cli-redaction.test.ts` checks ten passwords, seven
+URL shapes and every echo path.
 
 ## Architecture
 

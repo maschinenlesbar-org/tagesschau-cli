@@ -39,6 +39,8 @@ export {
   TagesschauParseError,
   TagesschauValidationError,
   redactUrl,
+  credentialsIn,
+  redactCredentials,
 } from "./errors.js";
 
 export * from "./enums.js";
