@@ -104,8 +104,9 @@ export function baseUrlWhitespaceProblem(value: unknown): string | undefined {
  * `http:` or `https:` scheme, and no query or fragment — request paths are appended
  * to the base URL as a string, so a `?` or `#` would swallow every path
  * (`http://h/?x=1` requests `/?x=1/api2u/news/`, `http://h/#f` requests `/`).
- * Userinfo is allowed (Node sends it as Basic auth). The reasons never echo the
- * URL, so a credential in it cannot leak.
+ * Userinfo is allowed (sent as Basic auth); a `%` in it must start a valid escape (`%25`
+ * for a literal one), as it is decoded for the Authorization header. The reasons never
+ * echo the URL, so a credential in it cannot leak.
  */
 export function baseUrlProblem(value: unknown): string | undefined {
   if (typeof value !== "string" || value.trim() === "") return "Expected an absolute http(s) URL.";
@@ -121,6 +122,15 @@ export function baseUrlProblem(value: unknown): string | undefined {
     return `Unsupported scheme "${url.protocol}". Expected an http(s) URL.`;
   }
   if (/[?#]/.test(value)) return "A base URL cannot have a query (?) or fragment (#).";
+  // Node decodes the userinfo into the Authorization header and throws "URI malformed" for a
+  // "%" that isn't an escape — at request time, as a network error. Reject it here.
+  for (const part of [url.username, url.password]) {
+    try {
+      decodeURIComponent(part);
+    } catch {
+      return 'The user name or password has a "%" that is not followed by two hex digits; write a literal "%" as %25.';
+    }
+  }
   return undefined;
 }
 

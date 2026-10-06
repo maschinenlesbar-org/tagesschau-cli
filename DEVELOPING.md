@@ -122,7 +122,9 @@ that does no scheme checking of its own. The same holds for the configured base
 URL: the `RequestEngine` constructor runs the exported `validateBaseUrl` on the raw
 value, before the trailing-slash strip, and rejects a blank, non-`http(s)` or malformed
 base URL, one with surrounding or inner whitespace or a control character, or one with a
-query or fragment (request paths are appended to it as a string), with a
+query or fragment (request paths are appended to it as a string), or a `%` in the user
+name or password that doesn't start an escape (write a literal `%` as `%25`; it is
+decoded for the Authorization header and would otherwise fail at request time), with a
 `TagesschauValidationError` before any request (`Invalid baseUrl: Unsupported scheme
 "ftp:". Expected an http(s) URL.`). It is a configuration error, not a transport
 failure, so it is not a `TagesschauNetworkError`; that class stays for the default
