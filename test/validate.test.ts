@@ -101,7 +101,7 @@ test("pageSizeProblem / resultPageProblem: undefined or a safe integer in range 
   for (const v of [0, -1, 1.5, NaN, Infinity, MAX_SEARCH_INT + 1, "5"]) {
     assert.equal(
       pageSizeProblem(v),
-      `expected an integer from 1 to 2147483647, got ${String(v)}.`,
+      `expected an integer from 1 to 2147483647, got ${typeof v === "string" ? JSON.stringify(v) : String(v)}.`,
       String(v),
     );
   }

@@ -43,6 +43,8 @@ export {
   TagesschauValidationError,
   redactUrl,
   credentialsIn,
+  cutForMessage,
+  MAX_MESSAGE_VALUE_LENGTH,
   redactCredentials,
 } from "./errors.js";
 

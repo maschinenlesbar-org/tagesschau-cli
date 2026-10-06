@@ -8,7 +8,7 @@
 
 import { RequestEngine, type EngineOptions } from "./engine.js";
 import type { QueryParams } from "./query.js";
-import { TagesschauError, TagesschauParseError, TagesschauValidationError } from "./errors.js";
+import { TagesschauParseError, TagesschauValidationError, cutForMessage } from "./errors.js";
 import {
   assertValid,
   knownKeysProblem,
@@ -39,9 +39,12 @@ const SEARCH_KEYS = ["searchText", "pageSize", "resultPage"] as const;
  * Why a news `date` cursor is unusable, or `undefined` when it is a real calendar
  * day written `YYMMDD` — the form the API puts into `nextPage` (`?date=260925`).
  */
-export function newsDateProblem(date: string): string | undefined {
+export function newsDateProblem(date: unknown): string | undefined {
+  const shown = typeof date === "string" ? JSON.stringify(date) : String(date);
+  const problem = `Invalid date ${cutForMessage(shown)}: expected YYMMDD (e.g. 260925), as in the date parameter of nextPage.`;
+  // A string only: a number such as 261004 used to be sent as is, and NaN as "NaN".
+  if (typeof date !== "string") return problem;
   const m = /^(\d{2})(\d{2})(\d{2})$/.exec(date);
-  const problem = `Invalid date ${JSON.stringify(date)}: expected YYMMDD (e.g. 260925), as in the date parameter of nextPage.`;
   if (!m) return problem;
   const [yy, mm, dd] = [Number(m[1]), Number(m[2]), Number(m[3])];
   const day = new Date(Date.UTC(2000 + yy, mm - 1, dd));
@@ -77,7 +80,7 @@ export class TagesschauClient {
   private readonly engine: RequestEngine;
 
   constructor(options: EngineOptions = {}) {
-    this.engine = new RequestEngine(options);
+    this.engine = new RequestEngine(options ?? {});
   }
 
   /** The curated homepage feed (top news + regional). */
@@ -91,7 +94,7 @@ export class TagesschauClient {
   /**
    * The news feed, optionally filtered by region(s) or by Ressort — not both: the
    * API applies the Ressort and silently ignores the regions, so the combination is
-   * rejected with a `TagesschauError` before any request. `date` (YYMMDD) is the
+   * rejected with a `TagesschauValidationError` before any request. `date` (YYMMDD) is the
    * page cursor the API puts into `nextPage`; pass it to fetch that older page.
    * Each region must be one of `RegionValues` and the ressort one of
    * `RessortValues` (`regionProblem` / `ressortProblem`): the API does not reject
@@ -112,14 +115,14 @@ export class TagesschauClient {
       if (problem !== undefined) throw new TagesschauValidationError(problem);
     }
     if (regions.length > 0 && params.ressort !== undefined) {
-      throw new TagesschauError(
+      throw new TagesschauValidationError(
         "ressort and regions cannot be combined: the API applies the Ressort and silently ignores the regions, " +
           "so every item would come back national (regionId 0). Fetch the region feed and filter it locally instead.",
       );
     }
     if (params.date !== undefined) {
       const problem = newsDateProblem(params.date);
-      if (problem !== undefined) throw new TagesschauError(problem);
+      if (problem !== undefined) throw new TagesschauValidationError(problem);
     }
     const query: QueryParams = {};
     if (params.date !== undefined) query["date"] = params.date;

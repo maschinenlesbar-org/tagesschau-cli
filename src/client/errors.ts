@@ -31,6 +31,19 @@ export function redactUrl(url: string): string {
 }
 
 /**
+ * Longest echoed value or server text (in characters) an error message shows, like the
+ * 500 characters kept of a server `detail` (`MAX_DETAIL_LENGTH`). A 400 000-character
+ * region or date would otherwise put the whole input on one stderr line. Properties such
+ * as `TagesschauApiError.url` and `.body` keep the full value.
+ */
+export const MAX_MESSAGE_VALUE_LENGTH = 500;
+
+/** `text` cut to MAX_MESSAGE_VALUE_LENGTH characters, ending in "…" when cut. */
+export function cutForMessage(text: string): string {
+  return text.length > MAX_MESSAGE_VALUE_LENGTH ? `${text.slice(0, MAX_MESSAGE_VALUE_LENGTH)}…` : text;
+}
+
+/**
  * The userinfo a URL-like value carries, exactly as written — `["alice:pa#ss"]` for
  * `https://alice:pa#ss@host` — or `[]` when it carries none. It works on values that don't
  * parse as a URL too, and on values with a prefix (`--base-url=https://u:p@h`): the userinfo
@@ -118,7 +131,7 @@ export class TagesschauApiError extends TagesschauError {
     // Say that the status persisted through retries, so a user knows whether raising
     // --max-retries could help.
     const retryPart = retries > 0 ? ` (after ${retries} ${retries === 1 ? "retry" : "retries"})` : "";
-    super(`HTTP ${args.status} for ${args.method} ${url}${detailPart}${retryPart}`);
+    super(`HTTP ${args.status} for ${args.method} ${cutForMessage(url)}${detailPart}${retryPart}`);
     this.status = args.status;
     this.url = url;
     this.method = args.method;
@@ -142,7 +155,8 @@ export class TagesschauParseError extends TagesschauError {}
 
 /**
  * A rejected input — a client option or a method argument that breaks one of the
- * library's rules (see validate.ts). Thrown before any request is made; the CLI
- * maps it to its usage exit code (1).
+ * library's rules (see validate.ts): a wrong type, a value out of range, an unknown key,
+ * a combination the API can't serve. Thrown before any request is made; the CLI maps it
+ * to its usage exit code (1).
  */
 export class TagesschauValidationError extends TagesschauError {}

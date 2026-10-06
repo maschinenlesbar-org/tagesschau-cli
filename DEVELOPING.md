@@ -76,7 +76,7 @@ new TagesschauClient({
 The numeric options must be integers in range — `timeoutMs` 0..`MAX_TIMEOUT_MS`,
 `maxRetries` 0..`MAX_RETRIES` (10), `retryDelayMs` 0..`MAX_RETRY_AFTER_MS`,
 `maxRedirects` 0..`MAX_REDIRECTS` (20), `maxResponseBytes` 0..2^53−1. Anything else
-(negative, fractional, `NaN`, `Infinity`) makes the constructor throw a `TagesschauError`
+(negative, fractional, `NaN`, `Infinity`, a string) makes the constructor throw a `TagesschauValidationError`
 (`Invalid option maxRedirects: expected an integer from 0 to 20, got NaN.`).
 `userAgent` must be a non-blank Latin-1 string without control characters (tab is
 allowed); only an omitted one selects the default `tagesschau-cli`. A blank one, a
@@ -88,7 +88,7 @@ The rule is the exported `headerValueProblem` / `assertHeaderValue`, which the C
 ### Methods
 
 `client.homepage()`, `client.news({ regions?, ressort?, date? })` (regions or ressort,
-not both: together they are rejected with a `TagesschauError` before any request, since
+not both: together they are rejected with a `TagesschauValidationError` before any request, since
 the API would apply the Ressort and silently drop the regions; each region must be one
 of `RegionValues` and the ressort one of `RessortValues`, exactly as written there —
 anything else, blank, padded or wrong-case included, is a `TagesschauValidationError`
@@ -249,7 +249,11 @@ onto one line, cut at `MAX_DETAIL_LENGTH` (500) characters; `body` keeps the ful
 `Unexpected response shape from /api2u/news/: expected a JSON object with a "news"
 array.` — each method checks its top-level array, `news`/`regional`, `channels`,
 `searchResults` and a non-negative `totalItemCount`; items are not checked) and
-`TagesschauValidationError` (a rejected input, thrown before any request), all
+`TagesschauValidationError` (a rejected input, thrown before any request: every rule of
+the library — a wrong type, a value out of range, an unknown key, an impossible `date`,
+`ressort` with `regions`, a `transport` or `sleep` that is not a function — throws this
+class, never a plain `TagesschauError` or a raw `TypeError`; echoed values are cut at
+`MAX_MESSAGE_VALUE_LENGTH`, 500 characters, by the exported `cutForMessage`), all
 extending `TagesschauError`. The CLI maps
 a `404` to exit code `4`, other errors to `1`.
 

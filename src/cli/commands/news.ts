@@ -2,7 +2,7 @@ import { InvalidArgumentError, type Command } from "commander";
 import type { CliDeps } from "../io.js";
 import { action, once, parsePagingArg, parseResultPage, renderJson } from "../shared.js";
 import { RessortValues, type Region, type Ressort } from "../../client/enums.js";
-import { TagesschauError, TagesschauValidationError } from "../../client/errors.js";
+import { TagesschauValidationError } from "../../client/errors.js";
 import { newsDateProblem } from "../../client/client.js";
 import { MAX_SEARCH_INT, regionProblem, ressortProblem, searchSpellingHint } from "../../client/validate.js";
 import type { NewsParams } from "../../client/types.js";
@@ -60,7 +60,7 @@ export function registerNewsCommands(program: Command, deps: CliDeps): void {
         if (opts["region"] !== undefined) params.regions = opts["region"] as Region[];
         if (opts["date"] !== undefined) params.date = opts["date"] as string;
         if (params.ressort !== undefined && params.regions !== undefined) {
-          throw new TagesschauError(
+          throw new TagesschauValidationError(
             "--ressort and --region cannot be combined: the API applies the Ressort and silently ignores " +
               "the region, so every item would come back national (regionId 0). Fetch the region feed and " +
               "filter it locally instead (see Usage.md, use case 6).",
