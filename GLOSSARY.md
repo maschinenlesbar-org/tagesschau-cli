@@ -76,7 +76,9 @@ is rejected before any request by the client (`regionProblem`) and so by the CLI
 **searchText.** The free-text query for the search endpoint (the positional
 `<text>` argument of `search`). Sent to the API as typed, except that it is
 normalised to Unicode NFKC first (a decomposed umlaut, as pasted from macOS file
-names or PDFs, otherwise finds nothing). A blank or missing value is rejected
+names or PDFs, otherwise finds nothing). The API folds case but matches spellings
+literally (`Strasse` finds far fewer hits than `Straße`); for a text that may be such an
+ASCII spelling the CLI prints a note on stderr (`searchSpellingHint`). A blank or missing value is rejected
 before any request by the client (`searchTextProblem`, a
 `TagesschauValidationError`) and so by the CLI.
 

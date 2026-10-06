@@ -30,6 +30,7 @@ export {
   regionsProblem,
   ressortProblem,
   resultPageProblem,
+  searchSpellingHint,
   searchTextProblem,
 } from "./validate.js";
 export type { Problem } from "./validate.js";

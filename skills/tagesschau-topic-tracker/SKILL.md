@@ -36,6 +36,13 @@ Multi-word queries: quote them (`search "CDU Parteitag"`). The query is sent as 
 PDF or a macOS file name still matches; with an older CLI, retype such a word);
 it's a keyword/phrase match, not boolean — keep terms simple, broaden if you get 0 hits.
 
+**Spell German words with `ä`, `ö`, `ü` and `ß`.** The search folds case but matches
+spellings literally: `Strasse` found 88 hits against 582 for `Straße`, `Koeln` 210 against
+388 for `Köln` (2026-10-05). An ASCII spelling makes a big story look niche. When the text
+has `ae`, `oe`, `ue` or `ss`, the CLI prints a note on stderr; if the word is really
+written with an umlaut or `ß`, search that spelling (and report its count); if not
+(`Russland`, `Wasser`), ignore the note.
+
 The result object:
 
 | Field | Meaning |

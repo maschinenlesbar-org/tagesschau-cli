@@ -70,6 +70,27 @@ export function regionsProblem(value: unknown): string | undefined {
   return 'expected an array of Bundesland ids ("1".."16"), e.g. ["9"].';
 }
 
+/**
+ * A note for a search text that may be an ASCII transliteration of ä, ö, ü or ß, or
+ * `undefined`. The search endpoint folds case (`köln` = `Köln`) but matches spellings
+ * literally: on 2026-10-05 `Strasse` found 88 hits against 582 for `Straße`, and `Koeln`
+ * 210 against 388 for `Köln`, all with exit 0 — so a user without umlauts on the keyboard,
+ * or an agent writing ASCII, reports a major topic as a niche one. The client cannot
+ * search the variants itself: `ss` is a real `ss` as often as a `ß` (Russland, Wasser),
+ * and each extra request costs from a budget of 60 an hour. So the note is a hint: it is
+ * given when the text has no letter outside ASCII and contains `ae`, `oe`, `ue` (not after
+ * `a`, `e` or `q`, as in Steuer, Bauer, Quelle) or `ss`. It never repeats the text.
+ */
+export function searchSpellingHint(searchText: string): string | undefined {
+  const text = searchText.normalize("NFKC").toLowerCase();
+  if (/[^\u0000-\u007f]/.test(text)) return undefined;
+  if (!/ae|oe|(?<![aeq])ue|ss/.test(text)) return undefined;
+  return (
+    'Note: the search matches spellings literally ("Koeln" finds far fewer hits than "Köln", ' +
+    '"Strasse" than "Straße"); if your text stands for ä, ö, ü or ß, search that spelling too.'
+  );
+}
+
 /** `Invalid <name> "<value>". Expected one of: …`, or `undefined` for an allowed value. */
 function oneOfProblem(name: string, value: unknown, allowed: readonly string[]): string | undefined {
   // includes(), never a keyed lookup: "toString" must not pass as a known value.

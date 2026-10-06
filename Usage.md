@@ -134,6 +134,17 @@ tagesschau search "Bundestag" | jq -r '.searchResults[].title'
 
 An empty search text is rejected by the CLI before any request is made.
 
+The API folds case (`köln` = `Köln`) but not spellings: `Strasse` found 88 hits
+against 582 for `Straße` on 2026-10-05, `Koeln` 210 against 388 for `Köln`. When the
+text has `ae`, `oe`, `ue` or `ss` and no letter outside ASCII, the CLI adds a note on
+stderr (the JSON is unchanged); if the word is written with `ä`, `ö`, `ü` or `ß`, search
+that spelling too:
+
+```bash
+tagesschau search "Koeln" | jq '.totalItemCount'   # + a note on stderr
+tagesschau search "Köln" | jq '.totalItemCount'
+```
+
 ### 8. Page through search results
 
 Why: walk large result sets. `--result-page` is a **0-based** page index (`0`,

@@ -92,7 +92,10 @@ and image metadata.
 | `--result-page <n>` | page index (`0`–`2147483647`, 0-based: `0` is the first page) |
 
 The positional `<text>` argument is required and must not be empty (rejected
-before any request).
+before any request). The API folds case but matches spellings literally: `Strasse`
+finds far fewer hits than `Straße`, `Koeln` than `Köln`. When the text could be such an
+ASCII spelling (it has `ae`, `oe`, `ue` or `ss` and no umlaut), the CLI prints a note on
+stderr; search the spelling with `ä`, `ö`, `ü` or `ß` too.
 
 ## Common tasks
 

@@ -4,7 +4,7 @@ import { action, once, parsePagingArg, parseResultPage, renderJson } from "../sh
 import { RessortValues, type Region, type Ressort } from "../../client/enums.js";
 import { TagesschauError, TagesschauValidationError } from "../../client/errors.js";
 import { newsDateProblem } from "../../client/client.js";
-import { MAX_SEARCH_INT, regionProblem, ressortProblem } from "../../client/validate.js";
+import { MAX_SEARCH_INT, regionProblem, ressortProblem, searchSpellingHint } from "../../client/validate.js";
 import type { NewsParams } from "../../client/types.js";
 
 /**
@@ -100,6 +100,10 @@ export function registerNewsCommands(program: Command, deps: CliDeps): void {
             resultPage: opts["resultPage"] as number | undefined,
           }),
         );
+        // The API matches ae/oe/ue/ss literally, not as ä/ö/ü/ß: say so on stderr (the JSON
+        // on stdout is unchanged) when the text may be such a transliteration.
+        const hint = searchSpellingHint(text as string);
+        if (hint !== undefined) deps.io.err(hint);
       }),
     );
 }

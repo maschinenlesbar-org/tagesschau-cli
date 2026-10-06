@@ -268,3 +268,21 @@ test("news --date follows the nextPage cursor; a malformed one is a usage error"
   assert.equal(bad.mt.calls.length, 0);
   assert.match(bad.err.join("\n"), /Invalid date "2026-09-20": expected YYMMDD/);
 });
+
+test("search notes on stderr that an ASCII transliteration is matched literally", async () => {
+  const hinted = ["Strasse", "Koeln", "Muenchen", "Baerbock", "Russland"];
+  const plain = ["Straße", "Köln", "Bundestag", "Steuer", "neue Quelle", "Bauer"];
+  for (const text of [...hinted, ...plain]) {
+    const cli = makeCli(() => jsonResponse({ searchResults: [], totalItemCount: 0 }));
+    assert.equal(await run(["search", text], cli.deps), 0, text);
+    assert.equal(cli.mt.calls.length, 1);
+    const note = cli.err.join("\n");
+    if (hinted.includes(text)) {
+      assert.match(note, /matches spellings literally .*search that spelling too/, text);
+      if (!["Strasse", "Koeln"].includes(text)) assert.ok(!note.includes(text), "the note never repeats the text");
+    } else {
+      assert.equal(note, "", text);
+    }
+    assert.equal(cli.out.length, 1, "the JSON on stdout is unchanged");
+  }
+});

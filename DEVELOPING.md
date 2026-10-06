@@ -103,6 +103,13 @@ that is not one in 0..`MAX_SEARCH_INT` — `Invalid pageSize: expected an intege
 2147483647, got 0.` — checked by the exported `pageSizeProblem` / `resultPageProblem`). `RessortValues` and
 `RegionValues` are exported; they are the allow-lists `news()` checks.
 
+`searchSpellingHint(text)` (exported) returns a note for a search text that may be an
+ASCII transliteration (`ae`, `oe`, `ue` not after `a`/`e`/`q`, `ss`, and no letter outside
+ASCII), or `undefined`; the CLI prints it on stderr after the result. The API folds case
+but matches spellings literally (`Strasse` 88 hits against 582 for `Straße` on
+2026-10-05), and searching the variants would cost requests from a budget of 60 an hour,
+so it stays a hint.
+
 Both methods take only the keys listed: an unknown or misspelled key (`news({ region:
 ["9"] })`, `search({ searchText, page: 2 })`) or a `__proto__` key from `JSON.parse` is a
 `TagesschauValidationError` (`Invalid news parameters: Unknown key "region"; expected
