@@ -40,6 +40,36 @@ export function searchTextProblem(value: unknown): string | undefined {
   return undefined;
 }
 
+/**
+ * A parameter object must be a plain object (or `undefined`, for "none") whose own keys
+ * are all in `known`. A misspelled or unknown key (`region` for `regions`, `Ressort`), or a
+ * `__proto__` key from `JSON.parse`, used to be ignored without a word, so
+ * `news({ region: ["9"] })` returned the national feed as if it were Niedersachsen's.
+ * Returns a `Problem` naming the first unknown key (cut, JSON-quoted) and the known ones.
+ */
+export function knownKeysProblem(known: readonly string[]): Problem<unknown> {
+  return (value) => {
+    if (value === undefined) return undefined;
+    if (typeof value !== "object" || value === null || Array.isArray(value)) return "Expected an object.";
+    for (const key of Object.keys(value)) {
+      if (!known.includes(key)) {
+        return `Unknown key ${JSON.stringify(key.slice(0, 60))}; expected one of ${known.join(", ")}.`;
+      }
+    }
+    return undefined;
+  };
+}
+
+/**
+ * `regions` must be an array (or `undefined`): a `Set` passed the per-id check, then was
+ * dropped because it has no `length`, and a string was read character by character
+ * (`"10"` as the ids "1" and "0"). The ids themselves are checked by `regionProblem`.
+ */
+export function regionsProblem(value: unknown): string | undefined {
+  if (value === undefined || Array.isArray(value)) return undefined;
+  return 'expected an array of Bundesland ids ("1".."16"), e.g. ["9"].';
+}
+
 /** `Invalid <name> "<value>". Expected one of: …`, or `undefined` for an allowed value. */
 function oneOfProblem(name: string, value: unknown, allowed: readonly string[]): string | undefined {
   // includes(), never a keyed lookup: "toString" must not pass as a known value.

@@ -1,6 +1,6 @@
 import { InvalidArgumentError, type Command } from "commander";
 import type { CliDeps } from "../io.js";
-import { action, parsePagingArg, parseResultPage, renderJson } from "../shared.js";
+import { action, once, parsePagingArg, parseResultPage, renderJson } from "../shared.js";
 import { RessortValues, type Region, type Ressort } from "../../client/enums.js";
 import { TagesschauError, TagesschauValidationError } from "../../client/errors.js";
 import { newsDateProblem } from "../../client/client.js";
@@ -37,12 +37,16 @@ export function registerNewsCommands(program: Command, deps: CliDeps): void {
   program
     .command("news")
     .description("The news feed, optionally filtered by region or by Ressort (not both)")
-    .option("--ressort <ressort>", `topic: ${RessortValues.join(" | ")} (not with --region)`)
+    .option(
+      "--ressort <ressort>",
+      `topic: ${RessortValues.join(" | ")} (once; not with --region)`,
+      once((value: string) => value),
+    )
     .option("--region <id>", "Bundesland id 1..16 (repeatable)", collectRegion)
     .option(
       "--date <yymmdd>",
       "page cursor: the date=YYMMDD value of a previous response's nextPage (the next, older page)",
-      parseNewsDate,
+      once(parseNewsDate),
     )
     .action(
       action(deps, async ({ client, global, opts }) => {
@@ -78,11 +82,11 @@ export function registerNewsCommands(program: Command, deps: CliDeps): void {
   program
     .command("search <text>")
     .description("Full-text search across articles")
-    .option("--page-size <n>", `pageSize parameter (1..${MAX_SEARCH_INT})`, parsePagingArg)
+    .option("--page-size <n>", `pageSize parameter (1..${MAX_SEARCH_INT})`, once(parsePagingArg))
     .option(
       "--result-page <n>",
       `resultPage parameter (0-based; 0 = first page; at most ${MAX_SEARCH_INT})`,
-      parseResultPage,
+      once(parseResultPage),
     )
     .action(
       action(deps, async ({ client, global, opts }, [text]) => {

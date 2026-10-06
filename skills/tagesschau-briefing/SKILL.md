@@ -50,7 +50,9 @@ tagesschau --compact news --ressort wirtschaft
 ```
 
 Valid `--ressort` values: `inland`, `ausland`, `wirtschaft`, `sport`, `video`,
-`investigativ`, `wissen`. A Ressort feed is much larger (50–60 items) and not editorially
+`investigativ`, `wissen`. `--ressort` takes **one** value per run (given twice, the CLI
+refuses with exit 1) — for two topics ("wirtschaft and sport"), run the command once per
+Ressort. A Ressort feed is much larger (50–60 items) and not editorially
 ranked — so for "top news" prefer `homepage`; use Ressort feeds to go deep on one topic.
 
 > **Trap — `--ressort sport` is different.** Its items come from `www.sportschau.de`, carry

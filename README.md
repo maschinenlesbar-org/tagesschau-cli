@@ -68,9 +68,9 @@ No arguments. Returns a JSON object with a `news` array (top stories) and a
 
 | Flag | Meaning |
 | --- | --- |
-| `--ressort <ressort>` | topic: `inland` \| `ausland` \| `wirtschaft` \| `sport` \| `video` \| `investigativ` \| `wissen` |
+| `--ressort <ressort>` | topic: `inland` \| `ausland` \| `wirtschaft` \| `sport` \| `video` \| `investigativ` \| `wissen`; one per run (given twice, it is a usage error) |
 | `--region <id>` | Bundesland id `1`–`16` (repeatable — pass multiple times to combine) |
-| `--date <yymmdd>` | page cursor: the `date=` value (`YYMMDD`) of a previous response's `nextPage`, to fetch the next, older page |
+| `--date <yymmdd>` | page cursor: the `date=` value (`YYMMDD`) of a previous response's `nextPage`, to fetch the next, older page; once per run |
 
 Both filters are optional, but they can't be combined: when both are given, the
 API applies the Ressort and silently ignores the region (every item comes back

@@ -62,7 +62,10 @@ tagesschau news --ressort sport
 ```
 
 Valid Ressorts: `inland`, `ausland`, `wirtschaft`, `sport`, `video`,
-`investigativ`, `wissen`. The news feed returns `news`, `regional` and (when
+`investigativ`, `wissen`. The API takes one Ressort per request, so `--ressort` given
+twice is a usage error (exit `1`, no request) rather than keeping only the last one;
+fetch each Ressort in its own run. `--date`, `--page-size` and `--result-page` take one
+value too. The news feed returns `news`, `regional` and (when
 there are more results) a `nextPage` URL: the same filters plus a `date=YYMMDD`
 cursor, e.g. `https://www.tagesschau.de/api2u/news?date=260924&regions=9`. Pass
 that value to `--date`, with the same filters, to fetch the next, older page:

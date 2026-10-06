@@ -11,7 +11,9 @@ import type { QueryParams } from "./query.js";
 import { TagesschauError, TagesschauParseError, TagesschauValidationError } from "./errors.js";
 import {
   assertValid,
+  knownKeysProblem,
   pageSizeProblem,
+  regionsProblem,
   regionProblem,
   ressortProblem,
   resultPageProblem,
@@ -27,6 +29,11 @@ import type {
 } from "./types.js";
 
 const API = "/api2u";
+
+/** The keys `news()` takes; any other key is a TagesschauValidationError. */
+const NEWS_KEYS = ["regions", "ressort", "date"] as const;
+/** The keys `search()` takes; any other key is a TagesschauValidationError. */
+const SEARCH_KEYS = ["searchText", "pageSize", "resultPage"] as const;
 
 /**
  * Why a news `date` cursor is unusable, or `undefined` when it is a real calendar
@@ -89,9 +96,12 @@ export class TagesschauClient {
    * Each region must be one of `RegionValues` and the ressort one of
    * `RessortValues` (`regionProblem` / `ressortProblem`): the API does not reject
    * an unknown value, so anything else is a `TagesschauValidationError` before any
-   * request.
+   * request. So is an unknown key (`region`, `Ressort`) and a `regions` that is not an
+   * array: the API ignores what it doesn't know and answers with the unfiltered feed.
    */
   async news(params: NewsParams = {}): Promise<NewsResult> {
+    assertValid("news parameters", params, knownKeysProblem(NEWS_KEYS));
+    assertValid("regions", params.regions, regionsProblem);
     const regions: readonly unknown[] = params.regions ?? [];
     for (const region of regions) {
       const problem = regionProblem(region);
@@ -139,9 +149,11 @@ export class TagesschauClient {
    * `TagesschauValidationError` before any request: upstream answers an empty one
    * with HTTP 400 and runs a whitespace-only one as is. So is a `pageSize` outside
    * 1..`MAX_SEARCH_INT` or a `resultPage` outside 0..`MAX_SEARCH_INT` (integers
-   * only; `pageSizeProblem` / `resultPageProblem`).
+   * only; `pageSizeProblem` / `resultPageProblem`), and an unknown key (`page`,
+   * `query`).
    */
   async search(params: SearchParams): Promise<SearchResult> {
+    if (params !== undefined) assertValid("search parameters", params, knownKeysProblem(SEARCH_KEYS));
     const problem = searchTextProblem(params?.searchText);
     if (problem !== undefined) throw new TagesschauValidationError(problem);
     assertValid("pageSize", params.pageSize, pageSizeProblem);

@@ -134,3 +134,15 @@ test("SearchResult types the echoed paging fields (compile-time check)", async (
   };
   assert.deepEqual(paging, { size: 3, page: 0, details: live.details });
 });
+
+test("search refuses an unknown or misspelled key before any request", async () => {
+  for (const params of [{ searchText: "Köln", page: 2 }, { searchText: "Köln", pagesize: 5 }, { query: "Köln" }]) {
+    const mt = constantJson({ searchResults: [] });
+    await assert.rejects(
+      () => clientWith(mt).search(params as never),
+      (err: unknown) => err instanceof TagesschauError && err.name === "TagesschauValidationError",
+      JSON.stringify(params),
+    );
+    assert.equal(mt.calls.length, 0);
+  }
+});

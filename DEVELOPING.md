@@ -103,6 +103,14 @@ that is not one in 0..`MAX_SEARCH_INT` — `Invalid pageSize: expected an intege
 2147483647, got 0.` — checked by the exported `pageSizeProblem` / `resultPageProblem`). `RessortValues` and
 `RegionValues` are exported; they are the allow-lists `news()` checks.
 
+Both methods take only the keys listed: an unknown or misspelled key (`news({ region:
+["9"] })`, `search({ searchText, page: 2 })`) or a `__proto__` key from `JSON.parse` is a
+`TagesschauValidationError` (`Invalid news parameters: Unknown key "region"; expected
+one of regions, ressort, date.`), checked by the exported `knownKeysProblem` — the API
+ignores what it doesn't know, so such a filter would have returned the national feed.
+`regions` must be an array (`regionsProblem`): a `Set` used to pass the per-id check and
+then be dropped, and a string was read character by character.
+
 ## Authentication internals
 
 The Tagesschau API is fully open — no API key, no token, no cookie. The client
