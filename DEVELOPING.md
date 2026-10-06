@@ -312,6 +312,14 @@ npm test          # builds, then runs `node --test` over dist/test
   `TagesschauValidationError`, and the `parity()` helper (`test/helpers.ts`), which sends
   one input through `run()` and through the library on one recording mock transport so
   a test can assert both give the same outcome.
+- **`conformance-p*.test.ts`** — the workspace's shared conformance checks from the 2026-10-05
+  review, copied across the `*-cli` repos (only the adapter block at the top differs): P1
+  credential redaction in CLI output, P2 in library objects, P3 credentials across redirects,
+  P4 base-URL validation (its P19 part is skipped: no environment variable here), P5 the
+  transport contract (`timeoutMs`, `maxResponseBytes`, headers, bodies), P6 the retry policy,
+  P7 pipes and exit codes (spawns the built bin), P8/P9/P13 charset, 2xx shapes and error
+  classes, P10 strict parameters and repeated flags. They use mock transports and local
+  servers only; none reaches www.tagesschau.de.
 
 ## Continuous integration
 
