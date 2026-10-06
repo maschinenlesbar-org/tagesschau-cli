@@ -143,7 +143,12 @@ which echo a rejected `--base-url` value, a mistyped option name in `=` form
 library's messages that name a rejected region or date — so a password with spaces,
 quotes, `#`, `?` or `/` is caught as well as an ordinary one. `redactUrl` (exported)
 falls back to the same text-based cut (`redactCredentials`) for a value that doesn't
-parse as a URL. `test/conformance-p1-cli-redaction.test.ts` checks ten passwords, seven
+parse as a URL. Logging a client shows no base URL: the engine keeps it in a real
+`#private` field, so `console.log(client)`, `util.inspect` and `JSON.stringify` don't
+reach it. The engine also scrubs the base URL's userinfo (raw and percent-decoded) from
+error bodies and details, from transport error text and from the `cause` chain, and
+wraps whatever a custom transport throws in a `TagesschauNetworkError` (the original,
+scrubbed, as `cause`); `test/conformance-p2-library-redaction.test.ts` checks it. `test/conformance-p1-cli-redaction.test.ts` checks ten passwords, seven
 URL shapes and every echo path.
 
 ## Architecture
