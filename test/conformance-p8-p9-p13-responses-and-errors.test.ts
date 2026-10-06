@@ -20,27 +20,32 @@ const textBody = (text: string): unknown => ({ news: [{ title: text }], regional
 const readText = (result: unknown): string => (result as { news: Array<{ title: string }> }).news[0]!.title;
 /** 2xx bodies the call must reject (error envelopes, empty or wrong shapes). `{ news: [] }` is not one: it is an empty feed. */
 const malformedBodies: unknown[] = [null, {}, "text", 42, [], { error: "boom" }, { news: null }, { news: "x" }, { news: [], regional: {} }];
+/**
+ * A transport that never touches the network: every bad call must fail before a request,
+ * and if one didn't, it must not reach www.tagesschau.de (60 requests an hour).
+ */
+const offline = { transport: async (): Promise<HttpResponse> => { throw new Error("test transport: no network"); } };
 /** Library calls with wrong-typed or out-of-range input. */
 const badCalls: Array<[string, () => unknown]> = [
-  ["news(null)", () => new Client().news(null as never)],
-  ["news({ regions: '9' })", () => new Client().news({ regions: "9" as never })],
-  ["news({ regions: [9] })", () => new Client().news({ regions: [9] as never })],
-  ["news({ ressort: null })", () => new Client().news({ ressort: null as never })],
-  ["news({ date: 261004 })", () => new Client().news({ date: 261004 as never })],
-  ["news({ date: '260230' })", () => new Client().news({ date: "260230" })],
-  ["news({ ressort, regions })", () => new Client().news({ ressort: "inland", regions: ["9"] })],
-  ["search(null)", () => new Client().search(null as never)],
-  ["search({ searchText: 5 })", () => new Client().search({ searchText: 5 as never })],
-  ["search({ pageSize: '5' })", () => new Client().search({ searchText: "x", pageSize: "5" as never })],
-  ["timeoutMs: 'x'", () => new Client({ timeoutMs: "x" as unknown as number })],
-  ["timeoutMs: -1", () => new Client({ timeoutMs: -1 })],
-  ["maxRetries: 11", () => new Client({ maxRetries: 11 })],
-  ["maxRetries: 1.5", () => new Client({ maxRetries: 1.5 })],
-  ["retryDelayMs: 3e9", () => new Client({ retryDelayMs: 3_000_000_000 })],
-  ["baseUrl: 5", () => new Client({ baseUrl: 5 as unknown as string })],
-  ["userAgent: {}", () => new Client({ userAgent: {} as unknown as string })],
+  ["news(null)", () => new Client(offline).news(null as never)],
+  ["news({ regions: '9' })", () => new Client(offline).news({ regions: "9" as never })],
+  ["news({ regions: [9] })", () => new Client(offline).news({ regions: [9] as never })],
+  ["news({ ressort: null })", () => new Client(offline).news({ ressort: null as never })],
+  ["news({ date: 261004 })", () => new Client(offline).news({ date: 261004 as never })],
+  ["news({ date: '260230' })", () => new Client(offline).news({ date: "260230" })],
+  ["news({ ressort, regions })", () => new Client(offline).news({ ressort: "inland", regions: ["9"] })],
+  ["search(null)", () => new Client(offline).search(null as never)],
+  ["search({ searchText: 5 })", () => new Client(offline).search({ searchText: 5 as never })],
+  ["search({ pageSize: '5' })", () => new Client(offline).search({ searchText: "x", pageSize: "5" as never })],
+  ["timeoutMs: 'x'", () => new Client({ ...offline, timeoutMs: "x" as unknown as number })],
+  ["timeoutMs: -1", () => new Client({ ...offline, timeoutMs: -1 })],
+  ["maxRetries: 11", () => new Client({ ...offline, maxRetries: 11 })],
+  ["maxRetries: 1.5", () => new Client({ ...offline, maxRetries: 1.5 })],
+  ["retryDelayMs: 3e9", () => new Client({ ...offline, retryDelayMs: 3_000_000_000 })],
+  ["baseUrl: 5", () => new Client({ ...offline, baseUrl: 5 as unknown as string })],
+  ["userAgent: {}", () => new Client({ ...offline, userAgent: {} as unknown as string })],
   ["transport: 'x'", () => new Client({ transport: "x" as unknown as never })],
-  ["sleep: 5", () => new Client({ sleep: 5 as unknown as never })],
+  ["sleep: 5", () => new Client({ ...offline, sleep: 5 as unknown as never })],
 ];
 // --------------------------------------------------------------------------------------
 
