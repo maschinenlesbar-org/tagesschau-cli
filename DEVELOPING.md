@@ -192,7 +192,15 @@ library independently of the CLI.
 
 **Transport.** A single function `(HttpRequest) => Promise<HttpResponse>`
 ([`http.ts`](src/client/http.ts)). The default uses Node's built-in
-`http`/`https`; tests inject a mock. This is the only HTTP seam.
+`http`/`https`; tests inject a mock. This is the only HTTP seam. The engine enforces
+the transport contract itself, so the documented limits hold for a custom transport
+(`fetch`, a `node:http` wrapper) too: it races every call against the `timeoutMs`
+deadline and aborts the request's `signal` then (the built-in transport honours it;
+pass it on as `fetch(url, { signal })`), checks the body against `maxResponseBytes`,
+reads response headers in any case and from a `Headers` object or a `Map`, accepts any
+ArrayBuffer view (a `Uint8Array` from `fetch`) or ArrayBuffer as the body, and turns a
+thrown value or a malformed response (no status, no headers, a body of another type)
+into a `TagesschauNetworkError`. `test/conformance-p5-transport-contract.test.ts` checks it.
 
 **Request engine.** [`RequestEngine`](src/client/engine.ts) — builds URLs,
 serialises queries, applies retry/backoff, follows redirects, decodes JSON and
@@ -232,7 +240,9 @@ usage error (exit 1), and `run.ts` maps a `TagesschauValidationError` raised dur
 action to exit 1 too, printed as `Error: <message>`.
 
 **Retry / backoff.** Transient `429` (rate limit) and `503` responses are
-retried automatically, up to `maxRetries` (default `2`; CLI `--max-retries`,
+retried automatically (transport failures — a refused or reset connection, a DNS
+failure, a timeout — are not: with 60 requests an hour, a broken connection is
+reported, not asked again at once), up to `maxRetries` (default `2`; CLI `--max-retries`,
 `0`–`10`). Each retry waits the response's `Retry-After` (`parseRetryAfter`:
 delay-seconds or an IMF-fixdate, anything else is ignored) when it is at most
 `MAX_RETRY_AFTER_MS` (30 s); a longer one is not retried and the error surfaces
@@ -240,7 +250,10 @@ at once. Without a usable header the wait is `retryDelayMs * attempt`.
 `TagesschauApiError` exposes `isRetryable` (true for `429`/`503`).
 
 **maxResponseBytes.** A cap on the response body size in bytes (`0` = unlimited;
-default 100 MiB), guarding against unbounded responses.
+default 100 MiB), guarding against unbounded responses. The built-in transport aborts
+as soon as the cap is passed; the engine checks the body of any transport. The error
+names both spellings: `Response exceeded the size limit of 1000 bytes
+(maxResponseBytes; --max-response-bytes on the CLI)`.
 
 **Rendering (`--compact`).** Every command prints JSON to stdout — pretty-printed
 by default, on a single line with `--compact`.

@@ -410,3 +410,30 @@ test("error detail: bidi controls dropped, newlines folded, length capped", asyn
       err.body.length > 200_000,
   );
 });
+
+test("Location and Retry-After are read in any case and from a Headers object or Map", async () => {
+  // A 302 whose Location comes as a fetch Headers object, a Map or a Title-Case key is followed.
+  for (const headers of [new Headers({ Location: "/elsewhere/" }), new Map([["location", "/elsewhere/"]]), { Location: "/elsewhere/" }]) {
+    const mt = makeMockTransport((req) =>
+      req.url.endsWith("/elsewhere/")
+        ? jsonResponse({ ok: 1 })
+        : { status: 302, headers: headers as unknown as Record<string, string>, body: Buffer.alloc(0) },
+    );
+    const e = new RequestEngine({ baseUrl: "https://example.test", transport: mt.transport });
+    assert.deepEqual(await e.getJson("/x"), { ok: 1 });
+  }
+  // A Retry-After above the cap under a Title-Case key is not retried (it was retried twice at
+  // 200/400 ms when only lower-case keys were read).
+  let calls = 0;
+  const delays: number[] = [];
+  const e = new RequestEngine({
+    transport: async () => {
+      calls++;
+      return { status: 429, headers: { "Retry-After": "100" } as Record<string, string>, body: Buffer.from("{}") };
+    },
+    sleep: async (ms) => void delays.push(ms),
+  });
+  await assert.rejects(() => e.getJson("/x"), (err) => err instanceof TagesschauApiError && err.status === 429);
+  assert.equal(calls, 1);
+  assert.deepEqual(delays, []);
+});
