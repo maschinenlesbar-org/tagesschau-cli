@@ -38,8 +38,8 @@ tagesschau --compact homepage
 ```
 
 It returns `{ news, regional, type, newStoriesCountLink }`. `news` is the editorially
-ranked top stories (~9 items); `regional` is a per-state block (one item per Bundesland,
-each tagged `regionId` 1–16) — **ignore `regional` for a national briefing** unless the
+ranked top stories (~9 items); `regional` is a per-state block (up to one item per Bundesland,
+each tagged `regionId` 1–16; a state can be missing — on 2026-10-05 it had 15, no Bremen) — **ignore `regional` for a national briefing** unless the
 user asked for regional news (then use the **tagesschau-regional** skill).
 
 If the user scoped to a topic ("just business", "sport only"), pull that Ressort feed
