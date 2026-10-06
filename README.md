@@ -155,6 +155,9 @@ tagesschau --compact homepage | jq -c '.news'
 | `1` | any other error (API error, network failure, unexpected) |
 | non-zero | usage / invalid argument (commander parse error) |
 
+A reader that stops early (`tagesschau homepage | head -5`) ends the run quietly with
+exit `0`; if the reader of **stderr** goes away, a failed run still keeps its own code.
+
 ## Troubleshooting
 
 - **`command not found: tagesschau`** — the global npm bin directory isn't on

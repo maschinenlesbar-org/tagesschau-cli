@@ -182,4 +182,6 @@ name (e.g. `tagesschau --compact news --ressort sport` or
 | `-h, --help` | Display help for the program or a command. |
 
 Exit codes: `0` success, `4` on a `404` from the API, `1` for any other error,
-and a non-zero usage error from the parser for invalid arguments.
+and a non-zero usage error from the parser for invalid arguments. Output into a reader
+that stops early (`| head`) ends quietly with `0`; a failed run whose stderr reader has
+gone away (`2>&1 | true`) keeps its own code.
