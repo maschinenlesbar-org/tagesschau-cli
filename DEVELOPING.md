@@ -328,7 +328,7 @@ npm test          # builds, then runs `node --test` over dist/test
   transport contract (`timeoutMs`, `maxResponseBytes`, headers, bodies), P6 the retry policy,
   P7 pipes and exit codes (spawns the built bin), P8/P9/P13 charset, 2xx shapes and error
   classes, P10 strict parameters and repeated flags, P20 the stderr warning for a plain-`http:`
-  base URL. They use mock transports and local
+  base URL, P21 README links only to files the npm package ships (others by their GitHub URL). They use mock transports and local
   servers only; none reaches www.tagesschau.de.
 
 ## Continuous integration

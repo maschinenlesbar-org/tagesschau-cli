@@ -18,7 +18,7 @@ JSON you can pipe straight into [`jq`](https://jqlang.github.io/jq/).
 - **Read-only** — every call is a plain GET; nothing is written, nothing is sent except the query.
 
 > Want to use this as a TypeScript library or understand how it's built?
-> See **[DEVELOPING.md](DEVELOPING.md)**.
+> See **[DEVELOPING.md](https://github.com/maschinenlesbar-org/tagesschau-cli/blob/main/DEVELOPING.md)**.
 
 ## Install
 
@@ -76,8 +76,8 @@ Both filters are optional, but they can't be combined: when both are given, the
 API applies the Ressort and silently ignores the region (every item comes back
 national, `regionId: 0`), so the CLI refuses `--ressort` together with `--region`
 (exit `1`, no request). For a topic within a state, fetch the region feed and
-filter it locally (see [Usage.md](Usage.md), use case 6). The
-**[Glossary](GLOSSARY.md)** decodes every term.
+filter it locally (see [Usage.md](https://github.com/maschinenlesbar-org/tagesschau-cli/blob/main/Usage.md), use case 6). The
+**[Glossary](https://github.com/maschinenlesbar-org/tagesschau-cli/blob/main/GLOSSARY.md)** decodes every term.
 
 ### `channels`
 
@@ -99,7 +99,7 @@ stderr; search the spelling with `ä`, `ö`, `ü` or `ß` too.
 
 ## Common tasks
 
-A few recipes to get going — see **[Usage.md](Usage.md)** for the full,
+A few recipes to get going — see **[Usage.md](https://github.com/maschinenlesbar-org/tagesschau-cli/blob/main/Usage.md)** for the full,
 use-case-driven set.
 
 ```bash
@@ -199,10 +199,10 @@ These apply to every command and may be given **before or after** the command na
 
 ## Learn more
 
-- **[Usage.md](Usage.md)** — full use-case-driven cookbook.
-- **[GLOSSARY.md](GLOSSARY.md)** — every command, flag and domain term explained.
-- **[DEVELOPING.md](DEVELOPING.md)** — TypeScript library usage, architecture, testing, CI.
-- **[SKILLS.md](SKILLS.md)** — Claude Code Agent Skills bundled with this repo (news
+- **[Usage.md](https://github.com/maschinenlesbar-org/tagesschau-cli/blob/main/Usage.md)** — full use-case-driven cookbook.
+- **[GLOSSARY.md](https://github.com/maschinenlesbar-org/tagesschau-cli/blob/main/GLOSSARY.md)** — every command, flag and domain term explained.
+- **[DEVELOPING.md](https://github.com/maschinenlesbar-org/tagesschau-cli/blob/main/DEVELOPING.md)** — TypeScript library usage, architecture, testing, CI.
+- **[SKILLS.md](https://github.com/maschinenlesbar-org/tagesschau-cli/blob/main/SKILLS.md)** — Claude Code Agent Skills bundled with this repo (news
   briefing, regional news, topic tracker, live streams), installable as a plugin.
 
 ## Data license
