@@ -26,7 +26,7 @@ JSON you can pipe straight into [`jq`](https://jqlang.github.io/jq/).
 npm i -g @maschinenlesbar.org/tagesschau-cli
 ```
 
-This installs the **`tagesschau`** command. Requires **Node.js 20+**.
+This installs the **`tagesschau`** command. Requires **Node.js 22.12+**.
 
 Check it works:
 
@@ -164,7 +164,7 @@ exit `0`; if the reader of **stderr** goes away, a failed run still keeps its ow
 ## Troubleshooting
 
 - **`command not found: tagesschau`** — the global npm bin directory isn't on
-  your `PATH`. Run `npm bin -g` to find it and add it, or run via
+  your `PATH`. Add `$(npm prefix -g)/bin` to it, or run via
   `npx @maschinenlesbar.org/tagesschau-cli …`.
 - **Exit `4` / "not found"** — the API returned a `404`. Every command calls a
   fixed endpoint, so this usually means a wrong `--base-url` or a moved API. (An
