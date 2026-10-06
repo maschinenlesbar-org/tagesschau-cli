@@ -117,9 +117,14 @@ response's `Retry-After` (seconds or an HTTP date) when it is at most 30 s
 once. Without a usable `Retry-After` the wait grows linearly (200 ms × attempt).
 
 **Redirects.** The client follows up to `--max-redirects` redirects (default
-`5`). On a **cross-origin** hop it strips credential-bearing headers
-(`Authorization`, `X-API-Key`, `Cookie`) before the next request so they can
-never leak to an unintended host; same-origin redirects keep all headers.
+`5`). Credentials in `--base-url` (`https://user:pw@host`) go out as an
+`Authorization` header to the base URL's own origin (scheme, host and port) only:
+a same-origin redirect keeps them, relative or absolute; on a **cross-origin** hop
+the client strips credential-bearing headers (`Authorization`, `X-API-Key`,
+`Cookie`) before the next request so they can never leak to an unintended host. If
+the target then answers 401 or 403, the error says the redirect dropped them (for
+an `http:` → `https:` redirect: use an `https:` base URL). A user name or password
+in a redirect's `Location` is never used.
 
 **Response size cap.** Responses larger than `--max-response-bytes` (default
 **100 MiB**; `0` = unlimited) are aborted to defend against memory exhaustion

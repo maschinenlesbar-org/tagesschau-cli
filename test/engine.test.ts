@@ -342,7 +342,7 @@ test("the engine refuses a base URL with a query or fragment", () => {
   }
 });
 
-test("userinfo never reaches base-URL errors and is redacted in redirect errors", async () => {
+test("userinfo never reaches base-URL errors or redirect errors (the request URL carries none)", async () => {
   assert.throws(
     () => new RequestEngine({ baseUrl: "http://u:pw@h.test/#f" }),
     (err: unknown) => err instanceof TagesschauValidationError && !err.message.includes("pw"),
@@ -355,7 +355,7 @@ test("userinfo never reaches base-URL errors and is redacted in redirect errors"
   const e = new RequestEngine({ baseUrl: "http://u:pw@h.test", transport: loop.transport, maxRedirects: 1 });
   await assert.rejects(
     () => e.getJson("/x"),
-    (err: unknown) => err instanceof TagesschauNetworkError && err.message.includes("http://***@h.test/") && !err.message.includes("pw"),
+    (err: unknown) => err instanceof TagesschauNetworkError && err.message.includes("http://h.test/") && !err.message.includes("pw"),
   );
   const noLoc = makeMockTransport(() => ({ status: 302, headers: {}, body: Buffer.from("") }));
   const e2 = new RequestEngine({ baseUrl: "http://u:pw@h.test", transport: noLoc.transport });

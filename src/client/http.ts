@@ -27,6 +27,12 @@ export interface HttpRequest {
    * and enforces `maxResponseBytes` on the body it gets back, so neither limit depends on it.
    */
   signal?: AbortSignal;
+  /**
+   * Always `"manual"` from the engine: a transport must not follow redirects. The engine
+   * follows them itself and decides per hop whether the `Authorization` header goes along
+   * (same origin only). A fetch-based transport passes it on: `fetch(url, { redirect })`.
+   */
+  redirect?: "manual";
 }
 
 export interface HttpResponse {
@@ -38,6 +44,12 @@ export interface HttpResponse {
   headers: http.IncomingHttpHeaders;
   /** The body; the engine also accepts any ArrayBuffer view (a `Uint8Array` from fetch) or an ArrayBuffer. */
   body: Buffer;
+  /**
+   * The URL the response came from, if the transport knows it (fetch's `response.url`).
+   * When it is on another origin than the request, the transport followed a redirect
+   * itself and the engine rejects the response with a TagesschauNetworkError.
+   */
+  url?: string;
 }
 
 export type Transport = (request: HttpRequest) => Promise<HttpResponse>;

@@ -272,6 +272,35 @@ function firstHeader(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
+/**
+ * The `Authorization` header for a URL's userinfo (`Basic base64(user:password)`, both
+ * percent-decoded, as Node's own http client builds it), or undefined without userinfo.
+ */
+function basicAuthorization(url: string): string | undefined {
+  const parsed = new URL(url);
+  if (parsed.username === "" && parsed.password === "") return undefined;
+  const pair = `${decodeURIComponent(parsed.username)}:${decodeURIComponent(parsed.password)}`;
+  return `Basic ${Buffer.from(pair, "utf8").toString("base64")}`;
+}
+
+/**
+ * A validated base URL without its userinfo, kept otherwise exactly as written (the request
+ * paths are appended to the raw string).
+ */
+function withoutUserinfo(base: string): string {
+  const [userinfo] = credentialsIn(base);
+  return userinfo === undefined ? base : base.replace(`://${userinfo}@`, "://");
+}
+
+/** The origin (scheme, host, port) of a URL, or the value itself if it doesn't parse. */
+function originOf(url: string): string {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return url;
+  }
+}
+
 /** Return a copy of `headers` with all credential-bearing headers removed. */
 export function stripCredentialHeaders(
   headers: Record<string, string>,
@@ -425,11 +454,20 @@ export class RequestEngine {
     }
   }
 
-  /** Build a fully-qualified URL from a path and optional query parameters. */
+  /**
+   * Build a fully-qualified URL from a path and optional query parameters. It keeps the
+   * base URL's userinfo; `request()` sends the URL without it and the userinfo as an
+   * `Authorization` header instead.
+   */
   buildUrl(path: string, query?: QueryParams): string {
+    return this.composeUrl(this.#baseUrl, path, query);
+  }
+
+  /** `base` + path + query, the path and query serialised as `buildUrl` documents. */
+  private composeUrl(base: string, path: string, query?: QueryParams): string {
     const normalizedPath = path.startsWith("/") ? path : `/${path}`;
     const qs = query ? buildQueryString(query) : "";
-    return `${this.#baseUrl}${normalizedPath}${qs ? `?${qs}` : ""}`;
+    return `${base}${normalizedPath}${qs ? `?${qs}` : ""}`;
   }
 
   /** Perform a request with Accept negotiation and transient-error retries. */
@@ -438,11 +476,19 @@ export class RequestEngine {
     path: string,
     options: { query?: QueryParams; accept: string } = { accept: "application/json" },
   ): Promise<RawResponse> {
-    let url = this.buildUrl(path, options.query);
+    // The transport never sees the base URL's userinfo: the engine sends it as an
+    // Authorization header, per hop, so a redirect to the same origin (relative or
+    // absolute) keeps it and one to another origin or scheme drops it. A transport such
+    // as fetch also refuses a URL with credentials outright.
+    let url = this.composeUrl(withoutUserinfo(this.#baseUrl), path, options.query);
     let headers: Record<string, string> = {
       Accept: options.accept,
       "User-Agent": this.userAgent,
     };
+    const authorization = basicAuthorization(this.#baseUrl);
+    if (authorization !== undefined) headers["Authorization"] = authorization;
+    /** Why a redirect dropped the base URL's credentials, for a 401/403 message. */
+    let dropped: string | undefined;
 
     // Only an idempotent request is sent again: request() is public, and a POST re-sent
     // after a 503 may be applied twice. The client itself sends GETs only.
@@ -461,6 +507,7 @@ export class RequestEngine {
           url,
           headers,
           timeoutMs: this.timeoutMs,
+          redirect: "manual",
           ...(this.maxResponseBytes > 0 ? { maxResponseBytes: this.maxResponseBytes } : {}),
         });
       } catch (cause) {
@@ -472,6 +519,17 @@ export class RequestEngine {
       const invalid = responseProblem(response);
       if (invalid !== undefined) {
         throw new TagesschauNetworkError(`The transport returned an invalid response (${invalid}).`);
+      }
+      // A transport must not follow redirects itself (`redirect: "manual"`): one that did
+      // (fetch's default) may have carried the Authorization header to another host, and
+      // the answer is not the one asked for. Reject it when it says so (`url`).
+      const finalUrl = (response as { url?: unknown }).url;
+      if (typeof finalUrl === "string" && finalUrl !== "" && originOf(finalUrl) !== originOf(url)) {
+        throw new TagesschauNetworkError(
+          `${method} ${redactUrl(url)} failed: the transport followed a redirect to another origin ` +
+            `(${sanitizeServerText(redactUrl(this.scrub(finalUrl)))}); a transport must not follow redirects ` +
+            `(HttpRequest.redirect is "manual").`,
+        );
       }
       const status = response.status;
       const responseHeaders = plainHeaders(response.headers);
@@ -508,7 +566,14 @@ export class RequestEngine {
           );
         }
         const previousUrl = url;
-        const nextUrl = new URL(location, previousUrl);
+        let nextUrl: URL;
+        try {
+          nextUrl = new URL(location, previousUrl);
+        } catch {
+          throw new TagesschauNetworkError(
+            `Redirect (HTTP ${status}) to an unusable Location for ${method} ${redactUrl(previousUrl)}`,
+          );
+        }
         // Enforce http(s)-only on the redirect target here in the engine, not
         // only in the default transport: a custom transport gets no scheme guard
         // otherwise, so a hostile `Location: file:///…` (or ftp:, data:, …) would
@@ -518,20 +583,31 @@ export class RequestEngine {
             `Refusing to follow redirect to unsupported scheme "${nextUrl.protocol}" (from ${method} ${redactUrl(previousUrl)})`,
           );
         }
-        url = nextUrl.toString();
-        // Cross-origin hop: drop credential headers so they are never re-sent to
-        // a host the caller did not intend to authenticate against. Same-origin
-        // redirects (e.g. /homepage/ -> /homepage) keep all headers.
-        if (new URL(url).origin !== new URL(previousUrl).origin) {
+        // Userinfo in a Location is not used: credentials come from the base URL only,
+        // as the Authorization header, never from a server.
+        nextUrl.username = "";
+        nextUrl.password = "";
+        // Cross-origin hop (scheme, host or port): drop credential headers so they are
+        // never re-sent to a host the caller did not intend to authenticate against. The
+        // same origin keeps them, whether the Location is relative or absolute.
+        const from = new URL(previousUrl);
+        if (nextUrl.origin !== from.origin) {
+          if (authorization !== undefined && "Authorization" in headers && dropped === undefined) {
+            dropped =
+              from.protocol === "http:" && nextUrl.protocol === "https:" && from.hostname === nextUrl.hostname
+                ? "the server redirected http→https, which dropped the base URL's credentials; use an https base URL"
+                : `the redirect to ${nextUrl.origin} dropped the base URL's credentials (they are sent to their own origin only)`;
+          }
           headers = stripCredentialHeaders(headers);
         }
+        url = nextUrl.toString();
         redirects += 1;
         continue;
       }
 
       const contentType = String(firstHeader(responseHeaders["content-type"]) ?? "");
       if (status < 200 || status >= 300) {
-        throw this.toApiError(method, url, status, body);
+        throw this.toApiError(method, url, status, body, status === 401 || status === 403 ? dropped : undefined);
       }
 
       return { data: body, contentType, status };
@@ -549,7 +625,7 @@ export class RequestEngine {
     }
   }
 
-  private toApiError(method: string, url: string, status: number, body: Buffer): TagesschauApiError {
+  private toApiError(method: string, url: string, status: number, body: Buffer, hint?: string): TagesschauApiError {
     // The body is kept on the error (`body`) and may echo the request URL: scrub it.
     const text = this.scrub(body.toString("utf8"));
     let detail: string | undefined;
@@ -567,6 +643,7 @@ export class RequestEngine {
     // ends up in the error message printed to stderr, so strip control and bidi
     // characters, fold it onto one line and cap its length before it leaves the engine.
     if (detail !== undefined) detail = cleanDetail(detail);
+    if (hint !== undefined) detail = detail === undefined ? hint : `${detail}; ${hint}`;
     return new TagesschauApiError({ status, url, method, body: text, detail });
   }
 }

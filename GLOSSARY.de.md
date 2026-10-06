@@ -121,10 +121,15 @@ beträgt (`MAX_RETRY_AFTER_MS`); ein längeres wird nicht wiederholt, der Fehler
 sofort. Ohne brauchbares `Retry-After` wächst die Wartezeit linear (200 ms × Versuch).
 
 **Weiterleitungen.** Der Client folgt bis zu `--max-redirects` Weiterleitungen (Standard
-`5`). Bei einem Sprung auf einen **anderen Origin** entfernt er Header mit Zugangsdaten
+`5`). Zugangsdaten in `--base-url` (`https://user:pw@host`) gehen als
+`Authorization`-Header nur an den Origin der Basis-URL (Schema, Host und Port): Eine
+Weiterleitung innerhalb desselben Origins behält sie, ob relativ oder absolut; bei einem
+Sprung auf einen **anderen Origin** entfernt der Client Header mit Zugangsdaten
 (`Authorization`, `X-API-Key`, `Cookie`) vor der nächsten Anfrage, damit sie nie an einen
-unbeabsichtigten Host gelangen; bei Weiterleitungen innerhalb desselben Origins bleiben
-alle Header erhalten.
+unbeabsichtigten Host gelangen. Antwortet das Ziel dann mit 401 oder 403, sagt die
+Fehlermeldung, dass die Weiterleitung sie entfernt hat (bei `http:` → `https:`: eine
+`https:`-Basis-URL verwenden). Benutzername oder Passwort im `Location` einer
+Weiterleitung werden nie verwendet.
 
 **Obergrenze der Antwortgröße.** Antworten, die größer als `--max-response-bytes` sind
 (Standard **100 MiB**; `0` = unbegrenzt), werden abgebrochen – zum Schutz vor

@@ -109,10 +109,18 @@ The Tagesschau API is fully open — no API key, no token, no cookie. The client
 sends only read-only `GET` requests with two headers, `Accept` and `User-Agent`;
 there is no seam for extra headers and no credential header is ever injected.
 
-**Redirect safety.** When the API issues a redirect that crosses an origin
+**Redirect safety.** Userinfo in the base URL is not handed to the transport in
+the URL: the engine sends it as an `Authorization: Basic …` header it manages per
+hop. When the API issues a redirect that crosses an origin
 boundary (different scheme, host, or port), the client **strips credential-bearing
-headers** (`Authorization`, `X-API-Key`, `Cookie`) before following it. Same-origin
-redirects keep all headers. A same-host `https:` → `http:` **downgrade** counts as
+headers** (`Authorization`, `X-API-Key`, `Cookie`) before following it, and a 401/403
+from the target then names the drop (`the server redirected http→https, which dropped
+the base URL's credentials; use an https base URL`). Same-origin redirects keep all
+headers, whether the `Location` is relative or absolute; a `Location`'s own userinfo
+is ignored. The engine follows redirects itself: `HttpRequest.redirect` is `"manual"`,
+and a response whose `HttpResponse.url` (fetch's `response.url`) lies on another origin
+is rejected as a `TagesschauNetworkError` ("the transport followed a redirect to
+another origin"). `test/conformance-p3-redirect-credentials.test.ts` checks it. A same-host `https:` → `http:` **downgrade** counts as
 a cross-origin hop (the origin differs by scheme), so credentials are stripped
 there too — they never cross the wire in cleartext. The engine also enforces that
 a redirect `Location` resolves to an `http:`/`https:` URL, rejecting any other
@@ -134,8 +142,9 @@ to: `"https://h/ "` would request `/%20/api2u/...`. The rules are the exported
 `baseUrlProblem` (and its part `baseUrlWhitespaceProblem`); the CLI's `--base-url`
 parser (`parseBaseUrl`) calls the same `baseUrlProblem` and turns its reason into a
 usage error at parse time, with no rules of its own.
-Userinfo in the base URL (`https://user:pw@mirror/`) is allowed — Node sends it as
-Basic auth — but every error message shows it as `***` (the exported `redactUrl`):
+Userinfo in the base URL (`https://user:pw@mirror/`) is allowed — the engine sends it
+as Basic auth (see above), and request URLs in errors carry none — and any text that
+still shows it shows it as `***` (the exported `redactUrl`):
 `TagesschauApiError` (message and `url`), the redirect and transport URL errors; the
 base-URL errors never echo the URL at all. The CLI also redacts on output: `run.ts`
 (`withRedactedOutput`) takes the exact userinfo of every argument (`credentialsIn`,
