@@ -3,8 +3,9 @@
 Echte Beispiele für die Claude-Code-Skills des Plugins `tagesschau`, eines pro Skill: eine
 Anfrage, die `tagesschau`-Befehle, die der Skill ausgeführt hat, und Claudes Antwort.
 
-Jedes Beispiel lief am 15. September 2026 mit `tagesschau` 0.0.6 gegen die Live-API,
-außer tagesschau-topic-tracker, das am 26. September 2026 mit 0.1.0 neu lief.
+tagesschau-briefing, tagesschau-regional und tagesschau-topic-tracker liefen am 6. Oktober 2026
+mit `tagesschau` 0.3.0 gegen die Live-API; tagesschau-watch-live lief am 15. September 2026 mit
+0.0.6.
 Die Daten ändern sich, Ihre Ergebnisse werden also abweichen; mit den gezeigten IDs und
 Schlüsseln können Sie die Anfragen selbst ausprobieren. Lange Listen sind gekürzt.
 
@@ -14,145 +15,146 @@ Skills: [tagesschau-briefing](#tagesschau-briefing) · [tagesschau-regional](#ta
 
 ## tagesschau-briefing
 
-> Tagesschau-Überblick für heute Nachmittag, mit etwas mehr Tiefe bei der Wirtschaft.
+> Tagesschau-Überblick zu später Stunde, mit etwas mehr Tiefe bei der Wirtschaft.
 
 ```bash
 tagesschau --compact homepage
 tagesschau --compact news --ressort wirtschaft
 ```
 
-Keine Meldung hatte `breakingNews: true`. Den `regional`-Block der Startseite (16 Einträge) ließ
-der Skill im nationalen Überblick weg. „Neue Aufgaben für die Apotheken" kam in beiden Feeds
-vor und steht nur einmal in der Liste (abgeglichen über `sophoraId`). Der Wirtschaft-Feed enthält
-58 Beiträge zurück bis zum 08.09., neueste zuerst, davon 8 von heute.
+Keine Meldung hatte `breakingNews: true`. Den `regional`-Block der Startseite (diesmal 16
+Einträge, einer pro Bundesland) ließ der Skill im nationalen Überblick weg. Drei
+Wirtschaftsbeiträge kamen in beiden Feeds vor und stehen nur einmal in der Liste (abgeglichen
+über `sophoraId`). Es war 02:27 Uhr, der Wirtschaft-Feed hatte also noch nichts vom 6. Oktober:
+Seine 50 Beiträge reichen zurück bis zum 29.09., 9 davon vom 5. Oktober; er wurde vor dem
+Kürzen neueste zuerst nach `date` sortiert.
 
 ```
-Tagesschau – 15.09.2026, 17:42
+Tagesschau – 06.10.2026, 02:27
 
 EILMELDUNG
-  (derzeit keine)
+  (gerade keine)
+
+Wissen
+  • "Ich bin natürlich überwältigt" – Nobelpreisträger Hegemann
+    In den tagesthemen berichtet Hegemann vom Nutzen der Optogenetik - und fordert mehr Mut von der Politik.
+    tagesschau.de/wissen/forschung/tagesthemen-interview-hegemann-100.html
 
 Inland
-  • Merz kündigt Entlastungen bei Spritpreisen an – Kanzler bei Unternehmertag
-    tagesschau.de/inland/innenpolitik/merz-entlastungen-spritpreise-100.html
-  • Kriminelle Gruppen werden digitaler und brutaler – BKA legt Bericht für 2025 vor
-    Das BKA beobachtet einen tiefgreifenden Wandel der Organisierten Kriminalität.
-  • Wahlkampf zwischen Euphorie und Entgeisterung – Wahl in Mecklenburg-Vorpommern
-  • Mutmaßliche Mitglieder von Terrorgruppe festgenommen – Angriffe auf Eritrea-Festivals
+  • Die Bedrohung ist da - aber was heißt das? – Bilanz der Nachrichtendienste
+    tagesschau.de/inland/innenpolitik/nachrichtendienste-praesidenten-bedrohung-100.html
+  • Pharmafirmen sollen für Wasserreinigung zahlen – Pläne des Bundesumweltministers
 
 Ausland
-  • US-Behörde räumt Munitionsknappheit ein – Bericht zum Iran-Krieg
-  • Verlängerung von Strafmaßnahmen vorerst blockiert – EU-Sanktionen gegen Russland
-  • Russische Fregatte feuert Leuchtraketen auf Helikopter – Ostsee vor Dänemark
+  • Moskau dementiert tödlichen Pestfall in Sibirien – Gerüchte um Laborunfall
 
-Wirtschaft (Startseite + Ressort-Feed, heute, neueste zuerst)
-  • 17:30  Klagen gegen Preiserhöhungen bei Streaming-Diensten – Netflix, Apple TV und Wow
-    tagesschau.de/wirtschaft/verbraucher/streaminganbieter-rechtsstreit-preiserhoehungen-100.html
-  • 16:04  Was könnte die Politik gegen hohe Spritpreise machen? – Debatte über Entlastungen
-  • 14:04  US-Rendite auf Niveau der Finanzkrise – Zinserwartungen verfestigt
-  • 13:39  Neue Aufgaben für die Apotheken – Medizinische Dienstleister   (auch auf der Startseite)
-  • 12:34  Warum der Umstieg auf E-Lkw so schwierig ist – IAA Transportation in Hannover
-  • 10:58  US-Zinsentscheid zwingt Anleger zur Vorsicht – DAX weiter auf Talfahrt
-  …2 weitere von heute; 58 im Feed, zurück bis 08.09.
+Wirtschaft (Startseite + Ressort-Feed, 05.10., neueste zuerst)
+  • 18:42  Preise für Benzin und Diesel steigen wieder leicht – Hohe Energiepreise   (auch auf der Startseite)
+    tagesschau.de/wirtschaft/verbraucher/spritpreise-tankrabatt-120.html
+  • 18:28  DAX kommt nicht vom Fleck – Euro rutscht ab
+  • 15:44  Flugpreise aus Deutschland seit 2010 etwa verdoppelt – Kosten für Tickets   (auch auf der Startseite)
+  • 14:11  Euro fällt unter 1,12 Dollar – Talfahrt geht weiter
+  • 13:23  Wie die E-Auto-Prämie wirkt – Staatlicher Kaufanreiz
+  • 12:27  100.000 Antragsteller profitieren von E-Auto-Prämie – Erwartungen übertroffen   (auch auf der Startseite)
+  • 12:01  E-Autos boomen bei deutschen Käufern – Hohe Spritpreise und E-Auto-Prämie
+  • 11:15  Sanierung dauert deutlich länger - und wird teurer – Bahnstrecke Berlin-Hannover
+  …1 weiterer vom 05.10.; 50 im Feed, zurück bis 29.09.
 
 Weitere
   • Wolken, Temperaturen, Wind und Aussichten – Wettervorhersage Deutschland
 ```
 
-Als Nächstes angeboten: regionale Schlagzeilen für ein Bundesland (tagesschau-regional) oder ältere Wirtschaftsbeiträge.
+Als Nächstes angeboten: regionale Schlagzeilen für ein Bundesland (tagesschau-regional) oder die
+nächste, ältere Seite des Wirtschaft-Feeds (`--date 260928` aus seinem `nextPage`).
 
 ## tagesschau-regional
 
-> Was gibt es heute an Regionalnachrichten aus Sachsen und Thüringen? Und etwas zur Wirtschaft in Sachsen?
+> Was gibt es Neues aus Sachsen und Thüringen? Und etwas zur Wirtschaft in Sachsen?
 
 ```bash
 tagesschau --compact news --region 13 --region 16
 ```
 
-Der Skill hat `--ressort wirtschaft` nicht ergänzt, weil die API dann die Region ignoriert. Die
-51 Regionalmeldungen haben weder `ressort` noch `firstSentence` noch Tags. Die Wirtschaftsfrage
-wurde deshalb lokal beantwortet, über Stichwörter (Industrie, Chip, Fabrik …) in Titel und URL.
-Beide Länder teilten sich eine Seite mit 51 Einträgen (29 Sachsen, 22 Thüringen), und alle Links
-führen zu mdr.de.
+Der Skill hat `--ressort wirtschaft` nicht ergänzt: Die CLI lehnt es neben `--region` ab, weil
+die API die Region dann ignorieren würde. Die 61 Regionalmeldungen haben weder `ressort` noch
+Tags, nur 2 haben ein `firstSentence`. Die Wirtschaftsfrage wurde deshalb lokal beantwortet,
+über Stichwörter (Industrie, Insolvenz, investieren …) in Titel und URL; ein Treffer auf
+„Handwerkskunst" bei einem Herbstfest wurde von Hand aussortiert. Beide Länder teilten sich eine
+Seite mit 61 Einträgen (31 Sachsen, 30 Thüringen, zurück bis 02.10.), und alle Links führen zu
+mdr.de. Vom 6. Oktober gab es um 02:27 Uhr noch nichts.
 
 ```
-Sachsen (Region 13) – 15.09.2026
-  • 16:07  Streichung von Förderprogrammen: Muss Sachsen seine Kinos unterstützen?
-  • 15:10  "Dein Ort. Deine Themen." in Belgern: Vorbeikommen, mitreden, hinter die Kulissen schauen
-  • 14:56  Baustart für Carbon Lab Factory in Boxberg rückt näher
-  • 14:47  Ermittlungen gegen Handwerker: Betrug mit Vorsatz oder "nur" unorganisiert?
-  • 14:18  Dok Leipzig 2026 will ostdeutsche Perspektiven stärken
-  • 11:31  AG Kino fordert mehr Geld vom Bund
-  • 05:00  Neuer Hangar am Flugplatz Kamenz eröffnet
-  …und 22 weitere (zurück bis 11.09.)
+Sachsen (Region 13) – neueste vom 05.10.2026
+  • 19:59  Museum der Westlausitz: Förderverein kritisiert Ausstiegspläne des Landkreises Bautzen
+  • 18:53  Kommunen in Sachsen investieren Millionen in Energiewende
+  • 17:20  Polizei gibt Ermittlungsstand nach Schlägerei auf Dorffest in Beicha bekannt
+  • 15:54  Nach Protest-Aktion: Dresden richtet echten Zebrastreifen vor Musikschule ein
+  • 15:14  Sachsen: Theater demonstrieren in Dresden gegen Kürzungen
+  • 14:13  "Gaubln" ist Sachsens Wort des Jahres
+  • 12:54  Leipziger Schauspiel überzeugt mit XXXL-Inszenierung
+  …und 24 weitere (zurück bis 02.10.)
 
-Thüringen (Region 16) – 15.09.2026
-  • 17:33  Pferde auf Münzen: Keltischer Schatz im Ilm-Kreis gefunden
-  • 17:04  Weniger Kinder an Thüringens Schulen: Schülerzahl sinkt bis 2036 stark
-  • 12:43  Kita-Moratorium in Erfurt gekippt: Thema erneut im Stadtrat
-  • 12:41  Nach Explosion: Spürhunde sollen erneut bei Suche nach Hausbesitzer helfen
-  …und 18 weitere (zurück bis 11.09.)
+Thüringen (Region 16) – neueste vom 05.10.2026
+  • 20:28  Bangen um Kulturprojekte - Bundesentscheidung trifft auch Weimarer Vereine
+  • 19:59  Microverse Center Jena eröffnet: 55,6 Millionen Euro für neue Mikrobiomforschung
+  • 18:03  Kein Ende nach Urteil im "Raserprozess"
+  • 15:23  Neue Chipfabrik in Erfurt soll Unabhängigkeit von Asien stärken
+  • 12:16  Die Veranstaltungstipps für Thüringen
+  • 09:42  Zwei Tote: Kleinflugzeug aus Thüringen stürzt bei Heilbronn ab
+  …und 24 weitere (zurück bis 02.10.)
 
 Wirtschaft in Sachsen (lokal gefiltert – die API kann Region und Ressort nicht kombinieren)
-  • 15.09.  Baustart für Carbon Lab Factory in Boxberg rückt näher
-            mdr.de/nachrichten/sachsen/bautzen/bautzen-hoyerswerda-kamenz/boxberg-baustart-forschung-carbonfasern,carbon-forschung-labor-100.html
-  • 14.09.  Richtfest für Chip-Fabrik von ESMC in Dresden gefeiert
-            mdr.de/nachrichten/sachsen/dresden/dresden-radebeul/news-chipindustrie-richtfest-auto,halbleiterwerk-esmc-100.html
-  • 11.09.  Aufbruch aus der Krise: So will Sachsen bis 2040 an die Spitze
-            mdr.de/nachrichten/sachsen/news-industrie-reformen,wirtschaft-arbeitsplaetze-100.html
+  • 05.10.  Kommunen in Sachsen investieren Millionen in Energiewende
+            mdr.de/nachrichten/sachsen/klima-waermepumpe-energiewende,kommunen-waermeplan-100.html
+  • 02.10.  Solar-Anbieter EKD in Leipzig ist insolvent
+            mdr.de/nachrichten/sachsen/leipzig/leipzig-leipzig-land/news-pleite-solar,insolvenz-ekd-100.html
 ```
+
+Als Nächstes angeboten: die nächste, ältere Seite (`--date 261001` aus `nextPage`) oder eine
+Anfrage pro Land für den vollständigen Feed jedes Landes.
 
 ## tagesschau-topic-tracker
 
-> Berichtet die Tagesschau zunehmend über die Landtagswahl in Mecklenburg-Vorpommern?
+> Wie viel berichtet die Tagesschau gerade über Koeln?
 
 ```bash
-tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 0   # totalItemCount 276
-tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 1   # 50 Treffer
-tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 2   # 50 Treffer
-tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 3   # 50 Treffer
-tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 4   # 50 Treffer
-tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 5   # 26 Treffer
+tagesschau --compact search "Köln" --page-size 20 --result-page 0    # totalItemCount 394
+tagesschau --compact search "Koeln" --page-size 1                    # totalItemCount 212, dazu ein Hinweis auf stderr
 ```
 
-`--result-page` zählt ab 0, `0` ist also die erste Seite; `ceil(276 / 50) = 6` Seiten (0–5)
-ergaben alle 276 Treffer, ohne Dubletten bei `sophoraId`. Die Suche ist unscharf: 85 der 276
-Treffer nennen MV, einen Ort in MV oder Schwesig im Titel; die übrigen 191 hängen nur lose
-damit zusammen – 26 nennen die Berliner Wahl am selben Tag, die meisten anderen sind
-bundespolitische Folgen und regionale Newsticker.
+Der Skill suchte nach der richtigen Schreibweise der Stadt, `Köln`, wie es seine Regel zur
+Schreibweise verlangt. Um zu zeigen, was die ASCII-Schreibweise liefert, lief `Koeln` nur für die
+Zahl: 212 statt 394 Treffer, und die CLI gab auf stderr `Note: the search matches spellings
+literally ("Koeln" finds far fewer hits than "Köln", …)` aus. Die Suche ist unscharf: 6 der
+ersten 20 Treffer nennen Köln in Titel oder URL; die übrigen stammen aus Regional-Tickern und
+Seiten der Sender (Flughafen Stuttgart, Koblenz, Saarland, zwei Videos zur Bundespolitik). Keine
+Duplikate über `sophoraId`.
 
 ```
-Tagesschau-Berichterstattung zu „Landtagswahl Mecklenburg-Vorpommern" – 276 Treffer
+Tagesschau-Berichterstattung zu „Köln" – 394 Treffer
+  (wie eingegeben, „Koeln": 212 – die API vergleicht die Schreibweise wörtlich)
 
-Zeitraum          Treffer   Artikel / Videos   MV im Titel
-  heute 26.09.         1         1 / 0              0
-  20.–25.09.         167        80 / 87            60
-  13.–19.09.          44        18 / 26            22
-  28.08.–12.09.       64        29 / 35             3
-→ Die Berichterstattung erreichte am Wahltag und am Tag danach ihren Höhepunkt (20.09.: 63
-  Treffer, 21.09.: 87) und ist seitdem stark zurückgegangen (22.09.: 11, 23.–26.09.: 7).
-  „Zunehmend" stimmt nicht mehr – die Wahl ist entschieden.
+Neueste zu Köln (erste Seite, 20 Treffer: 18 vom 05.10., 2 vom 04.10.)
+  • 05.10.  Kölner Oper muss Bühnenstück neu inszenieren
+            www1.wdr.de/nrw/koeln/oper-koeln-technik-probleme-100.html
+  • 05.10.  Internationale Auszeichnung: Said El Mala für den "Golden Boy" nominiert
+            www1.wdr.de/sport/fc-koeln/golden-boy-el-mala-nominierung100.html
+  • 05.10.  Prozess um geraubte Drogen in Köln
+            www1.wdr.de/nrw/koeln/koeln-drogen-konflikt-raub-marihuana-100.html
+  • 04.10.  Vier neue Rekorde beim Köln Marathon
+            www1.wdr.de/nrw/koeln/koeln-marathon-2026-strecke-startzeit-datum-sperrungen-1-100.html
 
-Neueste Artikel zu MV
-  • 25.09.  Schwesig fordert mehr Selbstkritik von Merz
-            tagesschau.de/inland/innenpolitik/schwesig-kritik-merz-reformen-100.html
-  • 22.09.  Wer mit wem in Schwerin und Berlin?
-            tagesschau.de/inland/innenpolitik/regierungsbildung-berlin-mecklenburg-vorpommern-100.html
-  • 21.09.  ++ Schwesig-SPD will mit Linken und Grünen sondieren ++
-            tagesschau.de/newsticker/liveblog-nach-wahlen-berlin-mecklenburg-vorpommern-100.html
+Videos (7 auf dieser Seite, Video, kein Artikel-Link)
+  • 05.10.  Prozessauftakt Drogenkrieg-Eskalation in Köln
+  • 05.10.  Prozessauftakt im Kölner Drogenkonflikt | WDR Aktuell
+  • 05.10.  Technische Probleme bei der Oper gehen weiter
+  … 4 weitere, nicht zu Köln
 
-Videos zu MV (70, Video, kein Artikel-Link)
-  • 25.09.  Ministerpräsidentin Schwesig rückt nach Landtagswahl stärker in den Fokus der SPD
-  • 22.09.  Parteiloser Landrat in Mecklenburg-Vorpommern fordert Abschaffung der Brandmauer
-  • 22.09.  Stimmung in Mecklenburg-Vorpommern nach den Landtagswahlen
-  • 21.09.  Die Stimmung in Mecklenburg-Vorpommern nach der Landtagswahl
-  … 66 weitere
-
-276 Treffer insgesamt · alle 276 abgerufen (6 Seiten zu je 50).
+394 Treffer insgesamt · Seite 1 von 20 (20/Seite). Mehr? Sag „nächste Seite".
 ```
 
-Als Nächstes angeboten: ein engerer Suchbegriff (etwa „Regierungsbildung Schwerin") oder
-dieselbe Auswertung in einer Woche erneut, um die Koalitionsgespräche zu verfolgen.
+Als Nächstes angeboten: die nächste Seite oder ein engerer Begriff wie „Kölner Oper" oder
+„Drogenkonflikt Köln".
 
 ## tagesschau-watch-live
 

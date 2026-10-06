@@ -3,8 +3,9 @@
 Real examples for the Claude Code skills of the `tagesschau` plugin, one per skill: a request,
 the `tagesschau` commands the skill ran, and the answer Claude gave.
 
-Every example ran against the live API on 15 September 2026 with `tagesschau` 0.0.6,
-except tagesschau-topic-tracker, re-run on 26 September 2026 with 0.1.0.
+tagesschau-briefing, tagesschau-regional and tagesschau-topic-tracker ran against the live API
+on 6 October 2026 with `tagesschau` 0.3.0; tagesschau-watch-live ran on 15 September 2026 with
+0.0.6.
 The data changes, so your results will differ; the ids and keys shown work for trying the
 requests yourself. Long lists are shortened.
 
@@ -14,142 +15,143 @@ Skills: [tagesschau-briefing](#tagesschau-briefing) · [tagesschau-regional](#ta
 
 ## tagesschau-briefing
 
-> Give me a Tagesschau briefing for this afternoon, and go a bit deeper on business news.
+> Give me a late-night Tagesschau briefing, and go a bit deeper on business news.
 
 ```bash
 tagesschau --compact homepage
 tagesschau --compact news --ressort wirtschaft
 ```
 
-No item had `breakingNews: true`. The skill left the homepage's 16-item `regional` block out
-of the national briefing. „Neue Aufgaben für die Apotheken" came back in both feeds and was
-listed once (matched on `sophoraId`). The Wirtschaft feed holds 58 stories going back to 08.09.,
-newest first, and 8 of them are from today.
+No item had `breakingNews: true`. The skill left the homepage's `regional` block (16 items
+this time, one per Bundesland) out of the national briefing. Three Wirtschaft stories came
+back in both feeds and are listed once (matched on `sophoraId`). It was 02:27, so the
+Wirtschaft feed had nothing from 6 October yet: its 50 stories go back to 29.09., 9 of them
+from 5 October; it was sorted newest-first by `date` before cutting.
 
 ```
-Tagesschau — 15.09.2026, 17:42
+Tagesschau — 06.10.2026, 02:27
 
 EILMELDUNG
   (none right now)
 
+Wissen
+  • "Ich bin natürlich überwältigt" — Nobelpreisträger Hegemann
+    In den tagesthemen berichtet Hegemann vom Nutzen der Optogenetik - und fordert mehr Mut von der Politik.
+    tagesschau.de/wissen/forschung/tagesthemen-interview-hegemann-100.html
+
 Inland
-  • Merz kündigt Entlastungen bei Spritpreisen an — Kanzler bei Unternehmertag
-    tagesschau.de/inland/innenpolitik/merz-entlastungen-spritpreise-100.html
-  • Kriminelle Gruppen werden digitaler und brutaler — BKA legt Bericht für 2025 vor
-    Das BKA beobachtet einen tiefgreifenden Wandel der Organisierten Kriminalität.
-  • Wahlkampf zwischen Euphorie und Entgeisterung — Wahl in Mecklenburg-Vorpommern
-  • Mutmaßliche Mitglieder von Terrorgruppe festgenommen — Angriffe auf Eritrea-Festivals
+  • Die Bedrohung ist da - aber was heißt das? — Bilanz der Nachrichtendienste
+    tagesschau.de/inland/innenpolitik/nachrichtendienste-praesidenten-bedrohung-100.html
+  • Pharmafirmen sollen für Wasserreinigung zahlen — Pläne des Bundesumweltministers
 
 Ausland
-  • US-Behörde räumt Munitionsknappheit ein — Bericht zum Iran-Krieg
-  • Verlängerung von Strafmaßnahmen vorerst blockiert — EU-Sanktionen gegen Russland
-  • Russische Fregatte feuert Leuchtraketen auf Helikopter — Ostsee vor Dänemark
+  • Moskau dementiert tödlichen Pestfall in Sibirien — Gerüchte um Laborunfall
 
-Wirtschaft (homepage + Ressort feed, today, newest first)
-  • 17:30  Klagen gegen Preiserhöhungen bei Streaming-Diensten — Netflix, Apple TV und Wow
-    tagesschau.de/wirtschaft/verbraucher/streaminganbieter-rechtsstreit-preiserhoehungen-100.html
-  • 16:04  Was könnte die Politik gegen hohe Spritpreise machen? — Debatte über Entlastungen
-  • 14:04  US-Rendite auf Niveau der Finanzkrise — Zinserwartungen verfestigt
-  • 13:39  Neue Aufgaben für die Apotheken — Medizinische Dienstleister   (also on the homepage)
-  • 12:34  Warum der Umstieg auf E-Lkw so schwierig ist — IAA Transportation in Hannover
-  • 10:58  US-Zinsentscheid zwingt Anleger zur Vorsicht — DAX weiter auf Talfahrt
-  …2 more from today; 58 in the feed back to 08.09.
+Wirtschaft (homepage + Ressort feed, 05.10., newest first)
+  • 18:42  Preise für Benzin und Diesel steigen wieder leicht — Hohe Energiepreise   (also on the homepage)
+    tagesschau.de/wirtschaft/verbraucher/spritpreise-tankrabatt-120.html
+  • 18:28  DAX kommt nicht vom Fleck — Euro rutscht ab
+  • 15:44  Flugpreise aus Deutschland seit 2010 etwa verdoppelt — Kosten für Tickets   (also on the homepage)
+  • 14:11  Euro fällt unter 1,12 Dollar — Talfahrt geht weiter
+  • 13:23  Wie die E-Auto-Prämie wirkt — Staatlicher Kaufanreiz
+  • 12:27  100.000 Antragsteller profitieren von E-Auto-Prämie — Erwartungen übertroffen   (also on the homepage)
+  • 12:01  E-Autos boomen bei deutschen Käufern — Hohe Spritpreise und E-Auto-Prämie
+  • 11:15  Sanierung dauert deutlich länger - und wird teurer — Bahnstrecke Berlin-Hannover
+  …1 more from 05.10.; 50 in the feed back to 29.09.
 
 Weitere
   • Wolken, Temperaturen, Wind und Aussichten — Wettervorhersage Deutschland
 ```
 
-Next steps offered: regional headlines for a Bundesland (tagesschau-regional) or older Wirtschaft stories.
+Next steps offered: regional headlines for a Bundesland (tagesschau-regional) or the next,
+older page of the Wirtschaft feed (`--date 260928`, from its `nextPage`).
 
 ## tagesschau-regional
 
-> What's the regional news from Sachsen and Thüringen today? Anything about the economy in Sachsen?
+> What's the latest regional news from Sachsen and Thüringen? Anything about the economy in Sachsen?
 
 ```bash
 tagesschau --compact news --region 13 --region 16
 ```
 
-The skill did not add `--ressort wirtschaft`, because the API then ignores the region. The 51
-regional items have no `ressort`, `firstSentence` or tags, so the economy question was answered
-by matching keywords (Industrie, Chip, Fabrik …) in title and URL locally. Both states shared
-one page of 51 items (29 Sachsen, 22 Thüringen), and every link points to mdr.de.
+The skill did not add `--ressort wirtschaft`: the CLI refuses it next to `--region`, because
+the API would ignore the region. The 61 regional items have no `ressort` and no tags, and only
+2 have a `firstSentence`, so the economy question was answered by matching keywords (Industrie,
+Insolvenz, investieren …) in title and URL locally; a festival hit on "Handwerkskunst" was
+dropped by hand. Both states shared one page of 61 items (31 Sachsen, 30 Thüringen, back to
+02.10.), and every link points to mdr.de. Nothing from 6 October yet at 02:27.
 
 ```
-Sachsen (Region 13) — 15.09.2026
-  • 16:07  Streichung von Förderprogrammen: Muss Sachsen seine Kinos unterstützen?
-  • 15:10  "Dein Ort. Deine Themen." in Belgern: Vorbeikommen, mitreden, hinter die Kulissen schauen
-  • 14:56  Baustart für Carbon Lab Factory in Boxberg rückt näher
-  • 14:47  Ermittlungen gegen Handwerker: Betrug mit Vorsatz oder "nur" unorganisiert?
-  • 14:18  Dok Leipzig 2026 will ostdeutsche Perspektiven stärken
-  • 11:31  AG Kino fordert mehr Geld vom Bund
-  • 05:00  Neuer Hangar am Flugplatz Kamenz eröffnet
-  …und 22 weitere (back to 11.09.)
+Sachsen (Region 13) — newest from 05.10.2026
+  • 19:59  Museum der Westlausitz: Förderverein kritisiert Ausstiegspläne des Landkreises Bautzen
+  • 18:53  Kommunen in Sachsen investieren Millionen in Energiewende
+  • 17:20  Polizei gibt Ermittlungsstand nach Schlägerei auf Dorffest in Beicha bekannt
+  • 15:54  Nach Protest-Aktion: Dresden richtet echten Zebrastreifen vor Musikschule ein
+  • 15:14  Sachsen: Theater demonstrieren in Dresden gegen Kürzungen
+  • 14:13  "Gaubln" ist Sachsens Wort des Jahres
+  • 12:54  Leipziger Schauspiel überzeugt mit XXXL-Inszenierung
+  …und 24 weitere (back to 02.10.)
 
-Thüringen (Region 16) — 15.09.2026
-  • 17:33  Pferde auf Münzen: Keltischer Schatz im Ilm-Kreis gefunden
-  • 17:04  Weniger Kinder an Thüringens Schulen: Schülerzahl sinkt bis 2036 stark
-  • 12:43  Kita-Moratorium in Erfurt gekippt: Thema erneut im Stadtrat
-  • 12:41  Nach Explosion: Spürhunde sollen erneut bei Suche nach Hausbesitzer helfen
-  …und 18 weitere (back to 11.09.)
+Thüringen (Region 16) — newest from 05.10.2026
+  • 20:28  Bangen um Kulturprojekte - Bundesentscheidung trifft auch Weimarer Vereine
+  • 19:59  Microverse Center Jena eröffnet: 55,6 Millionen Euro für neue Mikrobiomforschung
+  • 18:03  Kein Ende nach Urteil im "Raserprozess"
+  • 15:23  Neue Chipfabrik in Erfurt soll Unabhängigkeit von Asien stärken
+  • 12:16  Die Veranstaltungstipps für Thüringen
+  • 09:42  Zwei Tote: Kleinflugzeug aus Thüringen stürzt bei Heilbronn ab
+  …und 24 weitere (back to 02.10.)
 
 Economy in Sachsen (filtered locally: the API can't combine region and Ressort)
-  • 15.09.  Baustart für Carbon Lab Factory in Boxberg rückt näher
-            mdr.de/nachrichten/sachsen/bautzen/bautzen-hoyerswerda-kamenz/boxberg-baustart-forschung-carbonfasern,carbon-forschung-labor-100.html
-  • 14.09.  Richtfest für Chip-Fabrik von ESMC in Dresden gefeiert
-            mdr.de/nachrichten/sachsen/dresden/dresden-radebeul/news-chipindustrie-richtfest-auto,halbleiterwerk-esmc-100.html
-  • 11.09.  Aufbruch aus der Krise: So will Sachsen bis 2040 an die Spitze
-            mdr.de/nachrichten/sachsen/news-industrie-reformen,wirtschaft-arbeitsplaetze-100.html
+  • 05.10.  Kommunen in Sachsen investieren Millionen in Energiewende
+            mdr.de/nachrichten/sachsen/klima-waermepumpe-energiewende,kommunen-waermeplan-100.html
+  • 02.10.  Solar-Anbieter EKD in Leipzig ist insolvent
+            mdr.de/nachrichten/sachsen/leipzig/leipzig-leipzig-land/news-pleite-solar,insolvenz-ekd-100.html
 ```
+
+Next steps offered: the next, older page (`--date 261001` from `nextPage`), or one request per
+state for each state's full feed.
 
 ## tagesschau-topic-tracker
 
-> Is Tagesschau covering the Landtagswahl in Mecklenburg-Vorpommern more and more?
+> How much is Tagesschau reporting on Koeln at the moment?
 
 ```bash
-tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 0   # totalItemCount 276
-tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 1   # 50 hits
-tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 2   # 50 hits
-tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 3   # 50 hits
-tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 4   # 50 hits
-tagesschau --compact search "Landtagswahl Mecklenburg-Vorpommern" --page-size 50 --result-page 5   # 26 hits
+tagesschau --compact search "Köln" --page-size 20 --result-page 0    # totalItemCount 394
+tagesschau --compact search "Koeln" --page-size 1                    # totalItemCount 212, plus a note on stderr
 ```
 
-`--result-page` is 0-based, so `0` is the first page; `ceil(276 / 50) = 6` pages (0–5) gave all
-276 hits, with no duplicates on `sophoraId`. The search matches loosely: 85 of the 276 hits name
-MV, a town in MV or Schwesig in the title; the other 191 are loosely related — 26 name the Berlin
-election held the same day, most of the rest are federal fallout and regional news tickers.
+The skill searched the city's real spelling, `Köln`, as its spelling rule says. To show the
+user what the ASCII spelling gives, it also ran `Koeln` for the count alone: 212 hits instead of
+394, and the CLI printed `Note: the search matches spellings literally ("Koeln" finds far fewer
+hits than "Köln", …)` on stderr. The search matches loosely: 6 of the first 20 hits name Köln in
+title or URL; the others come from regional tickers and broadcaster pages (Stuttgart airport,
+Koblenz, Saarland, two Bundespolitik videos). No duplicates on `sophoraId`.
 
 ```
-Tagesschau coverage of „Landtagswahl Mecklenburg-Vorpommern" — 276 Treffer
+Tagesschau coverage of „Köln" — 394 Treffer
+  (as typed, „Koeln": 212 — the API matches the spelling literally)
 
-Timeline          hits   articles / videos   MV in title
-  today 26.09.       1        1 / 0               0
-  20.–25.09.       167       80 / 87             60
-  13.–19.09.        44       18 / 26             22
-  28.08.–12.09.     64       29 / 35              3
-→ Coverage peaked on election day and the day after (20.09.: 63 hits, 21.09.: 87) and has
-  dropped off since (22.09.: 11, 23.–26.09.: 7). Not "more and more" any longer — the race is decided.
+Newest on Köln (first page, 20 hits: 18 from 05.10., 2 from 04.10.)
+  • 05.10.  Kölner Oper muss Bühnenstück neu inszenieren
+            www1.wdr.de/nrw/koeln/oper-koeln-technik-probleme-100.html
+  • 05.10.  Internationale Auszeichnung: Said El Mala für den "Golden Boy" nominiert
+            www1.wdr.de/sport/fc-koeln/golden-boy-el-mala-nominierung100.html
+  • 05.10.  Prozess um geraubte Drogen in Köln
+            www1.wdr.de/nrw/koeln/koeln-drogen-konflikt-raub-marihuana-100.html
+  • 04.10.  Vier neue Rekorde beim Köln Marathon
+            www1.wdr.de/nrw/koeln/koeln-marathon-2026-strecke-startzeit-datum-sperrungen-1-100.html
 
-Newest articles on MV
-  • 25.09.  Schwesig fordert mehr Selbstkritik von Merz
-            tagesschau.de/inland/innenpolitik/schwesig-kritik-merz-reformen-100.html
-  • 22.09.  Wer mit wem in Schwerin und Berlin?
-            tagesschau.de/inland/innenpolitik/regierungsbildung-berlin-mecklenburg-vorpommern-100.html
-  • 21.09.  ++ Schwesig-SPD will mit Linken und Grünen sondieren ++
-            tagesschau.de/newsticker/liveblog-nach-wahlen-berlin-mecklenburg-vorpommern-100.html
+Videos (7 on this page, Video, kein Artikel-Link)
+  • 05.10.  Prozessauftakt Drogenkrieg-Eskalation in Köln
+  • 05.10.  Prozessauftakt im Kölner Drogenkonflikt | WDR Aktuell
+  • 05.10.  Technische Probleme bei der Oper gehen weiter
+  … 4 more, not about Köln
 
-Videos on MV (70, Video, kein Artikel-Link)
-  • 25.09.  Ministerpräsidentin Schwesig rückt nach Landtagswahl stärker in den Fokus der SPD
-  • 22.09.  Parteiloser Landrat in Mecklenburg-Vorpommern fordert Abschaffung der Brandmauer
-  • 22.09.  Stimmung in Mecklenburg-Vorpommern nach den Landtagswahlen
-  • 21.09.  Die Stimmung in Mecklenburg-Vorpommern nach der Landtagswahl
-  … 66 more
-
-276 Treffer insgesamt · all 276 fetched (6 pages of 50).
+394 Treffer insgesamt · Seite 1 von 20 (20/Seite). Mehr? Sag „nächste Seite".
 ```
 
-Next steps offered: a narrower search term (e.g. "Regierungsbildung Schwerin"), or the same
-check again in a week to follow the coalition talks.
+Next steps offered: the next page, or a narrower term such as "Kölner Oper" or
+"Drogenkonflikt Köln".
 
 ## tagesschau-watch-live
 
