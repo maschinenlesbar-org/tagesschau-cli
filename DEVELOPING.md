@@ -305,9 +305,9 @@ reported, not asked again at once), up to `maxRetries` (default `2`; CLI `--max-
 response's `Retry-After` (`parseRetryAfter`: delay-seconds or an IMF-fixdate, anything
 else is ignored) when that is longer: the header can lengthen a wait, never shorten it,
 so `Retry-After: 0` or a past date doesn't make a burst. A `Retry-After` above
-`MAX_RETRY_AFTER_MS` (30 s) is not retried: the error surfaces at once and says so
-(`HTTP 429 for GET …: the server asked to retry after 100 s, longer than the 30 s the
-client waits; not retried — try again after that`; `retryAfterMs` holds the wait).
+`MAX_RETRY_AFTER_MS` (30 s) is invalid like a malformed one (`1e9`, `-1`): `parseRetryAfter`
+returns `undefined` and the normal backoff applies, so a hostile value neither stalls
+the CLI nor ends the retries early.
 After spent retries the message ends `(after 2 retries)` and `retries` holds the count.
 `TagesschauApiError` exposes `isRetryable` (true for `429`/`503`).
 

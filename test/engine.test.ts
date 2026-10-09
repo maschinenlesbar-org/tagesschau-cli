@@ -280,14 +280,15 @@ test("a malformed Retry-After falls back to linear backoff", async () => {
   }
 });
 
-test("a Retry-After beyond MAX_RETRY_AFTER_MS is not retried at all", async () => {
+test("a Retry-After beyond MAX_RETRY_AFTER_MS, or in exponent notation, is invalid: the normal backoff applies", async () => {
   const far = new Date(Date.now() + 3_600_000).toUTCString();
-  for (const ra of ["31", "3600", "99999999999", far]) {
+  for (const ra of ["31", "3600", "99999999999", "9".repeat(400), "1e9", far]) {
     const r = retryEngine({ "retry-after": ra });
     await assert.rejects(() => r.e.getJson("/x"), (err) => err instanceof TagesschauApiError && err.status === 429);
-    assert.deepEqual(r.delays, [], ra);
-    assert.equal(r.calls(), 1, ra);
+    assert.deepEqual(r.delays, [200, 400], ra.slice(0, 20));
   }
+  assert.equal(parseRetryAfter("30"), 30_000);
+  assert.equal(parseRetryAfter("31"), undefined);
 });
 
 test("parseRetryAfter reads delay-seconds and IMF-fixdate only", () => {
@@ -426,20 +427,19 @@ test("Location and Retry-After are read in any case and from a Headers object or
     const e = new RequestEngine({ baseUrl: "https://example.test", transport: mt.transport });
     assert.deepEqual(await e.getJson("/x"), { ok: 1 });
   }
-  // A Retry-After above the cap under a Title-Case key is not retried (it was retried twice at
-  // 200/400 ms when only lower-case keys were read).
+  // A Retry-After under a Title-Case key is read (it was ignored when only lower-case keys were).
   let calls = 0;
   const delays: number[] = [];
   const e = new RequestEngine({
     transport: async () => {
       calls++;
-      return { status: 429, headers: { "Retry-After": "100" } as Record<string, string>, body: Buffer.from("{}") };
+      return { status: 429, headers: { "Retry-After": "10" } as Record<string, string>, body: Buffer.from("{}") };
     },
     sleep: async (ms) => void delays.push(ms),
   });
   await assert.rejects(() => e.getJson("/x"), (err) => err instanceof TagesschauApiError && err.status === 429);
-  assert.equal(calls, 1);
-  assert.deepEqual(delays, []);
+  assert.equal(calls, 3);
+  assert.deepEqual(delays, [10_000, 10_000]);
 });
 
 test("getJson decodes the body by its declared charset and drops a BOM", async () => {

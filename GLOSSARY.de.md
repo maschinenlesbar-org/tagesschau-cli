@@ -121,8 +121,8 @@ Stunde**. Antwortet sie mit einem vorübergehenden Status (**429** Too Many Requ
 `--max-retries`-mal (Standard `2`, höchstens `10`). Jede Wiederholung wartet 200 ms ×
 Versuch, oder das `Retry-After` der Antwort (Sekunden oder HTTP-Datum), wenn es länger ist
 und höchstens 30 s beträgt (`MAX_RETRY_AFTER_MS`): `Retry-After: 0` lässt den Client nie
-sofort wiederholen. Ein längeres wird nicht wiederholt; der Fehler kommt sofort und nennt
-die Wartezeit, die der Server verlangt hat.
+sofort wiederholen. Ein längeres (oder fehlerhaftes, etwa `1e9`) ist ungültig: es wird
+ignoriert und der normale Backoff gilt.
 
 **Weiterleitungen.** Der Client folgt bis zu `--max-redirects` Weiterleitungen (Standard
 `5`). Zugangsdaten in `--base-url` (`https://user:pw@host`) gehen als
