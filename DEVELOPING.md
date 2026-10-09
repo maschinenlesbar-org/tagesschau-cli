@@ -164,8 +164,11 @@ as Basic auth (see above), and request URLs in errors carry none — and any tex
 still shows it shows it as `***` (the exported `redactUrl`):
 `TagesschauApiError` (message and `url`), the redirect and transport URL errors; the
 base-URL errors never echo the URL at all. The CLI also redacts on output: `run.ts`
-(`withRedactedOutput`) takes the exact userinfo of every argument (`credentialsIn`,
-exported) and replaces it with `***` in everything it prints — commander's usage errors,
+(`withRedactedOutput`) takes the exact userinfo of every URL argument (`credentialsIn`,
+exported: only a value that starts with a scheme counts, `[]` for a bare `alice:pw@host`,
+since a bare `a:b@c` is a search text or a User-Agent as often as a credential; as the
+`--base-url` value a `user:password@host` typed without its scheme is still one) and
+replaces it with `***` in everything it prints — commander's usage errors,
 which echo a rejected `--base-url` value, a mistyped option name in `=` form
 (`--base-ur=…`) or a URL typed without the flag (`unknown command '…'`), and the
 library's messages that name a rejected region or date — so a password with spaces,

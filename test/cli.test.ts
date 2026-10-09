@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { run } from "../src/cli/run.js";
 import { TagesschauClient } from "../src/client/client.js";
+import { credentialsIn } from "../src/client/errors.js";
 import type { CliDeps } from "../src/cli/io.js";
 import type { HttpRequest, HttpResponse } from "../src/client/http.js";
 import { makeMockTransport, jsonResponse, untimed } from "./helpers.js";
@@ -285,4 +286,23 @@ test("search notes on stderr that an ASCII transliteration is matched literally"
     }
     assert.equal(cli.out.length, 1, "the JSON on stdout is unchanged");
   }
+});
+
+test("an a:b@c search text or User-Agent is neither a credential in the log nor rewritten in the JSON on stdout (L14)", async () => {
+  const text = "Bundesliga:Bayern gegen Dortmund@Allianz Arena";
+  const body = { searchResults: [{ title: `${text}: 2:1` }], searchText: text, totalItemCount: 1 };
+  const search = makeCli(() => jsonResponse(body));
+  assert.equal(await run(["search", text], search.deps), 0, search.err.join("\n"));
+  assert.equal(new URL(search.mt.last().url).searchParams.get("searchText"), text);
+  assert.match(search.out.join("\n"), /"searchText": "Bundesliga:Bayern gegen Dortmund@Allianz Arena"/);
+  assert.match(search.out.join("\n"), /"title": "Bundesliga:Bayern gegen Dortmund@Allianz Arena: 2:1"/);
+  const ua = makeCli(() => jsonResponse({ news: [{ title: "Zeit:Online@Mitte" }], regional: [] }));
+  assert.equal(await run(["--user-agent", "Zeit:Online@Mitte", "news"], ua.deps), 0);
+  assert.match(ua.out.join("\n"), /"title": "Zeit:Online@Mitte"/);
+  assert.deepEqual(credentialsIn("Zeit:Online@Mitte"), []);
+  assert.deepEqual(credentialsIn("https://alice:pw@host"), ["alice:pw"]);
+  // A base URL typed without its scheme is still read as one: its password is never echoed.
+  const bare = makeCli(() => jsonResponse(body));
+  assert.equal(await run(["--base-url", "alice:hunter2-pw@mirror.example", "channels"], bare.deps), 1);
+  assert.ok(!bare.err.join("\n").includes("hunter2-pw"), bare.err.join("\n"));
 });
