@@ -169,7 +169,10 @@ exported) and replaces it with `***` in everything it prints — commander's usa
 which echo a rejected `--base-url` value, a mistyped option name in `=` form
 (`--base-ur=…`) or a URL typed without the flag (`unknown command '…'`), and the
 library's messages that name a rejected region or date — so a password with spaces,
-quotes, `#`, `?` or `/` is caught as well as an ordinary one. `redactUrl` (exported)
+quotes, `#`, `?` or `/` is caught as well as an ordinary one. The log replaces it in
+each record's *message* (`redactionFor`), before the record is cut and escaped, and writes
+the record to the raw stderr: the frame (time, level, topic) is never touched, and a
+password with DEL, C1 or bidi characters is matched in its raw form. `redactUrl` (exported)
 falls back to the same text-based cut (`redactCredentials`) for a value that doesn't
 parse as a URL. Logging a client shows no base URL: the engine keeps it in a real
 `#private` field, so `console.log(client)`, `util.inspect` and `JSON.stringify` don't
@@ -329,8 +332,9 @@ the search-spelling note, an `INFO` record whose message is `searchSpellingHint(
 its `Note: ` prefix) and `http` (the connection, the cleartext warning); the CLI writes no
 files, so it has no `output` area. Code logs through `logOf(deps)` and never writes
 diagnostics with `io.err` directly. `run()` builds the logger from argv before commander
-parses it, so commander's own usage errors are records too, and on top of the redacted
-`io.err`, so a secret is kept out of the log in either format. `CliDeps.now` makes the
+parses it, so commander's own usage errors are records too, and with the run's redaction
+(`withRedactedOutput`), which replaces a secret in the message only, before it is
+escaped: the frame is never touched, and a secret is kept out of the log in either format. `CliDeps.now` makes the
 timestamps testable. stdout carries data only. Only the bin shim's `Output error: …` (a
 failed write to stdout, `handleOutputErrors`, outside `run()`) stays a plain line.
 Conformance test P23 checks all of this, and its body is shared across the *-cli repos.
