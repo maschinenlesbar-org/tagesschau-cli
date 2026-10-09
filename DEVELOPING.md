@@ -334,7 +334,9 @@ forge another one or steer the terminal. Before that a lone surrogate (half a
 character, which jq rejects, stopping the whole stream) becomes U+FFFD (`toWellFormed`),
 and a message longer than `MAX_RECORD_MESSAGE` (4000 characters, exported) is cut at a
 code point and ends in `… (N more characters)`. The areas are `cli` (usage errors, commander's messages, unexpected errors, the
-library's validation and parse errors), `api` (the API's answers: an HTTP error status; and
+library's validation errors, a response nested too deeply to print), `api` (the API's
+answers: an HTTP error status; a malformed answer — a `TagesschauParseError`: bad JSON,
+an unknown charset, a 2xx body without the documented shape; and
 the search-spelling note, an `INFO` record whose message is `searchSpellingHint()` without
 its `Note: ` prefix), `http` (the connection, the cleartext warning) and `output` (a failed
 write to stdout; the CLI writes no files). Code logs through `logOf(deps)` and never writes

@@ -10,6 +10,7 @@ import {
   TagesschauApiError,
   TagesschauError,
   TagesschauNetworkError,
+  TagesschauParseError,
   TagesschauValidationError,
   credentialsIn,
   echoedCredentialForms,
@@ -183,6 +184,18 @@ export function withRedactedOutput(deps: CliDeps, argv: readonly string[]): CliD
 }
 
 /**
+ * The log area of a `TagesschauError` that is neither an API error nor a usage error: the
+ * connection (`http`), a malformed answer (`api`: bad JSON, the wrong shape, an unknown
+ * charset — the API's answer as much as an error status is), else `cli` (the CLI's own
+ * failures, such as a response nested too deeply to print).
+ */
+function areaOf(err: TagesschauError): string {
+  if (err instanceof TagesschauNetworkError) return "http";
+  if (err instanceof TagesschauParseError) return "api";
+  return "cli";
+}
+
+/**
  * The log for what happens outside `run()`, in the bin shim: a stdout write error
  * (`handleOutputErrors`). Its format is the one argv asks for (`logFormatFromArgv`), and
  * it replaces the secrets of argv like the run's own log; it writes to the raw stderr.
@@ -243,7 +256,7 @@ export async function run(argv: string[], deps: CliDeps = defaultDeps): Promise<
       return 1;
     }
     if (err instanceof TagesschauError) {
-      log.error(err instanceof TagesschauNetworkError ? "http" : "cli", err.message);
+      log.error(areaOf(err), err.message);
       return 1;
     }
     log.error("cli", `Unexpected error: ${err instanceof Error ? err.message : String(err)}`);

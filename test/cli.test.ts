@@ -246,7 +246,7 @@ test("a null 2xx body is an error (exit 1), not `null` with exit 0", async () =>
   const cli = makeCli(() => jsonResponse(null));
   assert.equal(await run(["--compact", "news"], cli.deps), 1);
   assert.deepEqual(cli.out, []);
-  assert.deepEqual(cli.err.map(untimed), ['ERROR [tagesschau.cli] Unexpected response shape from /api2u/news/: expected a JSON object with a "news" array.']);
+  assert.deepEqual(cli.err.map(untimed), ['ERROR [tagesschau.api] Unexpected response shape from /api2u/news/: expected a JSON object with a "news" array.']);
 });
 
 test("bidi formatting characters in server data are escaped in the JSON output", async () => {
@@ -348,4 +348,21 @@ test("a parse error is logged in the format commander would have parsed (L6)", a
     assert.equal(await run(argv, cli.deps), 1, argv.join(" "));
     assert.ok(cli.err.length > 0 && cli.err.every((line) => isJsonl(line) === jsonl), `${argv.join(" ")}:\n${cli.err.join("\n")}`);
   }
+});
+
+test("a malformed answer is an ERROR record of tagesschau.api, exit 1 (L9)", async () => {
+  const answers: HttpResponse[] = [
+    { status: 200, headers: { "content-type": "application/json" }, body: Buffer.from("not json") },
+    jsonResponse({ searchResults: "none" }),
+    jsonResponse({ searchResults: [], totalItemCount: -1 }),
+  ];
+  for (const answer of answers) {
+    const cli = makeCli(() => answer);
+    assert.equal(await run(["search", "Wahl"], cli.deps), 1);
+    assert.match(untimed(cli.err.join("\n")), /^ERROR \[tagesschau\.api\] /);
+  }
+  // The CLI's own failure to print a valid answer stays cli.
+  const deep = makeCli(() => ({ status: 200, headers: { "content-type": "application/json" }, body: Buffer.from('{"channels":[' + "[".repeat(200_000) + "]".repeat(200_000) + "]}") }));
+  assert.equal(await run(["channels"], deep.deps), 1);
+  assert.match(untimed(deep.err.join("\n")), /^ERROR \[tagesschau\.cli\] The response is nested too deeply/);
 });

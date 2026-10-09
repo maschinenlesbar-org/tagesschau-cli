@@ -132,7 +132,8 @@ stderr, so piping stdout into `jq` stays clean.
 
 Each line on stderr is a **log record**: a timestamp (UTC), a level (`ERROR`, `WARN`,
 `INFO`) and a topic, the program and the area it comes from (`tagesschau.cli` for usage
-errors, `tagesschau.api` for the API's answers and the search-spelling note,
+errors, `tagesschau.api` for the API's answers (a malformed answer included) and the
+search-spelling note,
 `tagesschau.http` for the connection, `tagesschau.output` for a failed write to stdout).
 By default it is written log4j style;
 `--log-format jsonl` writes one JSON object per line instead. A record is always one
