@@ -333,3 +333,19 @@ test("help for an unknown command, or global options with no command, is a faile
     assert.ok(records.some((record) => /\] Usage: tagesschau /.test(record)), records.join("\n"));
   }
 });
+
+test("a parse error is logged in the format commander would have parsed (L6)", async () => {
+  const isJsonl = (line: string): boolean => line.startsWith("{");
+  const cases: [string[], boolean][] = [
+    // Repeated: the last one counts, in commander and in the scan.
+    [["--log-format", "text", "--log-format", "jsonl", "hompage"], true],
+    [["--log-format", "jsonl", "--log-format", "text", "hompage"], false],
+    // --log-format is --user-agent's value, so `jsonl` is an unknown command, logged in text.
+    [["--user-agent", "--log-format", "jsonl", "channels"], false],
+  ];
+  for (const [argv, jsonl] of cases) {
+    const cli = makeCli(() => jsonResponse({ channels: [] }));
+    assert.equal(await run(argv, cli.deps), 1, argv.join(" "));
+    assert.ok(cli.err.length > 0 && cli.err.every((line) => isJsonl(line) === jsonl), `${argv.join(" ")}:\n${cli.err.join("\n")}`);
+  }
+});
