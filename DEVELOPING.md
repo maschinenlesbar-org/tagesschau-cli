@@ -254,7 +254,8 @@ subprocess.
 (non-2xx, carries `status`/`detail`/`url`/`method`/`body` and an `isRetryable`
 flag; `detail` — the body's `detail`, `message` or `error` string — is cleaned for
 stderr by `sanitizeServerText`: control and bidi characters dropped, whitespace folded
-onto one line, cut at `MAX_DETAIL_LENGTH` (500) characters; `body` keeps the full text), `TagesschauNetworkError` (transport failure/timeout),
+onto one line, cut at `MAX_DETAIL_LENGTH` (500) characters, never inside a surrogate pair
+(`cutText`), so the message stays well-formed; `body` keeps the full text), `TagesschauNetworkError` (transport failure/timeout),
 `TagesschauParseError` (bad JSON, or a 2xx body without the documented envelope:
 `Unexpected response shape from /api2u/news/: expected a JSON object with a "news"
 array.` — each method checks its top-level array, `news`/`regional`, `channels`,
@@ -263,7 +264,8 @@ array.` — each method checks its top-level array, `news`/`regional`, `channels
 the library — a wrong type, a value out of range, an unknown key, an impossible `date`,
 `ressort` with `regions`, a `transport` or `sleep` that is not a function — throws this
 class, never a plain `TagesschauError` or a raw `TypeError`; echoed values are cut at
-`MAX_MESSAGE_VALUE_LENGTH`, 500 characters, by the exported `cutForMessage`), all
+`MAX_MESSAGE_VALUE_LENGTH`, 500 characters, by the exported `cutForMessage`, cut the same
+way), all
 extending `TagesschauError`. The CLI maps
 a `404` to exit code `4`, other errors to `1`.
 
@@ -316,7 +318,9 @@ and `msg`. A record is always one line: `formatLogRecord` runs `escapeForRecord`
 the message (text) or the whole JSON object (jsonl), which writes CR and LF as `\r`/`\n`,
 every other C0 control but TAB, DEL and C1 as `\u00XX`, and U+2028, U+2029 and the bidi
 controls as `\uXXXX`, so no text that reaches a record, by whatever path, can split it,
-forge another one or steer the terminal. The areas are `cli` (usage errors, commander's messages, unexpected errors, the
+forge another one or steer the terminal. Before that a lone surrogate (half a
+character, which jq rejects, stopping the whole stream) becomes U+FFFD (`toWellFormed`).
+The areas are `cli` (usage errors, commander's messages, unexpected errors, the
 library's validation and parse errors), `api` (the API's answers: an HTTP error status; and
 the search-spelling note, an `INFO` record whose message is `searchSpellingHint()` without
 its `Note: ` prefix) and `http` (the connection, the cleartext warning); the CLI writes no

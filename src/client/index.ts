@@ -45,8 +45,10 @@ export {
   redactUrl,
   credentialsIn,
   cutForMessage,
+  cutText,
   MAX_MESSAGE_VALUE_LENGTH,
   redactCredentials,
+  toWellFormed,
 } from "./errors.js";
 
 export * from "./enums.js";

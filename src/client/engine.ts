@@ -20,6 +20,7 @@ import {
   TagesschauValidationError,
   credentialsIn,
   cutForMessage,
+  cutText,
   redactCredentials,
   redactUrl,
 } from "./errors.js";
@@ -230,13 +231,13 @@ export const MAX_DETAIL_LENGTH = 500;
 
 /**
  * Make server text fit for a one-line error message: sanitised (sanitizeServerText)
- * and cut at MAX_DETAIL_LENGTH characters with "…", so a 200 kB `detail` does not
+ * and cut at MAX_DETAIL_LENGTH characters (never inside a surrogate pair) with "…", so a 200 kB `detail` does not
  * flood stderr. `undefined` when nothing is left.
  */
 function cleanDetail(text: string): string | undefined {
   const flat = sanitizeServerText(text);
   if (flat === "") return undefined;
-  return flat.length > MAX_DETAIL_LENGTH ? `${flat.slice(0, MAX_DETAIL_LENGTH)}…` : flat;
+  return flat.length > MAX_DETAIL_LENGTH ? `${cutText(flat, MAX_DETAIL_LENGTH)}…` : flat;
 }
 
 /** True for a loopback host: `localhost`, 127.0.0.0/8 or `::1` (as URL#hostname spells it). */
@@ -339,7 +340,7 @@ function decodeBody(body: Buffer, contentType: string, path: string): string {
   try {
     decoder = new TextDecoder(charset);
   } catch {
-    throw new TagesschauParseError(`Unsupported response charset "${sanitizeServerText(charset).slice(0, 100)}" from ${path}.`);
+    throw new TagesschauParseError(`Unsupported response charset "${cutText(sanitizeServerText(charset), 100)}" from ${path}.`);
   }
   return decoder.decode(body);
 }

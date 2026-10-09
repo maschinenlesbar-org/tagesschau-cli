@@ -13,6 +13,9 @@ import {
   TagesschauNetworkError,
   TagesschauParseError,
   TagesschauValidationError,
+  cutForMessage,
+  cutText,
+  toWellFormed,
 } from "../src/client/errors.js";
 import { makeMockTransport, jsonResponse, rawResponse } from "./helpers.js";
 
@@ -451,4 +454,27 @@ test("getJson decodes the body by its declared charset and drops a BOM", async (
     () => new RequestEngine({ transport: unknown.transport }).getJson("/x"),
     (err) => err instanceof TagesschauParseError && /Unsupported response charset "x-no-such"/.test(err.message),
   );
+});
+
+test("cutText never cuts inside a surrogate pair; toWellFormed replaces half a character", () => {
+  assert.equal(cutText("ab\u{1f600}cd", 3), "ab");
+  assert.equal(cutText("ab\u{1f600}cd", 4), "ab\u{1f600}");
+  assert.equal(cutText("short", 10), "short");
+  assert.equal(toWellFormed("a\ud83d b\ude00 \u{1f600}"), "a\ufffd b\ufffd \u{1f600}");
+});
+
+test("a server detail cut at 500 characters keeps the message well-formed", async () => {
+  const detail = "a" + "\u{1f600}".repeat(400);
+  const engine = new RequestEngine({ transport: async () => ({ status: 500, headers: { "content-type": "application/json" }, body: Buffer.from(JSON.stringify({ detail })) }) });
+  await assert.rejects(engine.getJson("/api2u/homepage/"), (err: Error) => {
+    assert.equal(toWellFormed(err.message), err.message);
+    assert.match(err.message, /…$/);
+    return true;
+  });
+});
+
+test("a typed value cut at 500 characters (cutForMessage) keeps the message well-formed", () => {
+  const cut = cutForMessage("a".repeat(499) + "\u{1f600}" + "b");
+  assert.equal(cut, "a".repeat(499) + "…");
+  assert.equal(toWellFormed(cut), cut);
 });
