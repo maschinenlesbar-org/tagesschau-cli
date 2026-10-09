@@ -601,8 +601,8 @@ export class RequestEngine {
       const finalUrl = (response as { url?: unknown }).url;
       if (typeof finalUrl === "string" && finalUrl !== "" && originOf(finalUrl) !== originOf(url)) {
         throw new TagesschauNetworkError(
-          `${method} ${redactUrl(url)} failed: the transport followed a redirect to another origin ` +
-            `(${sanitizeServerText(redactUrl(this.scrub(finalUrl)))}); a transport must not follow redirects ` +
+          `${method} ${cutForMessage(redactUrl(url))} failed: the transport followed a redirect to another origin ` +
+            `(${cutForMessage(sanitizeServerText(redactUrl(this.scrub(finalUrl))))}); a transport must not follow redirects ` +
             `(HttpRequest.redirect is "manual").`,
         );
       }
@@ -635,13 +635,13 @@ export class RequestEngine {
       if (status >= 300 && status < 400) {
         if (redirects >= this.maxRedirects) {
           throw new TagesschauNetworkError(
-            `Too many redirects (>${this.maxRedirects}) for ${method} ${redactUrl(url)}`,
+            `Too many redirects (>${this.maxRedirects}) for ${method} ${cutForMessage(redactUrl(url))}`,
           );
         }
         const location = firstHeader(responseHeaders["location"]);
         if (typeof location !== "string" || location.length === 0) {
           throw new TagesschauNetworkError(
-            `Redirect (HTTP ${status}) with no Location header for ${method} ${redactUrl(url)}`,
+            `Redirect (HTTP ${status}) with no Location header for ${method} ${cutForMessage(redactUrl(url))}`,
           );
         }
         const previousUrl = url;
@@ -650,7 +650,7 @@ export class RequestEngine {
           nextUrl = new URL(location, previousUrl);
         } catch {
           throw new TagesschauNetworkError(
-            `Redirect (HTTP ${status}) to an unusable Location for ${method} ${redactUrl(previousUrl)}`,
+            `Redirect (HTTP ${status}) to an unusable Location for ${method} ${cutForMessage(redactUrl(previousUrl))}`,
           );
         }
         // Enforce http(s)-only on the redirect target here in the engine, not
@@ -659,7 +659,7 @@ export class RequestEngine {
         // be handed to it verbatim. Reject anything else as a typed error.
         if (nextUrl.protocol !== "http:" && nextUrl.protocol !== "https:") {
           throw new TagesschauNetworkError(
-            `Refusing to follow redirect to unsupported scheme "${nextUrl.protocol}" (from ${method} ${redactUrl(previousUrl)})`,
+            `Refusing to follow redirect to unsupported scheme "${cutForMessage(nextUrl.protocol)}" (from ${method} ${cutForMessage(redactUrl(previousUrl))})`,
           );
         }
         // Userinfo in a Location is not used: credentials come from the base URL only,

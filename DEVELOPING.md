@@ -141,7 +141,9 @@ there too — they never cross the wire in cleartext. The engine also enforces t
 a redirect `Location` resolves to an `http:`/`https:` URL, rejecting any other
 scheme (e.g. `file:`, `ftp:`, `data:`) as a typed `TagesschauNetworkError` — this
 guard lives in the engine, so it holds even when a custom `transport` is injected
-that does no scheme checking of its own. The same holds for the configured base
+that does no scheme checking of its own. A redirect target, a scheme or the URL a
+transport ended up on is quoted in these messages at most `MAX_MESSAGE_VALUE_LENGTH`
+(500) characters long (`cutForMessage`). The same holds for the configured base
 URL: the `RequestEngine` constructor runs the exported `validateBaseUrl` on the raw
 value, before the trailing-slash strip, and rejects a blank, non-`http(s)` or malformed
 base URL, one with surrounding or inner whitespace or a control character, or one with a

@@ -13,6 +13,7 @@ import {
   TagesschauNetworkError,
   TagesschauParseError,
   TagesschauValidationError,
+  MAX_MESSAGE_VALUE_LENGTH,
   cutForMessage,
   cutText,
   toWellFormed,
@@ -477,4 +478,41 @@ test("a typed value cut at 500 characters (cutForMessage) keeps the message well
   const cut = cutForMessage("a".repeat(499) + "\u{1f600}" + "b");
   assert.equal(cut, "a".repeat(499) + "…");
   assert.equal(toWellFormed(cut), cut);
+});
+
+test("a redirect target a message quotes is cut at MAX_MESSAGE_VALUE_LENGTH (bug 02-1)", async () => {
+  const long = "E".repeat(15000);
+  // A chain past the redirect cap: the URL named is the server's last Location.
+  const chain = new RequestEngine({
+    baseUrl: "https://example.test",
+    maxRedirects: 1,
+    transport: async (req) => ({ status: 307, headers: { location: req.url.includes("/q/") ? `/q/${long}2` : `/q/${long}` }, body: Buffer.alloc(0) }),
+  });
+  await assert.rejects(chain.getJson("/api2u/homepage/"), (err: Error) => {
+    assert.ok(err instanceof TagesschauNetworkError);
+    assert.match(err.message, /^Too many redirects \(>1\) for GET https:\/\/example\.test\/q\/E+…$/);
+    assert.ok(err.message.length <= MAX_MESSAGE_VALUE_LENGTH + 60, `${err.message.length}`);
+    return true;
+  });
+  // A scheme of 15 000 letters.
+  const scheme = new RequestEngine({
+    baseUrl: "https://example.test",
+    transport: async () => ({ status: 302, headers: { location: `${"b".repeat(15000)}:x` }, body: Buffer.alloc(0) }),
+  });
+  await assert.rejects(scheme.getJson("/api2u/news/"), (err: Error) => {
+    assert.ok(err instanceof TagesschauNetworkError);
+    assert.match(err.message, /^Refusing to follow redirect to unsupported scheme "b+…" \(from GET https:\/\/example\.test\/api2u\/news\/\)$/);
+    assert.ok(err.message.length <= MAX_MESSAGE_VALUE_LENGTH + 100, `${err.message.length}`);
+    return true;
+  });
+  // A custom transport that followed a redirect itself names where it ended up.
+  const followed = new RequestEngine({
+    baseUrl: "https://example.test",
+    transport: async () => ({ status: 200, headers: { "content-type": "application/json" }, body: Buffer.from("{}"), url: `https://other.test/${long}` }),
+  });
+  await assert.rejects(followed.getJson("/api2u/channels/"), (err: Error) => {
+    assert.ok(err instanceof TagesschauNetworkError);
+    assert.ok(err.message.length <= 2 * MAX_MESSAGE_VALUE_LENGTH, `${err.message.length}`);
+    return true;
+  });
 });
