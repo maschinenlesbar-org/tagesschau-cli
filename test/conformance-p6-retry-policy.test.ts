@@ -19,10 +19,9 @@ const RETRY_AFTER_CAP_MS = 30_000;
  * What a Retry-After above the ceiling does: "wait-cap" waits the ceiling and retries;
  * "fail" fails at once with a message that names the requested wait and says it was not
  * retried (tagesschau: 60 requests an hour; retrying early would only land inside the
- * server's window); "invalid" treats it like a malformed header: the normal backoff applies
- * (tagesschau since 2026-10-09: a hostile value neither stalls the CLI nor ends the retries).
+ * server's window).
  */
-const LONG_RETRY_AFTER = "invalid" as "wait-cap" | "fail" | "invalid";
+const LONG_RETRY_AFTER = "fail" as "wait-cap" | "fail";
 // --------------------------------------------------------------------------------------
 
 async function sleepsFor(status: number, retryAfter: string | undefined, retries = 3): Promise<number[]> {
@@ -52,9 +51,6 @@ test("P6: a Retry-After longer than the backoff is honoured, a huge one capped (
   assert.deepEqual(await sleepsFor(503, "5", 1), [5000]);
   if (LONG_RETRY_AFTER === "wait-cap") {
     assert.deepEqual(await sleepsFor(503, "999999", 1), [RETRY_AFTER_CAP_MS]);
-  } else if (LONG_RETRY_AFTER === "invalid") {
-    assert.deepEqual(await sleepsFor(503, "999999", 2), [MIN_503_MS, MIN_503_MS * 2]);
-    assert.deepEqual(await sleepsFor(503, "1e9", 1), [MIN_503_MS]);
   } else {
     await assert.rejects(
       sleepsFor(503, "999999", 1),

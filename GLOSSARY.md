@@ -116,8 +116,8 @@ hour**. When it answers with a transient status (**429** Too Many Requests,
 `--max-retries` times (default `2`, at most `10`). Each retry waits 200 ms ×
 attempt, or the response's `Retry-After` (seconds or an HTTP date) when that is
 longer and at most 30 s (`MAX_RETRY_AFTER_MS`): `Retry-After: 0` never makes the
-client retry at once. A longer one (or a malformed one, such as `1e9`) is invalid:
-it is ignored and the normal backoff applies.
+client retry at once. A longer one is not retried; the error surfaces at once and
+names the wait the server asked for.
 
 **Redirects.** The client follows up to `--max-redirects` redirects (default
 `5`). Credentials in `--base-url` (`https://user:pw@host`) go out as an

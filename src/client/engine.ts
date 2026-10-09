@@ -82,7 +82,8 @@ export interface EngineOptions {
   /**
    * Number of automatic retries for transient (429/503) responses, 0..`MAX_RETRIES`
    * (10). Each waits `retryDelayMs * attempt`, or the response's `Retry-After` when that
-   * is longer (up to `MAX_RETRY_AFTER_MS`; a longer one is invalid and ignored).
+   * is longer (up to `MAX_RETRY_AFTER_MS`; a longer one is not retried, and the
+   * TagesschauApiError says so).
    */
   maxRetries?: number;
   /**
@@ -146,9 +147,11 @@ function functionOption<F extends (...args: never[]) => unknown>(name: string, v
 }
 
 /**
- * Longest `Retry-After` the engine waits out before retrying a 429/503. A longer value
- * is invalid (`parseRetryAfter` returns `undefined`), like a malformed one, so the
- * normal backoff applies: a hostile value must not stall the CLI.
+ * Longest `Retry-After` the engine waits out before retrying a 429/503. When the
+ * server asks for longer, the engine does not retry at all and surfaces the error at
+ * once: retrying early would only land inside the window the server asked us to wait
+ * out (the Tagesschau API allows 60 requests an hour), and a hostile value must not
+ * stall the CLI.
  */
 export const MAX_RETRY_AFTER_MS = 30_000;
 
@@ -160,7 +163,6 @@ const IMF_FIXDATE =
  * Parse a `Retry-After` header into a delay in milliseconds (RFC 9110 §10.2.3):
  * either delay-seconds (`"120"`) or an HTTP-date (`"Wed, 21 Oct 2026 07:28:00 GMT"`,
  * turned into the time left from `now`; a date in the past gives 0).
- * A delay above `MAX_RETRY_AFTER_MS` is invalid too.
  *
  * Returns `undefined` when the header is absent or malformed — negative (`"-1"`),
  * fractional (`"1.5"`), padded inside, any other date format — so the caller falls
@@ -173,11 +175,10 @@ export function parseRetryAfter(
 ): number | undefined {
   const value = (Array.isArray(header) ? header[0] : header)?.trim();
   if (value === undefined || value === "") return undefined;
-  let delay: number;
-  if (/^\d+$/.test(value)) delay = Number(value) * 1000;
-  else if (IMF_FIXDATE.test(value)) delay = Math.max(0, Date.parse(value) - now);
-  else return undefined;
-  return Number.isNaN(delay) || delay > MAX_RETRY_AFTER_MS ? undefined : delay;
+  if (/^\d+$/.test(value)) return Number(value) * 1000;
+  if (!IMF_FIXDATE.test(value)) return undefined;
+  const when = Date.parse(value);
+  return Number.isNaN(when) ? undefined : Math.max(0, when - now);
 }
 
 const realSleep = (ms: number): Promise<void> =>
@@ -627,8 +628,11 @@ export class RequestEngine {
         throw new TagesschauNetworkError(sizeLimitMessage(this.maxResponseBytes));
       }
       const retryable = status === 429 || status === 503;
+      // A Retry-After beyond MAX_RETRY_AFTER_MS is not retried: the error below surfaces at
+      // once and names the wait the server asked for.
       const retryAfter = retryable ? parseRetryAfter(responseHeaders["retry-after"]) : undefined;
-      if (idempotent && retryable && attempt < this.maxRetries) {
+      const tooLong = retryAfter !== undefined && retryAfter > MAX_RETRY_AFTER_MS;
+      if (idempotent && retryable && !tooLong && attempt < this.maxRetries) {
         attempt += 1;
         // Back off linearly from retryDelayMs. A Retry-After can ask for longer, never for
         // less: `Retry-After: 0` or a date in the past turned the retries into a zero-delay
@@ -696,6 +700,7 @@ export class RequestEngine {
       if (status < 200 || status >= 300) {
         throw this.toApiError(method, url, status, body, status === 401 || status === 403 ? dropped : undefined, {
           retries: attempt,
+          ...(tooLong ? { retryAfterMs: retryAfter } : {}),
         });
       }
 
