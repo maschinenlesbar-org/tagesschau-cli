@@ -306,3 +306,30 @@ test("an a:b@c search text or User-Agent is neither a credential in the log nor 
   assert.equal(await run(["--base-url", "alice:hunter2-pw@mirror.example", "channels"], bare.deps), 1);
   assert.ok(!bare.err.join("\n").includes("hunter2-pw"), bare.err.join("\n"));
 });
+
+test("the help after a usage error is one INFO record per line; a suggestion is part of the ERROR (L5)", async () => {
+  const cli = makeCli(() => jsonResponse({ channels: [] }));
+  assert.equal(await run(["channels", "--no-such-option"], cli.deps), 1);
+  const records = cli.err.map(untimed);
+  assert.equal(records[0], "ERROR [tagesschau.cli] unknown option '--no-such-option'");
+  assert.ok(records.length > 3, records.join("\n"));
+  for (const record of records.slice(1)) {
+    assert.match(record, /^INFO  \[tagesschau\.cli\] .*\S$/);
+    assert.doesNotMatch(record, /\\n/, "one line of the help per record");
+  }
+  const typo = makeCli(() => jsonResponse({ channels: [] }));
+  assert.equal(await run(["hompage"], typo.deps), 1);
+  assert.equal(untimed(typo.err[0] ?? ""), "ERROR [tagesschau.cli] unknown command 'hompage' (Did you mean homepage?)");
+});
+
+test("help for an unknown command, or global options with no command, is a failed run with an ERROR first (L5)", async () => {
+  for (const argv of [["help", "hompage"], ["--compact"]]) {
+    const cli = makeCli(() => jsonResponse({ channels: [] }));
+    assert.equal(await run(argv, cli.deps), 1, argv.join(" "));
+    const records = cli.err.map(untimed);
+    assert.equal(records[0], "ERROR [tagesschau.cli] missing command: `tagesschau <subcommand>`", argv.join(" "));
+    assert.ok(records.length > 3, records.join("\n"));
+    for (const record of records.slice(1)) assert.match(record, /^INFO  \[tagesschau\.cli\] .*\S$/);
+    assert.ok(records.some((record) => /\] Usage: tagesschau /.test(record)), records.join("\n"));
+  }
+});
