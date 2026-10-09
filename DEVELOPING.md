@@ -336,8 +336,8 @@ and a message longer than `MAX_RECORD_MESSAGE` (4000 characters, exported) is cu
 code point and ends in `… (N more characters)`. The areas are `cli` (usage errors, commander's messages, unexpected errors, the
 library's validation and parse errors), `api` (the API's answers: an HTTP error status; and
 the search-spelling note, an `INFO` record whose message is `searchSpellingHint()` without
-its `Note: ` prefix) and `http` (the connection, the cleartext warning); the CLI writes no
-files, so it has no `output` area. Code logs through `logOf(deps)` and never writes
+its `Note: ` prefix), `http` (the connection, the cleartext warning) and `output` (a failed
+write to stdout; the CLI writes no files). Code logs through `logOf(deps)` and never writes
 diagnostics with `io.err` directly. `run()` builds the logger from argv before commander
 parses it (`logFormatFromArgv`, which skips the value of the program's value options such
 as `--user-agent`, used only for the records of a parse error; a `preAction` hook then
@@ -349,8 +349,10 @@ command, or global options with no command) an ERROR "missing command: `tagessch
 <subcommand>`" before that help, so every failed run has an ERROR record
 (`writeCommanderErr`). The log is built with the run's redaction (`withRedactedOutput`), which replaces a secret in the message only, before it is
 escaped: the frame is never touched, and a secret is kept out of the log in either format. `CliDeps.now` makes the
-timestamps testable. stdout carries data only. Only the bin shim's `Output error: …` (a
-failed write to stdout, `handleOutputErrors`, outside `run()`) stays a plain line.
+timestamps testable. stdout carries data only. A failed write to stdout other
+than a closed pipe (`handleOutputErrors`, in the bin shim, outside `run()`) is an ERROR
+record of `tagesschau.output` (`Could not write to stdout: …`), in the format argv asks
+for and redacted like the run's log (`processLogger`).
 Conformance test P23 checks all of this, and its body is shared across the *-cli repos.
 
 ## Testing
@@ -364,7 +366,7 @@ npm test          # builds, then runs `node --test` over dist/test
 - **`engine.test.ts`** — URL building, JSON decoding, error mapping, 429/503 retry — mocked transport.
 - **`client.test.ts`** — every endpoint's method/URL/query mapping — mocked transport.
 - **`cli.test.ts`** — end-to-end command parsing, validation and exit codes — mocked client.
-- **`io.test.ts`** — stdout/stderr write errors (a closed stdout pipe exits 0 quietly; an EPIPE on stderr keeps the run's exit code) — fake streams.
+- **`io.test.ts`** — stdout/stderr write errors (a closed stdout pipe exits 0 quietly; an EPIPE on stderr keeps the run's exit code; any other stdout error is an ERROR record of `tagesschau.output`) — fake streams.
 - **`log.test.ts`** — the record helpers of `src/cli/log.ts` on their own
   (`escapeForRecord`, `formatLogRecord`); the CLI-level checks are P23's.
 - **`validate.test.ts`** — `assertValid`, the `run.ts` mapping of
