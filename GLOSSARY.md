@@ -147,7 +147,7 @@ unexpected); and a non-zero commander code for usage / argument-validation error
 `--log-format jsonl` as one JSON object per line. The areas: `cli` (usage errors,
 commander's messages, unexpected errors), `api` (the API's answers: an error status, a
 malformed answer — bad JSON, the wrong shape, an unknown charset — and the
-search-spelling note), `http` (the connection, the cleartext warning) and `output` (a
+search-spelling note), `http` (the connection, the cleartext warning, and one WARN per retry before it waits) and `output` (a
 failed write to stdout). A record is always one line; control characters in it are
 escaped.
 

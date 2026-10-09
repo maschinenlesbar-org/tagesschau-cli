@@ -154,7 +154,7 @@ Stil von log4j) oder mit `--log-format jsonl` als ein JSON-Objekt pro Zeile. Die
 Bereiche: `cli` (Bedienfehler, Meldungen von commander, unerwartete Fehler), `api` (die
 Antworten der API: ein Fehlerstatus, eine fehlerhafte Antwort – kein JSON, die falsche
 Form, ein unbekannter Zeichensatz – und der Hinweis zur Schreibweise bei der Suche),
-`http` (die Verbindung, die Warnung vor unverschlüsseltem `http:`) und `output` (ein
+`http` (die Verbindung, die Warnung vor unverschlüsseltem `http:` und je Wiederholung eine WARN-Zeile vor dem Warten) und `output` (ein
 fehlgeschlagenes Schreiben auf stdout). Ein Eintrag ist immer eine Zeile; Steuerzeichen
 darin werden maskiert.
 
