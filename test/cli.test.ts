@@ -39,6 +39,20 @@ test("news: repeatable --region builds the query; --ressort alone too", async ()
   assert.equal(new URL(ress.mt.last().url).searchParams.get("ressort"), "sport");
 });
 
+test("news --region 17 --help prints the help and exits 0; --region 17 alone is still a usage error", async () => {
+  for (const argv of [["news", "--region", "17", "--help"], ["news", "--help", "--region", "0"], ["news", "-h", "--region", "x"]]) {
+    const cli = makeCli(() => jsonResponse({ news: [], regional: [] }));
+    assert.equal(await run(argv, cli.deps), 0, argv.join(" "));
+    assert.match(cli.out.join("\n"), /^Usage: tagesschau news /, argv.join(" "));
+    assert.deepEqual(cli.err, [], argv.join(" "));
+    assert.equal(cli.mt.calls.length, 0);
+  }
+  const bad = makeCli(() => jsonResponse({ news: [], regional: [] }));
+  assert.equal(await run(["news", "--region", "17"], bad.deps), 1);
+  assert.equal(bad.mt.calls.length, 0);
+  assert.match(untimed(bad.err[0] ?? ""), /^ERROR \[tagesschau\.cli\] /);
+});
+
 test("news --ressort with --region is refused before any request (the API drops the region)", async () => {
   for (const argv of [
     ["news", "--ressort", "inland", "--region", "2"],

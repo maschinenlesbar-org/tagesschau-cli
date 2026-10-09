@@ -8,13 +8,12 @@ import { MAX_SEARCH_INT, regionProblem, ressortProblem, searchSpellingHint } fro
 import type { NewsParams } from "../../client/types.js";
 
 /**
- * commander accumulator for repeatable --region, checked by the library's
- * regionProblem (1..16) at parse time, with the library's error and message.
+ * commander accumulator for repeatable --region. The value is checked by the library's
+ * regionProblem (1..16) in the action, before any request, not here: a rejected value
+ * must not keep `news --region 17 --help` from printing the help.
  */
-function collectRegion(value: string, previous: Region[] = []): Region[] {
-  const problem = regionProblem(value);
-  if (problem !== undefined) throw new TagesschauValidationError(problem);
-  return previous.concat([value as Region]);
+function collectRegion(value: string, previous: string[] = []): string[] {
+  return previous.concat([value]);
 }
 
 /** commander value-parser for --date: YYMMDD, a real calendar day. */
@@ -51,6 +50,10 @@ export function registerNewsCommands(program: Command, deps: CliDeps): void {
     .action(
       action(deps, async ({ client, global, opts }) => {
         const params: NewsParams = {};
+        for (const region of (opts["region"] as string[] | undefined) ?? []) {
+          const problem = regionProblem(region);
+          if (problem !== undefined) throw new TagesschauValidationError(problem);
+        }
         if (opts["ressort"] !== undefined) {
           // The library's rule, checked before the combination rule below.
           const problem = ressortProblem(opts["ressort"]);
