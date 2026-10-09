@@ -117,13 +117,13 @@ state for each state's full feed.
 
 ```bash
 tagesschau --compact search "Köln" --page-size 20 --result-page 0    # totalItemCount 394
-tagesschau --compact search "Koeln" --page-size 1                    # totalItemCount 212, plus a note on stderr
+tagesschau --compact search "Koeln" --page-size 1                    # totalItemCount 212, plus an INFO record on stderr
 ```
 
 The skill searched the city's real spelling, `Köln`, as its spelling rule says. To show the
 user what the ASCII spelling gives, it also ran `Koeln` for the count alone: 212 hits instead of
-394, and the CLI printed `Note: the search matches spellings literally ("Koeln" finds far fewer
-hits than "Köln", …)` on stderr. The search matches loosely: 6 of the first 20 hits name Köln in
+394, and the CLI logged its spelling note on stderr, an `INFO` record of `tagesschau.api`:
+`the search matches spellings literally ("Koeln" finds far fewer hits than "Köln", …)`. The search matches loosely: 6 of the first 20 hits name Köln in
 title or URL; the others come from regional tickers and broadcaster pages (Stuttgart airport,
 Koblenz, Saarland, two Bundespolitik videos). No duplicates on `sophoraId`.
 

@@ -119,13 +119,14 @@ Anfrage pro Land für den vollständigen Feed jedes Landes.
 
 ```bash
 tagesschau --compact search "Köln" --page-size 20 --result-page 0    # totalItemCount 394
-tagesschau --compact search "Koeln" --page-size 1                    # totalItemCount 212, dazu ein Hinweis auf stderr
+tagesschau --compact search "Koeln" --page-size 1                    # totalItemCount 212, dazu ein INFO-Eintrag auf stderr
 ```
 
 Der Skill suchte nach der richtigen Schreibweise der Stadt, `Köln`, wie es seine Regel zur
 Schreibweise verlangt. Um zu zeigen, was die ASCII-Schreibweise liefert, lief `Koeln` nur für die
-Zahl: 212 statt 394 Treffer, und die CLI gab auf stderr `Note: the search matches spellings
-literally ("Koeln" finds far fewer hits than "Köln", …)` aus. Die Suche ist unscharf: 6 der
+Zahl: 212 statt 394 Treffer, und die CLI schrieb ihren Hinweis zur Schreibweise als
+`INFO`-Eintrag von `tagesschau.api` auf stderr: `the search matches spellings literally
+("Koeln" finds far fewer hits than "Köln", …)`. Die Suche ist unscharf: 6 der
 ersten 20 Treffer nennen Köln in Titel oder URL; die übrigen stammen aus Regional-Tickern und
 Seiten der Sender (Flughafen Stuttgart, Koblenz, Saarland, zwei Videos zur Bundespolitik). Keine
 Duplikate über `sophoraId`.
