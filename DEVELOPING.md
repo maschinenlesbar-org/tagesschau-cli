@@ -312,7 +312,7 @@ After spent retries the message ends `(after 2 retries)` and `retries` holds the
 `TagesschauApiError` exposes `isRetryable` (true for `429`/`503`).
 
 Each retry is announced: the engine option `onRetry(event: RetryEvent)` (exported type:
-`{ retry` (1-based), `maxRetries`, `delayMs`, `status?` (absent for a reset), `url` (userinfo
+`{ retry` (1-based), `maxRetries`, `delayMs`, `status`, `url` (userinfo
 redacted) `}`) is called once per retry right before the sleep, never when there is none, and
 a throw in it is swallowed. The CLI's `action()` sets it to log one `WARN` record of
 `tagesschau.http`, `HTTP 503 from <host>: retry 1 of 3 in 2 s` (`retryMessage`; host only, whole
