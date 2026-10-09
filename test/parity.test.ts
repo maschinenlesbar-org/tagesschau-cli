@@ -27,7 +27,7 @@ test("parity: blank search text is rejected by the CLI and the library alike (fi
     const label = JSON.stringify(text);
     assert.equal(cli.code, 1, label);
     assert.equal(cli.requests.length, 0, label);
-    assert.equal(cli.err, "Error: search text must not be empty.", label);
+    assert.equal(cli.err, "ERROR [tagesschau.cli] search text must not be empty.", label);
     assertLibRejected(lib, "search text must not be empty.", label);
   }
 });
@@ -69,7 +69,7 @@ test("parity: a region outside 1..16 is rejected by the CLI and the library alik
     const label = JSON.stringify(region);
     assert.equal(cli.code, 1, label);
     assert.equal(cli.requests.length, 0, label);
-    assert.equal(cli.err, `Error: ${REGION_MSG(region)}`, label);
+    assert.equal(cli.err, `ERROR [tagesschau.cli] ${REGION_MSG(region)}`, label);
     assertLibRejected(lib, REGION_MSG(region), label);
   }
 });
@@ -82,7 +82,7 @@ test("parity: a ressort outside the seven Ressorts is rejected by the CLI and th
     const label = JSON.stringify(ressort);
     assert.equal(cli.code, 1, label);
     assert.equal(cli.requests.length, 0, label);
-    assert.equal(cli.err, `Error: ${RESSORT_MSG(ressort)}`, label);
+    assert.equal(cli.err, `ERROR [tagesschau.cli] ${RESSORT_MSG(ressort)}`, label);
     assertLibRejected(lib, RESSORT_MSG(ressort), label);
   }
 });

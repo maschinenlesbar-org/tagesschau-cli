@@ -4,7 +4,7 @@ import { run } from "../src/cli/run.js";
 import { TagesschauClient } from "../src/client/client.js";
 import type { CliDeps } from "../src/cli/io.js";
 import type { HttpRequest, HttpResponse } from "../src/client/http.js";
-import { makeMockTransport, jsonResponse } from "./helpers.js";
+import { makeMockTransport, jsonResponse, untimed } from "./helpers.js";
 
 function makeCli(responder: (req: HttpRequest) => HttpResponse) {
   const out: string[] = [];
@@ -46,7 +46,7 @@ test("news --ressort with --region is refused before any request (the API drops 
     const cli = makeCli(() => jsonResponse({ news: [], regional: [] }));
     assert.equal(await run(argv, cli.deps), 1, argv.join(" "));
     assert.equal(cli.mt.calls.length, 0);
-    assert.match(cli.err.join("\n"), /^Error: --ressort and --region cannot be combined/);
+    assert.match(untimed(cli.err.join("\n")), /^ERROR \[tagesschau\.cli\] --ressort and --region cannot be combined/);
   }
 });
 
@@ -201,7 +201,7 @@ test("userinfo in --base-url is sent as Basic auth and kept out of error message
   assert.equal(cli.mt.last().headers?.["Authorization"], `Basic ${Buffer.from("user:s3cret").toString("base64")}`);
   const text = cli.err.join("\n");
   assert.doesNotMatch(text, /s3cret/);
-  assert.equal(text, "Error: HTTP 404 for GET http://127.0.0.1:1/api2u/news/: nicht gefunden");
+  assert.equal(untimed(text), "ERROR [tagesschau.api] HTTP 404 for GET http://127.0.0.1:1/api2u/news/: nicht gefunden");
 });
 
 test("--user-agent: blank, control characters and non-Latin-1 are usage errors before any request", async () => {
@@ -232,12 +232,12 @@ test("a deeply nested response is a clear error, not a stack overflow", async ()
   const respond = () => ({ status: 200, headers: { "content-type": "application/json" }, body: Buffer.from(deep) });
   const pretty = makeCli(respond);
   assert.equal(await run(["news"], pretty.deps), 1);
-  assert.deepEqual(pretty.err, ["Error: The response is nested too deeply to pretty-print; try --compact."]);
+  assert.deepEqual(pretty.err.map(untimed), ["ERROR [tagesschau.cli] The response is nested too deeply to pretty-print; try --compact."]);
   const compact = makeCli(respond);
   const code = await run(["--compact", "news"], compact.deps);
   if (code !== 0) {
     assert.equal(code, 1);
-    assert.deepEqual(compact.err, ["Error: The response is nested too deeply to print."]);
+    assert.deepEqual(compact.err.map(untimed), ["ERROR [tagesschau.cli] The response is nested too deeply to print."]);
   }
 });
 
@@ -245,7 +245,7 @@ test("a null 2xx body is an error (exit 1), not `null` with exit 0", async () =>
   const cli = makeCli(() => jsonResponse(null));
   assert.equal(await run(["--compact", "news"], cli.deps), 1);
   assert.deepEqual(cli.out, []);
-  assert.deepEqual(cli.err, ['Error: Unexpected response shape from /api2u/news/: expected a JSON object with a "news" array.']);
+  assert.deepEqual(cli.err.map(untimed), ['ERROR [tagesschau.cli] Unexpected response shape from /api2u/news/: expected a JSON object with a "news" array.']);
 });
 
 test("bidi formatting characters in server data are escaped in the JSON output", async () => {
@@ -278,7 +278,7 @@ test("search notes on stderr that an ASCII transliteration is matched literally"
     assert.equal(cli.mt.calls.length, 1);
     const note = cli.err.join("\n");
     if (hinted.includes(text)) {
-      assert.match(note, /matches spellings literally .*search that spelling too/, text);
+      assert.match(untimed(note), /^INFO  \[tagesschau\.api\] the search matches spellings literally .*search that spelling too\.$/, text);
       if (!["Strasse", "Koeln"].includes(text)) assert.ok(!note.includes(text), "the note never repeats the text");
     } else {
       assert.equal(note, "", text);

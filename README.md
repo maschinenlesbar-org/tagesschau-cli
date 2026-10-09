@@ -94,8 +94,8 @@ and image metadata.
 The positional `<text>` argument is required and must not be empty (rejected
 before any request). The API folds case but matches spellings literally: `Strasse`
 finds far fewer hits than `Straße`, `Koeln` than `Köln`. When the text could be such an
-ASCII spelling (it has `ae`, `oe`, `ue` or `ss` and no umlaut), the CLI prints a note on
-stderr; search the spelling with `ä`, `ö`, `ü` or `ß` too.
+ASCII spelling (it has `ae`, `oe`, `ue` or `ss` and no umlaut), the CLI logs a note on
+stderr (an `INFO` record of `tagesschau.api`); search the spelling with `ä`, `ö`, `ü` or `ß` too.
 
 ## Common tasks
 
@@ -129,6 +129,21 @@ tagesschau channels | jq -r '.channels[].title'
 
 Every command prints **pretty JSON to stdout**. Errors and diagnostics go to
 stderr, so piping stdout into `jq` stays clean.
+
+Each line on stderr is a **log record**: a timestamp (UTC), a level (`ERROR`, `WARN`,
+`INFO`) and a topic, the program and the area it comes from (`tagesschau.cli` for usage
+errors, `tagesschau.api` for the API's answers and the search-spelling note,
+`tagesschau.http` for the connection). By default it is written log4j style;
+`--log-format jsonl` writes one JSON object per line instead:
+
+```text
+2026-10-09T14:03:12.481Z WARN  [tagesschau.http] requests to mirror.test are sent unencrypted (http:, not https:)
+2026-10-09T14:03:12.902Z INFO  [tagesschau.api] the search matches spellings literally ("Koeln" finds far fewer hits than "Köln", …); if your text stands for ä, ö, ü or ß, search that spelling too.
+```
+
+```bash
+tagesschau --log-format jsonl search Koeln 2>log.jsonl   # {"ts":"…","level":"INFO","topic":"tagesschau.api","msg":"the search matches …"}
+```
 
 ```bash
 # Date + topic + title digest from the front page
@@ -190,7 +205,8 @@ These apply to every command and may be given **before or after** the command na
 | `-V, --version` | Print the version number |
 | `-h, --help` | Show help for the program or a command |
 | `--compact` | Print JSON on a single line instead of pretty-printed |
-| `--base-url <url>` | API base URL (default `https://www.tagesschau.de`); an `http(s)` URL, optionally with a path prefix, without a query (`?`), fragment (`#`), whitespace or control characters. Credentials (`https://user:pw@host`) are sent as Basic auth, to that origin only (not across a redirect to another host or scheme); write a literal `%` in them as `%25`. A plain `http:` base URL to a remote host prints one `warning: … sent unencrypted to <host> (http:, not https:)` line on stderr before the first request (naming the base URL's credentials when it carries any, never printing them); loopback hosts (`localhost`, `127.x`, `::1`) don't warn, and stdout and the exit code are unchanged |
+| `--log-format <format>` | How errors, warnings and notes are written to stderr: `text` (default; log4j style, `2026-10-09T14:03:12.481Z WARN  [tagesschau.http] …`) or `jsonl` (one JSON object per line: `ts`, `level`, `topic`, `msg`). stdout is not affected |
+| `--base-url <url>` | API base URL (default `https://www.tagesschau.de`); an `http(s)` URL, optionally with a path prefix, without a query (`?`), fragment (`#`), whitespace or control characters. Credentials (`https://user:pw@host`) are sent as Basic auth, to that origin only (not across a redirect to another host or scheme); write a literal `%` in them as `%25`. A plain `http:` base URL to a remote host logs one `WARN` record of `tagesschau.http` on stderr (`… sent unencrypted to <host> (http:, not https:)`) before the first request (naming the base URL's credentials when it carries any, never printing them); loopback hosts (`localhost`, `127.x`, `::1`) don't warn, and stdout and the exit code are unchanged |
 | `--timeout <ms>` | Time limit per request in milliseconds, reading the whole response included (default `30000`; `0` disables; at most `2147483647`) |
 | `--user-agent <ua>` | `User-Agent` header value (not blank; no control characters or characters above U+00FF) |
 | `--max-retries <n>` | Retries for transient `429`/`503` responses, `0`–`10` (default `2`); each waits 200 ms × attempt, or the server's `Retry-After` when that is longer (up to 30 s; a longer one is not retried, and the error names the wait) |

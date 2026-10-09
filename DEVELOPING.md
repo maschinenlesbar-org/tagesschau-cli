@@ -105,9 +105,9 @@ that is not one in 0..`MAX_SEARCH_INT` — `Invalid pageSize: expected an intege
 
 `searchSpellingHint(text)` (exported) returns a note for a search text that may be an
 ASCII transliteration (`ae`, `oe`, `ue` not after `a`/`e`/`q`, `ss`, and no letter outside
-ASCII), or `undefined`; the CLI prints it on stderr after the result. The API folds case
-but matches spellings literally (`Strasse` 88 hits against 582 for `Straße` on
-2026-10-05), and searching the variants would cost requests from a budget of 60 an hour,
+ASCII), or `undefined`; the CLI logs it after the result, an `INFO` record of
+`tagesschau.api` on stderr. The API folds case but matches spellings literally (`Strasse`
+88 hits against 582 for `Straße` on 2026-10-05), and searching the variants would cost requests from a budget of 60 an hour,
 so it stays a hint.
 
 Both methods take only the keys listed: an unknown or misspelled key (`news({ region:
@@ -182,8 +182,8 @@ returns one sentence when requests to `baseUrl` would travel unencrypted — `re
 <host> are sent unencrypted (http:, not https:)`, or `the base URL's credentials are sent
 unencrypted to <host> (http:, not https:)` with userinfo — and `undefined` for `https:`, an
 unparseable URL and loopback hosts. `<host>` is `url.host`, never the userinfo. The CLI's
-`action()` wrapper writes `warning: <sentence>` to stderr once per run, before the client is
-built; help, version and usage errors never warn, stdout and the exit code are unchanged,
+`action()` wrapper logs it as a `WARN` record of `tagesschau.http` on stderr once per run,
+before the client is built; help, version and usage errors never warn, stdout and the exit code are unchanged,
 and the library never warns. `test/conformance-p20-cleartext-warning.test.ts` checks it.
 
 ## Architecture
@@ -200,7 +200,8 @@ src/
     validate.ts  # the Problem type + assertValid: input rules shared by library and CLI
     client.ts    # TagesschauClient — the news surface over the engine
   cli/
-    io.ts        # injectable I/O seam (stdout/stderr/file)
+    io.ts        # injectable I/O seam (stdout/stderr/file), the logger and the clock
+    log.ts       # the stderr log: records with ts, level, topic; --log-format text|jsonl
     shared.ts    # option parsers, global-option resolver, JSON renderer
     commands/    # homepage / news / channels / search
     program.ts   # assembles the commander program from injectable deps
@@ -274,7 +275,7 @@ value is invalid, or `undefined`. The library enforces it with
 message `Invalid <name>: <reason>` before any request (a constructor throws; a method
 returning a promise rejects). The CLI's commander parsers turn the same reason into a
 usage error (exit 1), and `run.ts` maps a `TagesschauValidationError` raised during an
-action to exit 1 too, printed as `Error: <message>`.
+action to exit 1 too, logged as an `ERROR` record of `tagesschau.cli`.
 
 **Charset.** JSON bodies are decoded by the charset their `Content-Type` names (UTF-8
 when it names none, as the live API sends `application/json`), with `TextDecoder`: a
@@ -305,6 +306,24 @@ names both spellings: `Response exceeded the size limit of 1000 bytes
 **Rendering (`--compact`).** Every command prints JSON to stdout — pretty-printed
 by default, on a single line with `--compact`.
 
+## The log on stderr
+
+Every diagnostic line on stderr is a log record (`src/cli/log.ts`): a timestamp, a level
+(`ERROR`, `WARN`, `INFO`) and a topic, `tagesschau.<area>`. `--log-format text` (the
+default) writes it log4j style, `<ISO 8601 UTC> <LEVEL padded to 5> [<topic>] <message>`;
+`--log-format jsonl` writes one JSON object per line with exactly `ts`, `level`, `topic`
+and `msg`. The areas are `cli` (usage errors, commander's messages, unexpected errors, the
+library's validation and parse errors), `api` (the API's answers: an HTTP error status; and
+the search-spelling note, an `INFO` record whose message is `searchSpellingHint()` without
+its `Note: ` prefix) and `http` (the connection, the cleartext warning); the CLI writes no
+files, so it has no `output` area. Code logs through `logOf(deps)` and never writes
+diagnostics with `io.err` directly. `run()` builds the logger from argv before commander
+parses it, so commander's own usage errors are records too, and on top of the redacted
+`io.err`, so a secret is kept out of the log in either format. `CliDeps.now` makes the
+timestamps testable. stdout carries data only. Only the bin shim's `Output error: …` (a
+failed write to stdout, `handleOutputErrors`, outside `run()`) stays a plain line.
+Conformance test P23 checks all of this, and its body is shared across the *-cli repos.
+
 ## Testing
 
 ```bash
@@ -328,7 +347,9 @@ npm test          # builds, then runs `node --test` over dist/test
   transport contract (`timeoutMs`, `maxResponseBytes`, headers, bodies), P6 the retry policy,
   P7 pipes and exit codes (spawns the built bin), P8/P9/P13 charset, 2xx shapes and error
   classes, P10 strict parameters and repeated flags, P20 the stderr warning for a plain-`http:`
-  base URL, P21 README links only to files the npm package ships (others by their GitHub URL). They use mock transports and local
+  base URL, P21 README links only to files the npm package ships (others by their GitHub URL),
+  P23 the log on stderr (its body takes the usage-error exit code from the adapter's
+  `USAGE_EXIT`, `1` here). They use mock transports and local
   servers only; none reaches www.tagesschau.de.
 
 ## Continuous integration

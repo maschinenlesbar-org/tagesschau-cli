@@ -1,5 +1,5 @@
 import { InvalidArgumentError, type Command } from "commander";
-import type { CliDeps } from "../io.js";
+import { logOf, type CliDeps } from "../io.js";
 import { action, once, parsePagingArg, parseResultPage, renderJson } from "../shared.js";
 import { RessortValues, type Region, type Ressort } from "../../client/enums.js";
 import { TagesschauValidationError } from "../../client/errors.js";
@@ -100,10 +100,11 @@ export function registerNewsCommands(program: Command, deps: CliDeps): void {
             resultPage: opts["resultPage"] as number | undefined,
           }),
         );
-        // The API matches ae/oe/ue/ss literally, not as ä/ö/ü/ß: say so on stderr (the JSON
-        // on stdout is unchanged) when the text may be such a transliteration.
+        // The API matches ae/oe/ue/ss literally, not as ä/ö/ü/ß: say so on stderr, an INFO
+        // record of `tagesschau.api` (the JSON on stdout is unchanged), when the text may be
+        // such a transliteration. The record's level says what the library's "Note: " did.
         const hint = searchSpellingHint(text as string);
-        if (hint !== undefined) deps.io.err(hint);
+        if (hint !== undefined) logOf(deps).info("api", hint.replace(/^Note: /, ""));
       }),
     );
 }
