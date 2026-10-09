@@ -354,7 +354,10 @@ escaped: the frame is never touched, and a secret is kept out of the log in eith
 timestamps testable. stdout carries data only. A failed write to stdout other
 than a closed pipe (`handleOutputErrors`, in the bin shim, outside `run()`) is an ERROR
 record of `tagesschau.output` (`Could not write to stdout: …`), in the format argv asks
-for and redacted like the run's log (`processLogger`).
+for and redacted like the run's log (`processLogger`). So are Node's own process warnings
+(`installWarningLog`, also installed by the shim): a WARN record of `tagesschau.cli`,
+`(node) <name>: <message>`, instead of Node's plain `(node:PID) Warning: …` line (e.g. with
+`NODE_TLS_REJECT_UNAUTHORIZED=0`).
 Conformance test P23 checks all of this, and its body is shared across the *-cli repos.
 
 ## Testing
@@ -370,7 +373,7 @@ npm test          # builds, then runs `node --test` over dist/test
 - **`cli.test.ts`** — end-to-end command parsing, validation and exit codes — mocked client.
 - **`io.test.ts`** — stdout/stderr write errors (a closed stdout pipe exits 0 quietly; an EPIPE on stderr keeps the run's exit code; any other stdout error is an ERROR record of `tagesschau.output`) — fake streams.
 - **`log.test.ts`** — the record helpers of `src/cli/log.ts` on their own
-  (`escapeForRecord`, `formatLogRecord`); the CLI-level checks are P23's.
+  (`escapeForRecord`, `formatLogRecord`, `installWarningLog`); the CLI-level checks are P23's.
 - **`validate.test.ts`** — `assertValid`, the `run.ts` mapping of
   `TagesschauValidationError`, and the `parity()` helper (`test/helpers.ts`), which sends
   one input through `run()` and through the library on one recording mock transport so
