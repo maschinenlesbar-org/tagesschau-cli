@@ -516,3 +516,20 @@ test("a redirect target a message quotes is cut at MAX_MESSAGE_VALUE_LENGTH (bug
     return true;
   });
 });
+
+test("credentials a server echoes are scrubbed from the error: Basic, user:password, password (L13)", async () => {
+  // The engine sends the pair UTF-8 encoded, so that is the form a server echoes.
+  const basic = Buffer.from("alice:pä ss-pw", "utf8").toString("base64");
+  const body = JSON.stringify({ message: `no: Basic ${basic} / alice:pä ss-pw / pä ss-pw` });
+  const engine = new RequestEngine({
+    baseUrl: "https://alice:p%C3%A4%20ss-pw@127.0.0.1",
+    maxRetries: 0,
+    transport: async () => ({ status: 401, headers: { "content-type": "application/json" }, body: Buffer.from(body) }),
+  });
+  await assert.rejects(engine.getJson("/x"), (err: unknown) => {
+    assert.ok(err instanceof TagesschauApiError);
+    for (const form of [basic, "alice:pä ss-pw", "pä ss-pw"]) assert.ok(!err.message.includes(form), err.message);
+    assert.match(err.message, /no: Basic \*\*\* \/ \*\*\* \/ \*\*\*/);
+    return true;
+  });
+});

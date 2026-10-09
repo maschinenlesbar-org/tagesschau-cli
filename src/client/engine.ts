@@ -21,7 +21,9 @@ import {
   credentialsIn,
   cutForMessage,
   cutText,
+  echoedCredentialForms,
   redactCredentials,
+  redactSecrets,
   redactUrl,
 } from "./errors.js";
 import { assertValid, baseUrlProblem, headerValueProblem } from "./validate.js";
@@ -415,6 +417,12 @@ export class RequestEngine {
   readonly #baseUrl: string;
   /** The base URL's userinfo, raw and percent-decoded, for scrubbing server and transport text. */
   readonly #credentials: string[];
+  /**
+   * The forms a server echoes that userinfo back in (the Basic value, the decoded
+   * `user:password`, the password alone), longest first, so a password never leaves half
+   * of the `user:password` around it.
+   */
+  readonly #echoed: string[];
   private readonly transport: Transport;
   private readonly userAgent: string;
   private readonly timeoutMs: number;
@@ -438,6 +446,9 @@ export class RequestEngine {
         return [raw];
       }
     });
+    this.#echoed = credentialsIn(this.#baseUrl)
+      .flatMap(echoedCredentialForms)
+      .sort((a, b) => b.length - a.length);
     this.transport = functionOption("transport", options.transport, nodeHttpTransport);
     // Only an omitted userAgent selects the default: a blank one is an error, not a
     // silent fallback, and one Node's header validation would throw a raw TypeError
@@ -460,10 +471,11 @@ export class RequestEngine {
 
   /**
    * `text` without the base URL's credentials: server text (an error body that echoes the
-   * request URL) and transport text (fetch's "Failed to fetch <url>") can carry them.
+   * request URL, the Authorization header or the decoded `user:password`) and transport
+   * text (fetch's "Failed to fetch <url>") can carry them.
    */
   private scrub(text: string): string {
-    return this.#credentials.length === 0 ? text : redactCredentials(text, this.#credentials);
+    return this.#credentials.length === 0 ? text : redactSecrets(redactCredentials(text, this.#credentials), this.#echoed);
   }
 
   /**
@@ -478,7 +490,7 @@ export class RequestEngine {
     if (!(cause instanceof Error)) return cause;
     const inner = this.scrubCause(cause.cause, depth + 1);
     const message = this.scrub(cause.message);
-    if (message === cause.message && inner === cause.cause && !this.scrub(cause.stack ?? "").includes("***@")) return cause;
+    if (message === cause.message && inner === cause.cause && this.scrub(cause.stack ?? "") === (cause.stack ?? "")) return cause;
     const copy = new Error(message, inner === undefined ? undefined : { cause: inner });
     copy.name = cause.name;
     const code = (cause as { code?: unknown }).code;

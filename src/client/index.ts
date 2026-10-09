@@ -47,7 +47,9 @@ export {
   cutForMessage,
   cutText,
   MAX_MESSAGE_VALUE_LENGTH,
+  echoedCredentialForms,
   redactCredentials,
+  redactSecrets,
   toWellFormed,
 } from "./errors.js";
 

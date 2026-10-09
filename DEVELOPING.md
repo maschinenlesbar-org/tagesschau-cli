@@ -177,8 +177,12 @@ falls back to the same text-based cut (`redactCredentials`) for a value that doe
 parse as a URL. Logging a client shows no base URL: the engine keeps it in a real
 `#private` field, so `console.log(client)`, `util.inspect` and `JSON.stringify` don't
 reach it. The engine also scrubs the base URL's userinfo (raw and percent-decoded) from
-error bodies and details, from transport error text and from the `cause` chain, and
-wraps whatever a custom transport throws in a `TagesschauNetworkError` (the original,
+error bodies and details, from transport error text and from the `cause` chain — and with
+it the forms a server echoes it back in (`echoedCredentialForms`, exported): the
+`Authorization: Basic` value, the decoded `user:password`, and the password alone from 4
+characters on (`redactSecrets`, exported). The CLI replaces the Basic value and the pair
+on stdout and stderr, the bare password on stderr only (on stdout a short password may
+well occur in the data). It also wraps whatever a custom transport throws in a `TagesschauNetworkError` (the original,
 scrubbed, as `cause`); `test/conformance-p2-library-redaction.test.ts` checks it. `test/conformance-p1-cli-redaction.test.ts` checks ten passwords, seven
 URL shapes and every echo path.
 
