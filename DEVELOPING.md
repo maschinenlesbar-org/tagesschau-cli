@@ -22,14 +22,14 @@ The package ships both a CLI (`tagesschau`) and a typed API client
 
 ```bash
 npm install
-npm run build        # compiles TypeScript to dist/
+npm run build        # compiles every workspace (tsc -b) to its dist/
 ```
 
 Run the locally built CLI without a global install:
 
 ```bash
-node dist/src/cli/index.js --help
-# or, after `npm link`:
+node apps/cli/dist/src/cli/index.js --help    # or: npm start -- --help
+# or, after `npm link --workspace apps/cli`:
 tagesschau --help
 ```
 
@@ -135,7 +135,7 @@ headers, whether the `Location` is relative or absolute; a `Location`'s own user
 is ignored. The engine follows redirects itself: `HttpRequest.redirect` is `"manual"`,
 and a response whose `HttpResponse.url` (fetch's `response.url`) lies on another origin
 is rejected as a `TagesschauNetworkError` ("the transport followed a redirect to
-another origin"). `test/conformance-p3-redirect-credentials.test.ts` checks it. A same-host `https:` → `http:` **downgrade** counts as
+another origin"). `apps/cli/test/conformance-p3-redirect-credentials.test.ts` checks it. A same-host `https:` → `http:` **downgrade** counts as
 a cross-origin hop (the origin differs by scheme), so credentials are stripped
 there too — they never cross the wire in cleartext. The engine also enforces that
 a redirect `Location` resolves to an `http:`/`https:` URL, rejecting any other
@@ -186,7 +186,7 @@ it the forms a server echoes it back in (`echoedCredentialForms`, exported): the
 characters on (`redactSecrets`, exported). The CLI replaces the Basic value and the pair
 on stdout and stderr, the bare password on stderr only (on stdout a short password may
 well occur in the data). It also wraps whatever a custom transport throws in a `TagesschauNetworkError` (the original,
-scrubbed, as `cause`); `test/conformance-p2-library-redaction.test.ts` checks it. `test/conformance-p1-cli-redaction.test.ts` checks ten passwords, seven
+scrubbed, as `cause`); `apps/cli/test/conformance-p2-library-redaction.test.ts` checks it. `apps/cli/test/conformance-p1-cli-redaction.test.ts` checks ten passwords, seven
 URL shapes and every echo path.
 
 **Plain `http:` warning.** `cleartextProblem(baseUrl, secrets?)` (`engine.ts`, exported)
@@ -196,13 +196,50 @@ unencrypted to <host> (http:, not https:)` with userinfo — and `undefined` for
 unparseable URL and loopback hosts. `<host>` is `url.host`, never the userinfo. The CLI's
 `action()` wrapper logs it as a `WARN` record of `tagesschau.http` on stderr once per run,
 before the client is built; help, version and usage errors never warn, stdout and the exit code are unchanged,
-and the library never warns. `test/conformance-p20-cleartext-warning.test.ts` checks it.
+and the library never warns. `apps/cli/test/conformance-p20-cleartext-warning.test.ts` checks it.
 
 ## Architecture
 
+The repository is an **npm workspace** with two folders: `apps/` holds the programs it
+publishes, `packages/` the libraries they are built from.
+
 ```
-src/
-  client/
+package.json         # private workspace manifest: no version, never packed
+apps/cli/            # @maschinenlesbar.org/tagesschau-cli — the published package
+  package.json       # its version, bin, files, bundleDependencies
+  src/index.ts       # library entry: re-exports @maschinenlesbar.org/tagesschau-client
+  src/cli/           # the CLI (below)
+  test/              # CLI tests and every conformance-*.test.ts
+packages/client/     # @maschinenlesbar.org/tagesschau-client — private, bundled into the CLI
+  src/               # the API client (below)
+  test/              # tests that only touch the client, + the transport helpers
+tools/pack/          # prepack/postpack: bundle the client and commander into the tarball
+tools/bump.mjs       # version bump + commit + tag (npm run bump)
+tsconfig.docs.json   # TypeDoc only: the package entry, with the client read from its sources
+```
+
+- **The client is its own package** so a later MCP app can share it with the CLI. It is
+  never published on its own: `apps/cli`'s `prepack` copies it (and commander) into the
+  app's `node_modules`, and `bundleDependencies` ships it inside the tarball. The library
+  entry re-exports the client's `"."`, so `import { TagesschauClient } from
+  "@maschinenlesbar.org/tagesschau-cli"` is unchanged.
+- **The client's exports:** `"."` is the public library surface (`src/index.ts`);
+  `"./internal/*"` maps to any module (`…/tagesschau-client/internal/engine`) for what the
+  CLI needs beyond that; `"./test/*"` reaches the client's test helpers from the CLI's
+  tests (not bundled). Only `"."` is part of the library.
+- **Dependencies point one way:** the app depends on the client, the client on nothing
+  in the workspace.
+- **The version lives in `apps/cli/package.json`.** The root has none; a plain
+  `npm version` at the root is refused. Release with `npm run bump -- <patch|minor|major>`,
+  which bumps the app, commits (the bare version as the message) and tags `vX.Y.Z`.
+- **TypeScript:** `tsconfig.base.json` holds the compiler options; every workspace has a
+  `tsconfig.json` (`src/`) and a `tsconfig.test.json` (`test/`), and the root
+  `tsconfig.json`/`tsconfig.test.json` reference them, built with `tsc -b`.
+
+The client (`packages/client/src/`) and the CLI (`apps/cli/src/`):
+
+```
+packages/client/src/
     enums.ts     # Ressort + region (1..16) value sets (runtime + type)
     types.ts     # response envelopes (items exposed as raw JsonObject)
     query.ts     # dependency-free query-string builder
@@ -211,7 +248,8 @@ src/
     errors.ts    # TagesschauError / *ApiError / *NetworkError / *ParseError / *ValidationError
     validate.ts  # the Problem type + assertValid: input rules shared by library and CLI
     client.ts    # TagesschauClient — the news surface over the engine
-  cli/
+    index.ts     # the client's public surface (the library entry re-exports it)
+apps/cli/src/cli/
     io.ts        # injectable I/O seam (stdout/stderr/file), the logger and the clock
     log.ts       # the stderr log: records with ts, level, topic; --log-format text|jsonl
     shared.ts    # option parsers, global-option resolver, JSON renderer
@@ -232,12 +270,12 @@ src/
 
 ### Library / technical terms
 
-**API client.** [`TagesschauClient`](src/client/client.ts) — the typed wrapper
+**API client.** [`TagesschauClient`](packages/client/src/client.ts) — the typed wrapper
 over the API (`homepage()`, `news()`, `channels()`, `search()`). Usable as a
 library independently of the CLI.
 
 **Transport.** A single function `(HttpRequest) => Promise<HttpResponse>`
-([`http.ts`](src/client/http.ts)). The default uses Node's built-in
+([`http.ts`](packages/client/src/http.ts)). The default uses Node's built-in
 `http`/`https`; tests inject a mock. This is the only HTTP seam. The engine enforces
 the transport contract itself, so the documented limits hold for a custom transport
 (`fetch`, a `node:http` wrapper) too: it races every call against the `timeoutMs`
@@ -246,23 +284,23 @@ pass it on as `fetch(url, { signal })`), checks the body against `maxResponseByt
 reads response headers in any case and from a `Headers` object or a `Map`, accepts any
 ArrayBuffer view (a `Uint8Array` from `fetch`) or ArrayBuffer as the body, and turns a
 thrown value or a malformed response (no status, no headers, a body of another type)
-into a `TagesschauNetworkError`. `test/conformance-p5-transport-contract.test.ts` checks it.
+into a `TagesschauNetworkError`. `apps/cli/test/conformance-p5-transport-contract.test.ts` checks it.
 
-**Request engine.** [`RequestEngine`](src/client/engine.ts) — builds URLs,
+**Request engine.** [`RequestEngine`](packages/client/src/engine.ts) — builds URLs,
 serialises queries, applies retry/backoff, follows redirects, decodes JSON and
 maps errors. Sits between the client's methods and the transport.
 
-**Query-string builder.** [`query.ts`](src/client/query.ts) — a dependency-free
+**Query-string builder.** [`query.ts`](packages/client/src/query.ts) — a dependency-free
 serialiser: `undefined`/`null` values are omitted, arrays become repeated keys,
 booleans become `"true"`/`"false"`, `Date`s become ISO-8601, spaces are encoded
 as `%20`.
 
 **CliDeps / CliIO.** The dependency-injection seam for the CLI
-([`io.ts`](src/cli/io.ts)): a client factory plus an I/O object (`out`/`err`).
+([`io.ts`](apps/cli/src/cli/io.ts)): a client factory plus an I/O object (`out`/`err`).
 Lets the whole CLI run in tests with a mocked client and captured output — no
 subprocess.
 
-**Error types.** [`errors.ts`](src/client/errors.ts): `TagesschauApiError`
+**Error types.** [`errors.ts`](packages/client/src/errors.ts): `TagesschauApiError`
 (non-2xx, carries `status`/`detail`/`url`/`method`/`body` and an `isRetryable`
 flag; `detail` — the body's `detail`, `message` or `error` string — is cleaned for
 stderr by `sanitizeServerText`: control and bidi characters dropped, whitespace folded
@@ -283,7 +321,7 @@ a `404` to exit code `4`, other errors to `1`.
 
 **Input validation.** The library owns every rule about what a request may contain;
 the CLI calls the same functions instead of keeping its own copy. A rule is a pure,
-exported `Problem` ([`validate.ts`](src/client/validate.ts)): it returns the reason a
+exported `Problem` ([`validate.ts`](packages/client/src/validate.ts)): it returns the reason a
 value is invalid, or `undefined`. The library enforces it with
 `assertValid(name, value, problem)`, which throws `TagesschauValidationError` with the
 message `Invalid <name>: <reason>` before any request (a constructor throws; a method
@@ -316,7 +354,7 @@ Each retry is announced: the engine option `onRetry(event: RetryEvent)` (exporte
 redacted) `}`) is called once per retry right before the sleep, never when there is none, and
 a throw in it is swallowed. The CLI's `action()` sets it to log one `WARN` record of
 `tagesschau.http`, `HTTP 503 from <host>: retry 1 of 3 in 2 s` (`retryMessage`; host only, whole
-seconds, ms under 1 s). Tests: `test/retry-log.test.ts`.
+seconds, ms under 1 s). Tests: `apps/cli/test/retry-log.test.ts`.
 
 **maxResponseBytes.** A cap on the response body size in bytes (`0` = unlimited;
 default 100 MiB), guarding against unbounded responses. The built-in transport aborts
@@ -329,7 +367,7 @@ by default, on a single line with `--compact`.
 
 ## The log on stderr
 
-Every diagnostic line on stderr is a log record (`src/cli/log.ts`): a timestamp, a level
+Every diagnostic line on stderr is a log record (`apps/cli/src/cli/log.ts`): a timestamp, a level
 (`ERROR`, `WARN`, `INFO`) and a topic, `tagesschau.<area>`. `--log-format text` (the
 default) writes it log4j style, `<ISO 8601 UTC> <LEVEL padded to 5> [<topic>] <message>`;
 `--log-format jsonl` writes one JSON object per line with exactly `ts`, `level`, `topic`
@@ -374,8 +412,13 @@ Conformance test P23 checks all of this, and its body is shared across the *-cli
 ## Testing
 
 ```bash
-npm test          # builds, then runs `node --test` over dist/test
+npm test          # builds, then runs `node --test` over each workspace's dist/test
+npm run coverage  # the same tests in one run, with a coverage report
+node --test apps/cli/dist/test/cli.test.js   # one file, after a build
 ```
+
+The client's tests are in `packages/client/test/` (`query`, `http`, `engine`, `client`),
+everything that drives the CLI is in `apps/cli/test/`.
 
 - **`query.test.ts`** — query-string serialisation.
 - **`http.test.ts`** — the default transport against a real loopback `http.createServer`.
@@ -383,10 +426,10 @@ npm test          # builds, then runs `node --test` over dist/test
 - **`client.test.ts`** — every endpoint's method/URL/query mapping — mocked transport.
 - **`cli.test.ts`** — end-to-end command parsing, validation and exit codes — mocked client.
 - **`io.test.ts`** — stdout/stderr write errors (a closed stdout pipe exits 0 quietly; an EPIPE on stderr keeps the run's exit code; any other stdout error is an ERROR record of `tagesschau.output`; `stderrAfterStdout` holds a record behind stdout's backlog) — fake streams.
-- **`log.test.ts`** — the record helpers of `src/cli/log.ts` on their own
+- **`log.test.ts`** — the record helpers of `apps/cli/src/cli/log.ts` on their own
   (`escapeForRecord`, `formatLogRecord`, `installWarningLog`); the CLI-level checks are P23's.
 - **`validate.test.ts`** — `assertValid`, the `run.ts` mapping of
-  `TagesschauValidationError`, and the `parity()` helper (`test/helpers.ts`), which sends
+  `TagesschauValidationError`, and the `parity()` helper (`apps/cli/test/helpers.ts`), which sends
   one input through `run()` and through the library on one recording mock transport so
   a test can assert both give the same outcome.
 - **`conformance-p*.test.ts`** — the workspace's shared conformance checks from the 2026-10-05
@@ -405,9 +448,13 @@ npm test          # builds, then runs `node --test` over dist/test
 
 GitHub Actions workflows under `.github/workflows/`:
 
-- **ci.yml** — type-check, build and test on Node 22/24 for every push and PR.
-- **release.yml** — on a `v*` tag: verify the tag matches `package.json`, test, `npm pack`, and create a GitHub Release with the tarball.
-- **publish.yml** — manual dispatch from the release tag (`gh workflow run publish.yml --ref vX.Y.Z`; the version is the tag's): publish to npm via OIDC **Trusted Publishing** (no stored `NPM_TOKEN`) with provenance.
+- **ci.yml** — type-check, build and test on Node 22/24 for every push and PR; then pack the
+  real tarball, check the pack left nothing behind, install it globally with the registry out
+  of reach and run the bin.
+- **release.yml** — on a `v*` tag (made by `npm run bump`): verify the tag matches
+  `apps/cli/package.json`, test, write the SBOMs (scoped to the `apps/cli` workspace), then
+  `npm pack --workspace apps/cli`, and create a GitHub Release with the tarball.
+- **publish.yml** — manual dispatch from the release tag (`gh workflow run publish.yml --ref vX.Y.Z`; the version is the tag's): `npm publish --workspace apps/cli` via OIDC **Trusted Publishing** (no stored `NPM_TOKEN`) with provenance.
 - **docs.yml** — build the project website (`site/`, English and German) with the TypeDoc API docs
   under `/api/`, and deploy both to GitHub Pages on each `v*` tag.
   TypeDoc runs from the isolated, lockfile-pinned `tools/docs/` toolchain because it
@@ -423,7 +470,9 @@ and [Fylgja](https://fylgja.dev/) CSS, and deployed by `docs.yml` together with 
 reference under `/api/`. Its content comes from this repository: the README intro and quick
 start, the command tree of the built CLI (`site/scripts/cli-reference.mjs`), `Usage.md`,
 `GLOSSARY.md` and its German version `GLOSSARY.de.md`, the skills, and the skill examples in
-`EXAMPLE.md` and `EXAMPLE.de.md`. The only repo-specific files are `site/_config.yml` and
+`EXAMPLE.md` and `EXAMPLE.de.md`. The only repo-specific files are `site/_config.yml` (which
+also says where the published manifest and the built program are: `manifest:
+apps/cli/package.json`, `program: apps/cli/dist/src/cli/program.js`) and
 `site/_data/project.yml` (the German intro and the access requirements); the rest of `site/` is
 identical in every maschinenlesbar.org CLI, so change it in all of them together. When the
 README intro changes, update the German intro in `site/_data/project.yml`.

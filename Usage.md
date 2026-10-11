@@ -12,7 +12,7 @@ npm i -g @maschinenlesbar.org/tagesschau-cli
 ```
 
 This installs the `tagesschau` binary. To run from a checkout without a global
-install, use `node dist/src/cli/index.js` in place of `tagesschau` (after
+install, use `node apps/cli/dist/src/cli/index.js` in place of `tagesschau` (after
 `npm run build`).
 
 ```bash
