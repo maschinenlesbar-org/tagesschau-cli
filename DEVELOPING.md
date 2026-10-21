@@ -380,7 +380,11 @@ built-in transport's own reason is Node's text, with the error code added when t
 doesn't name it (`socket hang up (ECONNRESET)`).
 
 **Rendering (`--compact`).** Every command prints JSON to stdout — pretty-printed
-by default, on a single line with `--compact`.
+by default, on a single line with `--compact`. An answer nested too deeply to pretty-print
+is an ERROR record that suggests `--compact`. `--compact` takes V8's fast path
+(`JSON.stringify(value)`) unless the answer holds a string or key of 64 Mi characters or more
+(`holdsHugeString`): on Node 26 the fast path aborts the process on a ~250 MB string from
+`JSON.parse`, but it is also the only path that prints very deep nesting there.
 
 ## The log on stderr
 
