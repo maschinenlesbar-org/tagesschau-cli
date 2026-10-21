@@ -472,7 +472,12 @@ everything that drives the CLI is in `apps/cli/test/`.
   classes, P10 strict parameters and repeated flags, P20 the stderr warning for a plain-`http:`
   base URL, P21 README links only to files the npm package ships (others by their GitHub URL),
   P23 the log on stderr (its body takes the usage-error exit code from the adapter's
-  `USAGE_EXIT`, `1` here). They use mock transports and local
+  `USAGE_EXIT`, `1` here), P24 the input corpus (the search text goes out trimmed and in NFKC,
+  or is refused, on the CLI and in the library alike; no id goes into a path here), P25 the
+  response corpus (a number a double can't carry exactly, or an empty answer, is an error,
+  never a changed value). P24 and P25 read the library's error by its class name through
+  `kitParity` (`apps/cli/test/helpers.ts`). P26 (`-o` integrity) is not copied: the CLI
+  writes no files. They use mock transports and local
   servers only; none reaches www.tagesschau.de.
 
 ## Continuous integration

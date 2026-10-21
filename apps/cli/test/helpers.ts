@@ -73,3 +73,28 @@ export async function parity(
   }
   return { cli, lib };
 }
+
+/** The library's outcome in the shape the kit's conformance tests P24/P25 read: the error by its class name. */
+export interface KitLibOutcome {
+  ok: boolean;
+  value?: unknown;
+  error?: { name: string; message: string };
+  requests: HttpRequest[];
+}
+
+/**
+ * `parity` in the shape the kit's conformance tests P24/P25 describe: the same run, with the
+ * library's error given as `{ name, message }` (`name` is the error's class,
+ * `TagesschauValidationError`) instead of the thrown value.
+ */
+export async function kitParity(
+  argv: string[],
+  call: (transport: Transport) => unknown,
+  responder?: (req: HttpRequest) => HttpResponse | Promise<HttpResponse>,
+): Promise<{ cli: CliOutcome; lib: KitLibOutcome }> {
+  const r = await parity(argv, call, responder);
+  if (r.lib.ok) return { cli: r.cli, lib: { ok: true, value: r.lib.value, requests: r.lib.requests } };
+  const e = r.lib.error;
+  const error = e instanceof Error ? { name: e.constructor.name, message: e.message } : { name: typeof e, message: String(e) };
+  return { cli: r.cli, lib: { ok: false, error, requests: r.lib.requests } };
+}
