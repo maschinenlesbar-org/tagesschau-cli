@@ -386,6 +386,11 @@ function withoutUserinfo(base: string): string {
   return userinfo === undefined ? base : base.replace(`://${userinfo}@`, "://");
 }
 
+/** `<METHOD> <url> failed: `, the start of a network error's message (userinfo redacted, the URL cut). */
+function requestFailed(method: string, url: string): string {
+  return `${method} ${cutForMessage(redactUrl(url))} failed: `;
+}
+
 /** The origin (scheme, host, port) of a URL, or the value itself if it doesn't parse. */
 function originOf(url: string): string {
   try {
@@ -540,17 +545,24 @@ export class RequestEngine {
    * What the transport threw, as the error the engine raises. The default transport
    * rejects with `TagesschauNetworkError` only; an injected one may throw anything (a
    * string, a `TypeError` from fetch). Every failure becomes a `TagesschauNetworkError` — a
-   * `TagesschauError` a caller and the CLI can rely on — with the base URL's credentials
-   * scrubbed from its message and cause chain; any other `TagesschauError` passes through,
-   * and a clean `TagesschauNetworkError` stays as it is.
+   * `TagesschauError` a caller and the CLI can rely on — that names the request
+   * (`GET <url> failed: <reason>`, userinfo redacted; Node's own text, "connect ECONNREFUSED
+   * 127.0.0.1:1" or "Request timed out after 500ms", says nothing about which call failed),
+   * with the original as `cause` and the base URL's credentials scrubbed from the message and
+   * the cause chain. Any other `TagesschauError` passes through, and a message that names the
+   * request already is not prefixed twice.
    */
-  private transportError(cause: unknown): TagesschauError {
+  private transportError(cause: unknown, method: string, url: string): TagesschauError {
     if (cause instanceof TagesschauError && !(cause instanceof TagesschauNetworkError)) return cause;
     const reason = cause instanceof Error ? cause.message : String(cause);
     const message = sanitizeServerText(this.scrub(reason));
     const scrubbed = this.scrubCause(cause);
-    if (cause instanceof TagesschauNetworkError && message === cause.message && scrubbed === cause) return cause;
-    return new TagesschauNetworkError(message, { cause: scrubbed });
+    const prefix = requestFailed(method, url);
+    if (message.startsWith(prefix)) {
+      if (cause instanceof TagesschauNetworkError && message === cause.message && scrubbed === cause) return cause;
+      return new TagesschauNetworkError(message, { cause: scrubbed });
+    }
+    return new TagesschauNetworkError(`${prefix}${message}`, { cause: scrubbed });
   }
 
   /**
@@ -636,14 +648,14 @@ export class RequestEngine {
           ...(this.maxResponseBytes > 0 ? { maxResponseBytes: this.maxResponseBytes } : {}),
         });
       } catch (cause) {
-        throw this.transportError(cause);
+        throw this.transportError(cause, method, url);
       }
 
       // An injected transport may resolve with anything; a malformed HttpResponse would
       // otherwise surface below as a raw TypeError, outside the TagesschauError contract.
       const invalid = responseProblem(response);
       if (invalid !== undefined) {
-        throw new TagesschauNetworkError(`The transport returned an invalid response (${invalid}).`);
+        throw new TagesschauNetworkError(`${requestFailed(method, url)}the transport returned an invalid response (${invalid}).`);
       }
       // A transport must not follow redirects itself (`redirect: "manual"`): one that did
       // (fetch's default) may have carried the Authorization header to another host, and
@@ -651,7 +663,7 @@ export class RequestEngine {
       const finalUrl = (response as { url?: unknown }).url;
       if (typeof finalUrl === "string" && finalUrl !== "" && originOf(finalUrl) !== originOf(url)) {
         throw new TagesschauNetworkError(
-          `${method} ${cutForMessage(redactUrl(url))} failed: the transport followed a redirect to another origin ` +
+          `${requestFailed(method, url)}the transport followed a redirect to another origin ` +
             `(${cutForMessage(sanitizeServerText(redactUrl(this.scrub(finalUrl))))}); a transport must not follow redirects ` +
             `(HttpRequest.redirect is "manual").`,
         );
@@ -663,7 +675,7 @@ export class RequestEngine {
       // The size cap holds whatever the transport did: the default one aborts early, a custom
       // one may have read everything.
       if (this.maxResponseBytes > 0 && body.byteLength > this.maxResponseBytes) {
-        throw new TagesschauNetworkError(sizeLimitMessage(this.maxResponseBytes));
+        throw new TagesschauNetworkError(`${requestFailed(method, url)}${sizeLimitMessage(this.maxResponseBytes)}`);
       }
       const retryable = status === 429 || status === 503;
       // A Retry-After beyond MAX_RETRY_AFTER_MS is not retried: the error below surfaces at

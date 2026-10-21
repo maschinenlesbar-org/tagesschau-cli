@@ -165,14 +165,12 @@ export const nodeHttpTransport: Transport = (request) =>
         fail(err);
         return;
       }
-      // Wrap raw Node socket errors (ECONNREFUSED, ENOTFOUND, ECONNRESET, ...) in
-      // a clearer, branded network-failure message that names the target host
-      // instead of surfacing the opaque `connect ECONNREFUSED 127.0.0.1:1`.
+      // Wrap raw Node socket errors (ECONNREFUSED, ENOTFOUND, ECONNRESET, ...) in a
+      // TagesschauNetworkError with Node's error as the cause. The engine puts the request in
+      // front (`GET <url> failed: connect ECONNREFUSED 127.0.0.1:1`); the code is added when
+      // Node's text doesn't name it ("socket hang up (ECONNRESET)").
       const code = (err as NodeJS.ErrnoException).code;
-      const target = `${request.method} ${url.origin}`;
-      const message = code
-        ? `Network error (${code}) connecting to ${target}: ${err.message}`
-        : `Network error connecting to ${target}: ${err.message}`;
+      const message = code && !err.message.includes(code) ? `${err.message} (${code})` : err.message;
       fail(new TagesschauNetworkError(message, { cause: err }));
     });
 

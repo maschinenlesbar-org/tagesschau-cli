@@ -368,8 +368,16 @@ seconds, ms under 1 s). Tests: `apps/cli/test/retry-log.test.ts`.
 **maxResponseBytes.** A cap on the response body size in bytes (`0` = unlimited;
 default 100 MiB), guarding against unbounded responses. The built-in transport aborts
 as soon as the cap is passed; the engine checks the body of any transport. The error
-names both spellings: `Response exceeded the size limit of 1000 bytes
-(maxResponseBytes; --max-response-bytes on the CLI)`.
+names the request and both spellings: `GET <url> failed: Response exceeded the size limit
+of 1000 bytes (maxResponseBytes; --max-response-bytes on the CLI)`.
+
+**Network errors name the request.** Every `TagesschauNetworkError` from a request — a
+timeout (the transport's or the engine's deadline), the size cap, a refused connection, a
+DNS failure, a reset, whatever a custom transport throws — reads `<METHOD> <url> failed:
+<reason>` (userinfo redacted), with the original as `cause`: `GET
+https://www.tagesschau.de/api2u/news/ failed: connect ECONNREFUSED 127.0.0.1:443`. The
+built-in transport's own reason is Node's text, with the error code added when the text
+doesn't name it (`socket hang up (ECONNRESET)`).
 
 **Rendering (`--compact`).** Every command prints JSON to stdout — pretty-printed
 by default, on a single line with `--compact`.

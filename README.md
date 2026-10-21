@@ -191,8 +191,9 @@ exit `0`; if the reader of **stderr** goes away, a failed run still keeps its ow
   fixed endpoint, so this usually means a wrong `--base-url` or a moved API. (An
   out-of-range region id or an empty search text never reaches the API: the CLI
   rejects them with exit `1`.)
-- **Network error / timeout** — connectivity or a timeout. Try again, or raise
-  the limit with `--timeout 60000`.
+- **Network error / timeout** — connectivity or a timeout; the ERROR record of
+  `tagesschau.http` names the request (`GET https://www.tagesschau.de/api2u/news/ failed:
+  Request timed out after 30000ms`). Try again, or raise the limit with `--timeout 60000`.
 - **No results / empty arrays** — the query matched nothing; broaden the search
   text, drop `--ressort`/`--region` filters, or try a different keyword.
 - **Invalid ressort** — must be one of `inland`, `ausland`, `wirtschaft`,

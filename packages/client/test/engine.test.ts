@@ -1,5 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import http from "node:http";
+import type { AddressInfo } from "node:net";
 import {
   RequestEngine,
   stripCredentialHeaders,
@@ -573,6 +575,53 @@ test("credentials a server echoes are scrubbed from the error: Basic, user:passw
     assert.ok(err instanceof TagesschauApiError);
     for (const form of [basic, "alice:pä ss-pw", "pä ss-pw"]) assert.ok(!err.message.includes(form), err.message);
     assert.match(err.message, /no: Basic \*\*\* \/ \*\*\* \/ \*\*\*/);
+    return true;
+  });
+});
+
+test("a timeout, the size cap, a refused connection and a DNS failure name the request (kit K3)", async () => {
+  // They said only "Request timed out after 20ms", "Response exceeded the size limit …",
+  // "Network error (ECONNREFUSED) connecting to GET http://127.0.0.1:9: …" (the origin, not the
+  // request) or the transport's bare text, so a caller making several calls could not tell
+  // which one failed.
+  const url = "http://127.0.0.1:9/api2u/news/";
+  const dns = Object.assign(new Error("getaddrinfo ENOTFOUND tagesschau.invalid"), { code: "ENOTFOUND" });
+  const own = new TagesschauNetworkError("Request timed out after 5ms");
+  const cases: Array<[string, ConstructorParameters<typeof RequestEngine>[0], RegExp, unknown]> = [
+    ["engine deadline", { transport: () => new Promise<never>(() => {}), timeoutMs: 20 }, /^Request timed out after 20ms$/, undefined],
+    ["size cap", { transport: async () => rawResponse("x".repeat(100), "application/json"), maxResponseBytes: 10 }, /^Response exceeded the size limit of 10 bytes/, undefined],
+    ["transport's own timeout", { transport: async () => { throw own; } }, /^Request timed out after 5ms$/, own],
+    ["DNS failure", { transport: async () => { throw dns; } }, /^getaddrinfo ENOTFOUND tagesschau\.invalid$/, dns],
+    ["a reset", { transport: async () => { throw new TypeError("fetch failed"); } }, /^fetch failed$/, undefined],
+  ];
+  for (const [name, options, reason, cause] of cases) {
+    const e = new RequestEngine({ baseUrl: "http://user:pw@127.0.0.1:9", maxRetries: 0, ...options });
+    await assert.rejects(e.getJson("/api2u/news/"), (err) => {
+      assert.ok(err instanceof TagesschauNetworkError, name);
+      assert.ok(err.message.startsWith(`GET ${url} failed: `), `${name}: ${err.message}`);
+      assert.match(err.message.slice(`GET ${url} failed: `.length), reason, name);
+      assert.doesNotMatch(err.message, /user|pw/, name);
+      if (cause !== undefined) assert.equal(err.cause, cause, name);
+      return true;
+    });
+  }
+  // A message that names the request already is not prefixed twice.
+  const named = new RequestEngine({ baseUrl: "http://127.0.0.1:9", transport: async () => { throw new TagesschauNetworkError(`GET ${url} failed: x`); } });
+  await assert.rejects(named.getJson("/api2u/news/"), { message: `GET ${url} failed: x` });
+});
+
+test("a refused connection on the built-in transport names the request and keeps Node's error as the cause", async () => {
+  const server = http.createServer();
+  await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+  const port = (server.address() as AddressInfo).port;
+  await new Promise<void>((r) => server.close(() => r()));
+  const e = new RequestEngine({ baseUrl: `http://127.0.0.1:${port}`, maxRetries: 0 });
+  await assert.rejects(e.getJson("/api2u/news/"), (err) => {
+    assert.ok(err instanceof TagesschauNetworkError);
+    assert.equal(err.message, `GET http://127.0.0.1:${port}/api2u/news/ failed: connect ECONNREFUSED 127.0.0.1:${port}`);
+    let inner: unknown = err.cause;
+    while (inner instanceof Error && (inner as NodeJS.ErrnoException).code === undefined) inner = inner.cause;
+    assert.equal((inner as NodeJS.ErrnoException).code, "ECONNREFUSED");
     return true;
   });
 });
