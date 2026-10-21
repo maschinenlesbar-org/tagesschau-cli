@@ -10,7 +10,7 @@ import { defaultIO } from "./io.js";
 import { TagesschauClient } from "@maschinenlesbar.org/tagesschau-client/internal/client";
 import { MAX_TIMEOUT_MS } from "@maschinenlesbar.org/tagesschau-client/internal/http";
 import { MAX_REDIRECTS, MAX_RETRIES } from "@maschinenlesbar.org/tagesschau-client/internal/engine";
-import { parseBaseUrl, parseBoundedInt, parseHeaderValue, parseIntArg } from "./shared.js";
+import { forbidRepeatedOptions, parseBaseUrl, parseBoundedInt, parseHeaderValue, parseIntArg } from "./shared.js";
 import { registerNewsCommands } from "./commands/news.js";
 import { DEFAULT_LOG_FORMAT, logFormatProblem } from "./log.js";
 
@@ -83,6 +83,7 @@ export function buildProgram(deps: CliDeps = defaultDeps): Command {
     .showHelpAfterError();
 
   registerNewsCommands(program, deps);
+  forbidRepeatedOptions(program);
 
   return program;
 }

@@ -1,6 +1,6 @@
 import { InvalidArgumentError, type Command } from "commander";
 import { logOf, type CliDeps } from "../io.js";
-import { action, once, parsePagingArg, parseResultPage, renderJson } from "../shared.js";
+import { action, parsePagingArg, parseResultPage, renderJson } from "../shared.js";
 import { RessortValues, type Region, type Ressort } from "@maschinenlesbar.org/tagesschau-client/internal/enums";
 import { TagesschauValidationError } from "@maschinenlesbar.org/tagesschau-client/internal/errors";
 import { newsDateProblem } from "@maschinenlesbar.org/tagesschau-client/internal/client";
@@ -8,11 +8,12 @@ import { MAX_SEARCH_INT, regionProblem, ressortProblem, searchSpellingHint } fro
 import type { NewsParams } from "@maschinenlesbar.org/tagesschau-client/internal/types";
 
 /**
- * commander accumulator for repeatable --region. The value is checked by the library's
+ * commander accumulator for repeatable --region (declared with an array default, so
+ * forbidRepeatedOptions leaves it alone). The value is checked by the library's
  * regionProblem (1..16) in the action, before any request, not here: a rejected value
  * must not keep `news --region 17 --help` from printing the help.
  */
-function collectRegion(value: string, previous: string[] = []): string[] {
+function collectRegion(value: string, previous: string[]): string[] {
   return previous.concat([value]);
 }
 
@@ -39,18 +40,18 @@ export function registerNewsCommands(program: Command, deps: CliDeps): void {
     .option(
       "--ressort <ressort>",
       `topic: ${RessortValues.join(" | ")} (once; not with --region)`,
-      once((value: string) => value),
     )
-    .option("--region <id>", "Bundesland id 1..16 (repeatable)", collectRegion)
+    .option("--region <id>", "Bundesland id 1..16 (repeatable)", collectRegion, [] as string[])
     .option(
       "--date <yymmdd>",
       "page cursor: the date=YYMMDD value of a previous response's nextPage (the next, older page)",
-      once(parseNewsDate),
+      parseNewsDate,
     )
     .action(
       action(deps, async ({ client, global, opts }) => {
         const params: NewsParams = {};
-        for (const region of (opts["region"] as string[] | undefined) ?? []) {
+        const regions = opts["region"] as string[];
+        for (const region of regions) {
           const problem = regionProblem(region);
           if (problem !== undefined) throw new TagesschauValidationError(problem);
         }
@@ -60,7 +61,7 @@ export function registerNewsCommands(program: Command, deps: CliDeps): void {
           if (problem !== undefined) throw new TagesschauValidationError(problem);
           params.ressort = opts["ressort"] as Ressort;
         }
-        if (opts["region"] !== undefined) params.regions = opts["region"] as Region[];
+        if (regions.length > 0) params.regions = regions as Region[];
         if (opts["date"] !== undefined) params.date = opts["date"] as string;
         if (params.ressort !== undefined && params.regions !== undefined) {
           throw new TagesschauValidationError(
@@ -85,11 +86,11 @@ export function registerNewsCommands(program: Command, deps: CliDeps): void {
   program
     .command("search <text>")
     .description("Full-text search across articles")
-    .option("--page-size <n>", `pageSize parameter (1..${MAX_SEARCH_INT})`, once(parsePagingArg))
+    .option("--page-size <n>", `pageSize parameter (1..${MAX_SEARCH_INT})`, parsePagingArg)
     .option(
       "--result-page <n>",
       `resultPage parameter (0-based; 0 = first page; at most ${MAX_SEARCH_INT})`,
-      once(parseResultPage),
+      parseResultPage,
     )
     .action(
       action(deps, async ({ client, global, opts }, [text]) => {

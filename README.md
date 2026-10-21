@@ -170,6 +170,11 @@ tagesschau --compact homepage | jq -c '.news'
 
 `--compact` is a global option and works **before or after** the command name.
 
+Every option that takes a value takes **one**: given twice (`--timeout 1000 --timeout 0`,
+`--ressort inland --ressort ausland`) it is a usage error (`--timeout may be given only
+once.`, exit `1`, nothing sent), never "the last one wins". Only `--region` repeats (each
+adds a state); flags such as `--compact` may repeat.
+
 **Exit codes** make the CLI easy to use in scripts:
 
 | Code | Meaning |

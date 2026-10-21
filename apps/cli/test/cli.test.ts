@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { run } from "../src/cli/run.js";
-import { renderJson } from "../src/cli/shared.js";
+import { forbidRepeatedOptions, renderJson } from "../src/cli/shared.js";
+import { buildProgram } from "../src/cli/program.js";
 import { TagesschauClient } from "@maschinenlesbar.org/tagesschau-client/internal/client";
 import { credentialsIn } from "@maschinenlesbar.org/tagesschau-client/internal/errors";
 import type { CliDeps } from "../src/cli/io.js";
@@ -399,4 +400,45 @@ test("a malformed answer is an ERROR record of tagesschau.api, exit 1 (L9)", asy
   const deep = makeCli(() => ({ status: 200, headers: { "content-type": "application/json" }, body: Buffer.from('{"channels":[' + "[".repeat(200_000) + "]".repeat(200_000) + "]}") }));
   assert.equal(await run(["channels"], deep.deps), 1);
   assert.match(untimed(deep.err.join("\n")), /^ERROR \[tagesschau\.cli\] The response is nested too deeply/);
+});
+
+test("a single-value option given twice is a usage error, never 'the last one wins' (kit K5)", async () => {
+  // commander keeps the last value silently: `--timeout 1000 --timeout 0` switched the timeout off.
+  for (const [argv, name] of [
+    [["--timeout", "1000", "--timeout", "0", "channels"], "--timeout"],
+    [["--timeout=1000", "channels", "--timeout", "1000"], "--timeout"],
+    [["--base-url", "https://www.tagesschau.de", "--base-url", "https://www.tagesschau.de", "channels"], "--base-url"],
+    [["--log-format", "jsonl", "--log-format", "text", "channels"], "--log-format"],
+    [["--user-agent", "a", "--user-agent", "b", "channels"], "--user-agent"],
+    [["--max-retries", "1", "--max-retries", "2", "channels"], "--max-retries"],
+    [["--max-redirects", "1", "--max-redirects", "2", "channels"], "--max-redirects"],
+    [["--max-response-bytes", "1", "--max-response-bytes", "2", "channels"], "--max-response-bytes"],
+    [["news", "--ressort", "inland", "--ressort", "ausland"], "--ressort"],
+    [["news", "--date", "261004", "--date", "261003"], "--date"],
+    [["search", "Wahl", "--page-size", "1", "--page-size", "2"], "--page-size"],
+    [["search", "Wahl", "--result-page", "1", "--result-page", "2"], "--result-page"],
+  ] as const) {
+    const cli = makeCli(() => jsonResponse({ news: [], regional: [], channels: [], searchResults: [] }));
+    assert.equal(await run([...argv], cli.deps), 1, argv.join(" "));
+    assert.equal(cli.mt.calls.length, 0, `${argv.join(" ")} sent a request`);
+    assert.match(cli.err.join("\n"), new RegExp(`${name} may be given only once\\.`), argv.join(" "));
+  }
+  // Flags may repeat, and so may the repeatable --region.
+  const flags = makeCli(() => jsonResponse({ channels: [] }));
+  assert.equal(await run(["--compact", "--compact", "channels"], flags.deps), 0);
+  const regions = makeCli(() => jsonResponse({ news: [], regional: [] }));
+  assert.equal(await run(["news", "--region", "5", "--region", "9"], regions.deps), 0);
+  assert.equal(new URL(regions.mt.last().url).searchParams.get("regions"), "5,9");
+});
+
+test("an option with an array default is repeatable: each value adds to the list", async () => {
+  const program = buildProgram(makeCli(() => jsonResponse({})).deps);
+  const seen: string[][] = [];
+  program
+    .command("collect")
+    .option("--tag <t>", "repeatable", (value: string, previous: string[]) => [...previous, value], [] as string[])
+    .action((opts: { tag: string[] }) => void seen.push(opts.tag));
+  forbidRepeatedOptions(program);
+  await program.parseAsync(["collect", "--tag", "a", "--tag", "b"], { from: "user" });
+  assert.deepEqual(seen, [["a", "b"]]);
 });

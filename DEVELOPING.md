@@ -328,6 +328,12 @@ way), all
 extending `TagesschauError`. The CLI maps
 a `404` to exit code `4`, other errors to `1`.
 
+**One value per option.** `forbidRepeatedOptions` (`apps/cli/src/cli/shared.ts`, applied to the
+whole program in `buildProgram`) makes a single-value option given twice a usage error
+(`--timeout may be given only once.`, exit 1, no request); commander would keep the last value
+silently. A repeatable option is declared with an array default (`--region`, `collectRegion,
+[]`) and is left alone, as are flags.
+
 **Input validation.** The library owns every rule about what a request may contain;
 the CLI calls the same functions instead of keeping its own copy. A rule is a pure,
 exported `Problem` ([`validate.ts`](packages/client/src/validate.ts)): it returns the reason a

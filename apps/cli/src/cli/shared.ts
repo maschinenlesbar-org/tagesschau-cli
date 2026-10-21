@@ -28,19 +28,27 @@ export function parseIntArg(value: string): number {
 }
 
 /**
- * Wrap a commander value-parser for a single-valued option so that a second
- * occurrence is a usage error. commander otherwise keeps only the last value, so
- * `news --ressort inland --ressort ausland` silently dropped Inland, next to a
- * `--region` that is repeatable and combines. (The option must have no default:
- * commander passes the default as `previous` on the first occurrence.)
+ * Make giving a single-value option twice a usage error, on `command` and every subcommand:
+ * commander keeps the last value silently, so `--timeout 1000 --timeout 0` switched the timeout
+ * off and `news --ressort inland --ressort ausland` dropped Inland, with nothing telling the user
+ * a value was dropped. Flags without a value are left alone, and so is a repeatable option,
+ * declared the commander way with an array default (`.option("--region <id>", …, collect, [])`):
+ * each value adds to the list. Call it once on a freshly built program: the check counts per
+ * Option object.
  */
-export function once<T>(parse: (value: string) => T): (value: string, previous: T | undefined) => T {
-  return (value, previous) => {
-    if (previous !== undefined) {
-      throw new InvalidArgumentError("Given more than once; this option takes a single value.");
-    }
-    return parse(value);
-  };
+export function forbidRepeatedOptions(command: Command): void {
+  for (const option of command.options) {
+    if ((!option.required && !option.optional) || option.variadic || Array.isArray(option.defaultValue)) continue;
+    const parse = option.parseArg;
+    let given = false;
+    const guarded = (value: string, previous: unknown): unknown => {
+      if (given) throw new InvalidArgumentError(`${option.long ?? option.short} may be given only once.`);
+      given = true;
+      return parse === undefined ? value : parse(value, previous);
+    };
+    option.parseArg = guarded as typeof option.parseArg;
+  }
+  for (const child of command.commands) forbidRepeatedOptions(child);
 }
 
 /**
