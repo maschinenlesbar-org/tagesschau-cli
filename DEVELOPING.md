@@ -73,6 +73,9 @@ new TagesschauClient({
 });
 ```
 
+An option given as `undefined` means its default, as an omitted one does; the types say so
+(`?: T | undefined`, here and in the `news()`/`search()` parameters), so a consumer compiled
+with `exactOptionalPropertyTypes` can pass `{ baseUrl: process.env.TAGESSCHAU_BASE_URL }`.
 The numeric options must be integers in range — `timeoutMs` 0..`MAX_TIMEOUT_MS`,
 `maxRetries` 0..`MAX_RETRIES` (10), `retryDelayMs` 0..`MAX_RETRY_AFTER_MS`,
 `maxRedirects` 0..`MAX_REDIRECTS` (20), `maxResponseBytes` 0..2^53−1. Anything else
@@ -424,13 +427,15 @@ npm run coverage  # the same tests in one run, with a coverage report
 node --test apps/cli/dist/test/cli.test.js   # one file, after a build
 ```
 
-The client's tests are in `packages/client/test/` (`query`, `http`, `engine`, `client`),
+The client's tests are in `packages/client/test/` (`query`, `http`, `engine`, `client`, `types`),
 everything that drives the CLI is in `apps/cli/test/`.
 
 - **`query.test.ts`** — query-string serialisation.
 - **`http.test.ts`** — the default transport against a real loopback `http.createServer`.
 - **`engine.test.ts`** — URL building, JSON decoding, error mapping, 429/503 retry — mocked transport.
 - **`client.test.ts`** — every endpoint's method/URL/query mapping — mocked transport.
+- **`types.test.ts`** — a consumer compiled by `tsc` with `exactOptionalPropertyTypes` passes
+  `undefined` for every option (starts a process, 30 s), and `undefined` means the default.
 - **`cli.test.ts`** — end-to-end command parsing, validation and exit codes — mocked client.
 - **`io.test.ts`** — stdout/stderr write errors (a closed stdout pipe exits 0 quietly; an EPIPE on stderr keeps the run's exit code; any other stdout error is an ERROR record of `tagesschau.output`; `stderrAfterStdout` holds a record behind stdout's backlog) — fake streams.
 - **`log.test.ts`** — the record helpers of `apps/cli/src/cli/log.ts` on their own

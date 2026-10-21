@@ -72,20 +72,20 @@ export interface NewsParams {
    * Bundesland ids (`RegionValues`, "1".."16"); serialised as a comma-separated
    * `regions` value. Anything else is rejected before any request.
    */
-  regions?: Region[];
-  ressort?: Ressort;
+  regions?: Region[] | undefined;
+  ressort?: Ressort | undefined;
   /**
    * The page cursor from `nextPage`: a date as `YYMMDD` (e.g. `"260925"`). Checked
    * for shape and a real calendar day before any request.
    */
-  date?: string;
+  date?: string | undefined;
 }
 
 /** Parameters for the search endpoint. */
 export interface SearchParams {
   /** The full-text query; required, and must not be blank. */
   searchText: string;
-  pageSize?: number;
+  pageSize?: number | undefined;
   /** 0-based page index: 0 (or omitted) is the first page. */
-  resultPage?: number;
+  resultPage?: number | undefined;
 }
