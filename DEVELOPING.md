@@ -309,7 +309,10 @@ flag; `detail` — the body's `detail`, `message` or `error` string — is clean
 stderr by `sanitizeServerText`: control and bidi characters dropped, whitespace folded
 onto one line, cut at `MAX_DETAIL_LENGTH` (500) characters, never inside a surrogate pair
 (`cutText`), so the message stays well-formed; `body` keeps the full text), `TagesschauNetworkError` (transport failure/timeout),
-`TagesschauParseError` (bad JSON, or a 2xx body without the documented envelope:
+`TagesschauParseError` (bad JSON; a number `JSON.parse` cannot carry exactly — out of a
+double's range like `1e400`, past 2^53 and printed differently like `12345678901234567890`,
+or non-zero and too small like `1e-400`: `Unexpected response from /api2u/news/: the number
+12345678901234567890 cannot be represented exactly.`, never a changed value; or a 2xx body without the documented envelope:
 `Unexpected response shape from /api2u/news/: expected a JSON object with a "news"
 array.` — each method checks its top-level array, `news`/`regional`, `channels`,
 `searchResults` and a non-negative `totalItemCount`; items are not checked) and
@@ -384,7 +387,8 @@ and a message longer than `MAX_RECORD_MESSAGE` (4000 characters, exported) is cu
 code point and ends in `… (N more characters)`. The areas are `cli` (usage errors, commander's messages, unexpected errors, the
 library's validation errors, a response nested too deeply to print), `api` (the API's
 answers: an HTTP error status; a malformed answer — a `TagesschauParseError`: bad JSON,
-an unknown charset, a 2xx body without the documented shape; and
+an unknown charset, a 2xx body without the documented shape, a number a double can't carry
+exactly; and
 the search-spelling note, an `INFO` record whose message is `searchSpellingHint()` without
 its `Note: ` prefix), `http` (the connection, the cleartext warning) and `output` (a failed
 write to stdout; the CLI writes no files). Code logs through `logOf(deps)` and never writes
