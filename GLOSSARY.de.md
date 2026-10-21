@@ -79,7 +79,7 @@ die CLI.
 **searchText.** Der Freitext-Suchbegriff für den Such-Endpoint (das Positionsargument
 `<text>` von `search`). Wird wie eingegeben an die API gesendet, nur vorher auf Unicode-NFKC
 normalisiert (ein zerlegter Umlaut, etwa aus macOS-Dateinamen oder PDFs kopiert, fände sonst
-nichts). Die API ignoriert Groß- und Kleinschreibung, vergleicht Schreibweisen aber wörtlich
+nichts) und ohne Leerraum am Anfang und Ende (`normalizeText`; Leerzeichen innen bleiben). Die API ignoriert Groß- und Kleinschreibung, vergleicht Schreibweisen aber wörtlich
 (`Strasse` findet weit weniger Treffer als `Straße`); bei einem Text, der so eine
 ASCII-Umschrift sein kann, gibt die CLI einen Hinweis auf stderr aus (`searchSpellingHint`).
 Einen leeren, nur aus Leerraum bestehenden oder fehlenden Wert lehnt der Client

@@ -17,6 +17,7 @@ import {
   regionProblem,
   ressortProblem,
   resultPageProblem,
+  normalizeText,
   searchTextProblem,
 } from "./validate.js";
 import type {
@@ -143,10 +144,11 @@ export class TagesschauClient {
   }
 
   /**
-   * Full-text search across articles. The search text is normalised to NFKC before
-   * sending: the API finds nothing for a decomposed umlaut ("Ko" + U+0308, as pasted
-   * from macOS file names or PDFs), which looks identical to the composed "Köln"
-   * with hundreds of hits; NFKC also folds fullwidth digits and ligatures.
+   * Full-text search across articles. The search text goes out in its canonical form
+   * (`normalizeText`): NFKC and trimmed. The API finds nothing for a decomposed umlaut
+   * ("Ko" + U+0308, as pasted from macOS file names or PDFs), which looks identical to the
+   * composed "Köln" with hundreds of hits; NFKC also folds fullwidth digits and ligatures;
+   * and a trailing space or newline went out as typed.
    *
    * A blank or missing search text (`searchTextProblem`) is rejected with a
    * `TagesschauValidationError` before any request: upstream answers an empty one
@@ -162,7 +164,7 @@ export class TagesschauClient {
     assertValid("pageSize", params.pageSize, pageSizeProblem);
     assertValid("resultPage", params.resultPage, resultPageProblem);
     const query: QueryParams = {
-      searchText: params.searchText.normalize("NFKC"),
+      searchText: normalizeText(params.searchText),
       pageSize: params.pageSize,
       resultPage: params.resultPage,
     };

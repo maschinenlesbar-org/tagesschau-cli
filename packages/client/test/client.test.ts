@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { TagesschauClient } from "../src/client.js";
-import { TagesschauApiError, TagesschauError, TagesschauParseError } from "../src/errors.js";
+import { TagesschauApiError, TagesschauError, TagesschauParseError, TagesschauValidationError } from "../src/errors.js";
+import { normalizeText, searchSpellingHint } from "../src/validate.js";
 import { makeMockTransport, jsonResponse, constantJson } from "./helpers.js";
 
 function clientWith(mt: ReturnType<typeof makeMockTransport>): TagesschauClient {
@@ -67,6 +68,31 @@ test("search sends the text in composed form (NFKC): a decomposed umlaut finds t
   await clientWith(mt).search({ searchText: "Ko\u0308ln \uFF16\uFF10" });
   assert.equal(new URL(mt.last().url).searchParams.get("searchText"), "Köln 60");
   assert.match(mt.last().url, /searchText=K%C3%B6ln%2060/);
+});
+
+test("search sends the text trimmed and in NFKC, through normalizeText (kit K6)", async () => {
+  // A text pasted with a trailing space or newline went out as typed ("Köln%20%0A").
+  for (const [typed, sent] of [
+    ["  Köln  ", "Köln"],
+    ["Ko\u0308ln\n", "Köln"],
+    ["\tBundestag Wahl\u3000", "Bundestag Wahl"],
+    ["\u00a0ﬁnanzen ", "finanzen"],
+    ["a  b", "a  b"],
+  ] as const) {
+    assert.equal(normalizeText(typed), sent, JSON.stringify(typed));
+    const mt = constantJson({ searchResults: [] });
+    await clientWith(mt).search({ searchText: typed });
+    assert.equal(new URL(mt.last().url).searchParams.get("searchText"), sent, JSON.stringify(typed));
+  }
+  // A text that is blank once canonical is refused before any request.
+  for (const blank of ["", " ", "\n\t", "\u3000", "\u00a0"]) {
+    assert.equal(normalizeText(blank), "");
+    const mt = constantJson({ searchResults: [] });
+    await assert.rejects(clientWith(mt).search({ searchText: blank }), TagesschauValidationError);
+    assert.equal(mt.calls.length, 0);
+  }
+  // The spelling hint reads the same canonical form.
+  assert.equal(searchSpellingHint("  Koeln  "), searchSpellingHint("Koeln"));
 });
 
 test("a 404 raises TagesschauApiError with status 404", async () => {

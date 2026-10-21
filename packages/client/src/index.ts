@@ -26,6 +26,7 @@ export {
   headerValueProblem,
   knownKeysProblem,
   MAX_SEARCH_INT,
+  normalizeText,
   pageSizeProblem,
   regionProblem,
   regionsProblem,

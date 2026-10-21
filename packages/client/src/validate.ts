@@ -28,13 +28,25 @@ export function assertValid<T>(name: string, value: T, problem: Problem<T>): T {
 }
 
 /**
- * Why a search text is unusable, or `undefined` when it is not blank. Checked after
- * the NFKC normalisation `search()` applies, so an ideographic space (U+3000) counts
- * as blank too. Upstream answers an empty `searchText` with HTTP 400 and runs a
+ * A search text as the API matches it, the one canonical form the library sends and every
+ * rule reads: in NFKC and without surrounding whitespace. NFKC, not only NFC, is deliberate:
+ * the API finds nothing for a decomposed umlaut ("Ko" + U+0308, as pasted from macOS file
+ * names or PDFs), and NFKC also folds fullwidth digits and ligatures ("ﬁ" to "fi"). A text
+ * pasted with a trailing space or newline went out as typed. Inner whitespace is kept.
+ * Normalised first, then trimmed, so a character NFKC turns into a space is trimmed too.
+ */
+export function normalizeText(value: string): string {
+  return value.normalize("NFKC").trim();
+}
+
+/**
+ * Why a search text is unusable, or `undefined` when it is not blank. Checked on the
+ * canonical form `search()` sends ({@link normalizeText}), so an ideographic space (U+3000)
+ * counts as blank too. Upstream answers an empty `searchText` with HTTP 400 and runs a
  * whitespace-only one as is, so a blank or missing text never reaches the API.
  */
 export function searchTextProblem(value: unknown): string | undefined {
-  if (typeof value !== "string" || value.normalize("NFKC").trim() === "") {
+  if (typeof value !== "string" || normalizeText(value) === "") {
     return "search text must not be empty.";
   }
   return undefined;
@@ -82,7 +94,7 @@ export function regionsProblem(value: unknown): string | undefined {
  * `a`, `e` or `q`, as in Steuer, Bauer, Quelle) or `ss`. It never repeats the text.
  */
 export function searchSpellingHint(searchText: string): string | undefined {
-  const text = searchText.normalize("NFKC").toLowerCase();
+  const text = normalizeText(searchText).toLowerCase();
   if (/[^\u0000-\u007f]/.test(text)) return undefined;
   if (!/ae|oe|(?<![aeq])ue|ss/.test(text)) return undefined;
   return (
