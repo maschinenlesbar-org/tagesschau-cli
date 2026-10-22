@@ -315,7 +315,8 @@ onto one line, cut at `MAX_DETAIL_LENGTH` (500) characters, never inside a surro
 (`cutText`), so the message stays well-formed; `body` keeps the full text), `TagesschauNetworkError` (transport failure/timeout),
 `TagesschauParseError` (bad JSON; a number `JSON.parse` cannot carry exactly — out of a
 double's range like `1e400`, past 2^53 and printed differently like `12345678901234567890`,
-or non-zero and too small like `1e-400`: `Unexpected response from /api2u/news/: the number
+non-zero and too small like `1e-400`, or a subnormal that would print changed like `3e-324`,
+which became `5e-324` (`5e-324` and `1e-310` print as written and pass): `Unexpected response from /api2u/news/: the number
 12345678901234567890 cannot be represented exactly.`, never a changed value; or a 2xx body without the documented envelope:
 `Unexpected response shape from /api2u/news/: expected a JSON object with a "news"
 array.` — each method checks its top-level array, `news`/`regional`, `channels`,
