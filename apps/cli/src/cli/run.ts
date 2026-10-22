@@ -5,6 +5,7 @@
 import { CommanderError, type Command } from "commander";
 import { buildProgram, defaultDeps } from "./program.js";
 import { logOf, type CliDeps } from "./io.js";
+import { OutputError } from "./shared.js";
 import { DEFAULT_LOG_FORMAT, createLogger, logFormatFromArgv, type LogFormat, type Logger } from "./log.js";
 import {
   TagesschauApiError,
@@ -186,10 +187,11 @@ export function withRedactedOutput(deps: CliDeps, argv: readonly string[]): CliD
 /**
  * The log area of a `TagesschauError` that is neither an API error nor a usage error: the
  * connection (`http`), a malformed answer (`api`: bad JSON, the wrong shape, an unknown
- * charset — the API's answer as much as an error status is), else `cli` (the CLI's own
- * failures, such as a response nested too deeply to print).
+ * charset — the API's answer as much as an error status is), `output` for an answer that
+ * can't be printed (an `OutputError`: nested too deeply, too large), else `cli`.
  */
 function areaOf(err: TagesschauError): string {
+  if (err instanceof OutputError) return "output";
   if (err instanceof TagesschauNetworkError) return "http";
   if (err instanceof TagesschauParseError) return "api";
   return "cli";

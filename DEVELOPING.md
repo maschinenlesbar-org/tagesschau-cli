@@ -399,10 +399,14 @@ built-in transport's own reason is Node's text, with the error code added when t
 doesn't name it (`socket hang up (ECONNRESET)`).
 
 **Rendering (`--compact`).** Every command prints JSON to stdout — pretty-printed
-by default, on a single line with `--compact`. An answer nested too deeply to pretty-print
-is an ERROR record that suggests `--compact`. `--compact` takes V8's fast path
+by default, on a single line with `--compact`. An answer that can't be printed is an
+`OutputError`, an ERROR record of `tagesschau.output` (exit 1) that names the cause: `The answer
+is nested too deeply to pretty-print[; try --compact].` (a stack overflow) or `The answer is too
+large (more than 536870888 characters of JSON) to pretty-print[; try --compact].` (V8's longest
+string). "try --compact" is added only when the compact form of that very answer prints:
+probed, never assumed from the Node version. `--compact` takes V8's fast path
 (`JSON.stringify(value)`) unless the answer holds a string or key of 64 Mi characters or more
-(`holdsHugeString`): on Node 26 the fast path aborts the process on a ~250 MB string from
+(`holdsHugeString`, iterative, linear and without an allocation per value): on Node 26 the fast path aborts the process on a ~250 MB string from
 `JSON.parse`, but it is also the only path that prints very deep nesting there.
 
 ## The log on stderr
@@ -419,13 +423,13 @@ forge another one or steer the terminal. Before that a lone surrogate (half a
 character, which jq rejects, stopping the whole stream) becomes U+FFFD (`toWellFormed`),
 and a message longer than `MAX_RECORD_MESSAGE` (4000 characters, exported) is cut at a
 code point and ends in `… (N more characters)`. The areas are `cli` (usage errors, commander's messages, unexpected errors, the
-library's validation errors, a response nested too deeply to print), `api` (the API's
+library's validation errors), `api` (the API's
 answers: an HTTP error status; a malformed answer — a `TagesschauParseError`: bad JSON,
 an unknown charset, a 2xx body without the documented shape, a number a double can't carry
 exactly; and
 the search-spelling note, an `INFO` record whose message is `searchSpellingHint()` without
-its `Note: ` prefix), `http` (the connection, the cleartext warning) and `output` (a failed
-write to stdout; the CLI writes no files). Code logs through `logOf(deps)` and never writes
+its `Note: ` prefix), `http` (the connection, the cleartext warning) and `output` (an answer
+nested too deeply or too large to print, a failed write to stdout; the CLI writes no files). Code logs through `logOf(deps)` and never writes
 diagnostics with `io.err` directly. `run()` builds the logger from argv before commander
 parses it (`logFormatFromArgv`, which skips the value of the program's value options such
 as `--user-agent`, used only for the records of a parse error; a `preAction` hook then
