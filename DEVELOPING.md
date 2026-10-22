@@ -70,6 +70,7 @@ new TagesschauClient({
                               // default is 100 MiB when the option is omitted)
   userAgent: "my-app/1.0",    // default "tagesschau-cli" when omitted; a blank one is an error
   transport: customTransport, // inject your own HTTP transport
+  bigIntegerKeys: new Set(["id"]), // members past 2^53, delivered as exact strings (none by default)
 });
 ```
 
@@ -317,7 +318,12 @@ onto one line, cut at `MAX_DETAIL_LENGTH` (500) characters, never inside a surro
 double's range like `1e400`, past 2^53 and printed differently like `12345678901234567890`,
 non-zero and too small like `1e-400`, or a subnormal that would print changed like `3e-324`,
 which became `5e-324` (`5e-324` and `1e-310` print as written and pass): `Unexpected response from /api2u/news/: the number
-12345678901234567890 cannot be represented exactly.`, never a changed value; or a 2xx body without the documented envelope:
+12345678901234567890 cannot be represented exactly.`, never a changed value — a library caller
+whose server sends a member past 2^53 (a 64-bit id) declares it with the engine option
+`bigIntegerKeys` (a set of member names, none by default), and the value of a declared member is
+then delivered as its exact literal, a string (`"1858054135406919680"`), whatever its size, while
+every other number keeps the rule; `scanNumbers` does both in one linear pass that skips strings,
+with no reviver; tagesschau declares none —; or a 2xx body without the documented envelope:
 `Unexpected response shape from /api2u/news/: expected a JSON object with a "news"
 array.` — each method checks its top-level array, `news`/`regional`, `channels`,
 `searchResults` and a non-negative `totalItemCount`; items are not checked) and
