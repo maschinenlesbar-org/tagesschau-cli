@@ -505,3 +505,48 @@ test("commander's echo of a rejected value shows invisible characters escaped, n
     assert.equal(cli.mt.calls.length, 0);
   }
 });
+
+test("a URL with a password anywhere in an argument is redacted in every record (T15)", async () => {
+  const pw = "hunter2!x y";
+  const url = `https://bob:${pw}@mirror.example/`;
+  const encodedPw = new URLSearchParams({ p: pw }).toString().slice(2).replace(/\+/g, "%20");
+  const cases: Array<[string, string[], number]> = [
+    // A refusal quoting the search text (an invisible character in it), padded and mid-phrase.
+    ["search refusal", ["search", ` see ${url}\u200b `], 1],
+    // The search text goes out percent-encoded; a 404 names the request URL.
+    ["404 naming the request", ["search", `see ${url} now`], 4],
+    // commander's echo of a rejected --date, dash-led.
+    ["commander echo", ["news", `--date=-${url}`], 1],
+    // The library's refusal of a region, padded.
+    ["region refusal", ["news", "--region", ` ${url}`], 1],
+    // An unknown command.
+    ["unknown command", [`x${url}`], 1],
+  ];
+  for (const [label, argv, code] of cases) {
+    const cli = makeCli(() => jsonResponse({ error: "not found" }, 404));
+    assert.equal(await run(argv, cli.deps), code, `${label}: ${cli.err.join("\n")}`);
+    const err = cli.err.join("\n");
+    assert.ok(err.length > 0, label);
+    for (const leak of [pw, "hunter2", encodedPw]) assert.ok(!err.includes(leak), `${label}: ${leak} in ${err}`);
+  }
+  // A network error names the request URL too.
+  const failing = makeCli(() => {
+    throw new Error("connect ECONNREFUSED");
+  });
+  assert.equal(await run(["search", `see ${url} now`], failing.deps), 1);
+  assert.ok(!failing.err.join("\n").includes("hunter2"), failing.err.join("\n"));
+});
+
+test("finding URLs in an argument is linear: a 1 MB argument without :// is quick (T15)", async () => {
+  const big = "a".repeat(1 << 20);
+  const cli = makeCli(() => jsonResponse({ searchResults: [], totalItemCount: 0 }));
+  const started = Date.now();
+  assert.equal(await run(["--compact", "search", big], cli.deps), 0);
+  assert.ok(Date.now() - started < 1500, `${Date.now() - started} ms`);
+  // Many schemes in one argument: each read at most once, a bounded number of them.
+  const many = "x://".repeat(50_000) + "https://bob:hunter2pw@h/";
+  const slow = makeCli(() => jsonResponse({ searchResults: [], totalItemCount: 0 }));
+  const t0 = Date.now();
+  await run(["--compact", "search", many], slow.deps);
+  assert.ok(Date.now() - t0 < 1500, `${Date.now() - t0} ms`);
+});
