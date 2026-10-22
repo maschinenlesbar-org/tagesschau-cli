@@ -47,13 +47,12 @@ const BAD_VALUES: Array<[string, Record<string, unknown>]> = [
   ["numeric region", { regions: [9] }],
 ];
 /**
- * Queries that differ from GOOD only in how a region id is spelled (padding, leading zero):
- * the API does not match such an id. "reject" = the validation error (the ids are taken
- * exactly as written in RegionValues).
+ * Queries that differ from GOOD only in how a region id is spelled (leading zero, two ids in
+ * one entry): the API does not match such an id. "reject" = the validation error. A padded id is
+ * a token, sent trimmed (D8, P24), so it is not listed here.
  */
 const UNNORMALISED: Array<[string, Record<string, unknown>]> = [
   ["leading zero", { regions: ["05", "9"], date: "261004" }],
-  ["padded id", { regions: ["5", " 9"], date: "261004" }],
   ["two ids in one entry", { regions: ["5,9"], date: "261004" }],
 ];
 const UNNORMALISED_POLICY = "reject" as "normalise" | "reject";

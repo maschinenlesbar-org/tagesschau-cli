@@ -63,24 +63,28 @@ the echoed `searchText`/`pageSize`/`resultPage`, and `type`/`details`).
 news category. The news endpoint accepts one Ressort via `--ressort`. The values
 the client surfaces (`RessortValues`) are:
 `inland`, `ausland`, `wirtschaft`, `sport`, `video`, `investigativ`, `wissen`.
-Any other value (wrong case, padded or blank included) is rejected before any request
-by the client (`ressortProblem`) and so by the CLI.
+The value is a token: it goes out trimmed (`normalizeToken`); any other value (wrong case,
+blank, or with an invisible character such as a zero-width space included) is rejected before
+any request by the client (`ressortProblem`) and so by the CLI, shown escaped (`\u200b`).
 
 **Region (Bundesland id).** A German federal state, identified by a numeric id
 **`1`–`16`** in the order the API documents the Bundesländer. Passed to the news
 endpoint via the repeatable `--region` flag; the client joins multiple ids into a
 single comma-separated `regions` query value (e.g. `?regions=5,9`). The accepted
-ids are exposed as `RegionValues`; any other value (`17`, `09`, ` 9`, `9,10`, blank)
-is rejected before any request by the client (`regionProblem`) and so by the CLI.
+ids are exposed as `RegionValues`; an id goes out trimmed (` 9` as `9`), and any other value
+(`17`, `09`, `9,10`, blank, one with an invisible character) is rejected before any request by
+the client (`regionProblem`) and so by the CLI.
 
 **searchText.** The free-text query for the search endpoint (the positional
 `<text>` argument of `search`). Sent to the API as typed, except that it is
 normalised to Unicode NFKC (a decomposed umlaut, as pasted from macOS file
 names or PDFs, otherwise finds nothing) and trimmed (`normalizeText`; inner spaces stay). The API folds case but matches spellings
 literally (`Strasse` finds far fewer hits than `Straße`); for a text that may be such an
-ASCII spelling the CLI prints a note on stderr (`searchSpellingHint`). A blank or missing value is rejected
-before any request by the client (`searchTextProblem`, a
-`TagesschauValidationError`) and so by the CLI.
+ASCII spelling the CLI prints a note on stderr (`searchSpellingHint`). A blank or missing value — one of nothing but
+whitespace, invisible characters (a zero-width space, a soft hyphen) or combining marks
+included — is rejected before any request by the client (`searchTextProblem`, a
+`TagesschauValidationError`) and so by the CLI; so is a text with a control character, a format
+character (but ZWNJ/ZWJ) or half a character (a lone surrogate), shown escaped (`\u200b`).
 
 **pageSize / resultPage.** The search endpoint's paging parameters, exposed as
 `--page-size` / `--result-page`. `pageSize` is the number of hits per page and must
@@ -93,8 +97,8 @@ not an integer, is rejected before any request by the client (`pageSizeProblem` 
 **nextPage.** A URL returned by the news endpoint pointing at the next, older
 page of results, when present: the same filters plus a **`date`** cursor written
 `YYMMDD` (`…/api2u/news?date=260924&regions=9`). Follow it with `news --date
-260924` and the same filters (library: `news({ date: "260924" })`); a malformed or
-impossible date is rejected before any request.
+260924` and the same filters (library: `news({ date: "260924" })`); it goes out trimmed, and a
+malformed or impossible date is rejected before any request.
 
 **news / regional.** The two item lists returned by the homepage and news
 feeds: the main feed and the regional block. Each entry is a **news item**.

@@ -83,11 +83,14 @@ test("searchTextProblem: a blank or missing search text is refused, any other te
 
 test("regionProblem / ressortProblem: only the documented ids and Ressorts pass", () => {
   for (const v of ["1", "9", "16"]) assert.equal(regionProblem(v), undefined, v);
-  for (const v of ["17", "0", "", " 9", "09", "9,10", "1e1", 9, undefined, "toString"]) {
+  for (const v of [" 9", "9\n"]) assert.equal(regionProblem(v), undefined, v);
+  for (const v of ["17", "0", "09", "9,10", "1e1", 9, undefined, "toString"]) {
     assert.match(String(regionProblem(v)), /^Invalid region ".*"\. Expected one of: 1, 2, .*, 16\.$/, String(v));
   }
   for (const v of ["inland", "wissen"]) assert.equal(ressortProblem(v), undefined, v);
-  for (const v of ["Wirtschaft", "", "  ", " wirtschaft", "bogus", undefined, "constructor"]) {
+  for (const v of [" wirtschaft", "inland\t"]) assert.equal(ressortProblem(v), undefined, v);
+  for (const v of ["", "  ", "\u200b", "in\u00adland"]) assert.match(String(ressortProblem(v)), /^Invalid ressort: /, v);
+  for (const v of ["Wirtschaft", "bogus", undefined, "constructor"]) {
     assert.match(String(ressortProblem(v)), /^Invalid ressort ".*"\. Expected one of: inland, .*, wissen\.$/, String(v));
   }
   assert.equal(lib.regionProblem, regionProblem);
@@ -205,4 +208,33 @@ test("a refusal quotes the value visibly: invisible and format characters escape
   const deps: CliDeps = { io: { out: () => {}, err: (s) => err.push(s) }, createClient: () => c };
   assert.equal(await run(["news", "--region", "9​"], deps), 1);
   assert.ok(err.some((line) => line.includes("\\u200b")) && !err.some((line) => line.includes("​")), err.join("\n"));
+});
+
+test("a search text of invisible characters is blank; a control, format or half character is refused, never sent (bugs 1, 2)", async () => {
+  // Bug 1: U+200B, U+200D, U+2060, U+00AD, U+180E alone went out (live: totalItemCount 0, exit 0).
+  for (const v of ["​", "‍", "⁠", "­", "᠎", "́̈", "¨", " ​ "]) {
+    assert.equal(searchTextProblem(v), "search text must not be empty.", JSON.stringify(v));
+  }
+  // Bug 1: BEL, ESC and U+202E went out as typed; Koeln + U+200B too. Bug 2: a lone surrogate
+  // went out as U+FFFD (URLSearchParams), a changed value.
+  const refused: Array<[string, string]> = [
+    ["Köln\u0007", "control character (U+0007)"],
+    ["\u001b[31mKöln", "control character (U+001B)"],
+    ["‮Köln", "invisible character (U+202E)"],
+    ["Koeln​", "invisible character (U+200B)"],
+    ["\ud800", "half of a character"],
+    ["a\udfffb", "half of a character"],
+  ];
+  for (const [v, reason] of refused) {
+    const problem = searchTextProblem(v) ?? "";
+    assert.ok(problem.startsWith("search text \"") && problem.includes(reason), `${JSON.stringify(v)}: ${problem}`);
+    assert.ok(!/[\u0007\u001b‮​\ud800-\udfff]/.test(problem), `raw in ${problem}`);
+    const { cli, lib: library } = await parity(["--compact", "search", v], (transport) => new TagesschauClient({ transport }).search({ searchText: v }));
+    assert.equal(cli.code, 1, JSON.stringify(v));
+    assert.equal(cli.requests.length, 0, JSON.stringify(v));
+    assert.equal(library.requests.length, 0, JSON.stringify(v));
+    assert.ok(!library.ok && library.error instanceof TagesschauValidationError, JSON.stringify(v));
+  }
+  // ZWJ inside a word (emoji, scripts), TAB and inner whitespace stay; NFKC and the trim stay.
+  for (const v of ["a‍b", "Köln\tBonn", " ﬁsch "]) assert.equal(searchTextProblem(v), undefined, JSON.stringify(v));
 });

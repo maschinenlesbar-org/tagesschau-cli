@@ -62,28 +62,55 @@ const RESSORT_MSG = (v: string) =>
   `Invalid ressort "${v}". Expected one of: inland, ausland, wirtschaft, sport, video, investigativ, wissen.`;
 
 test("parity: a region outside 1..16 is rejected by the CLI and the library alike (finding #1)", async () => {
-  for (const region of ["17", "0", "", " 9", "09", "9,10", "1e1"]) {
+  for (const region of ["17", "0", "09", "9,10", "1e1", " 17 "]) {
     const { cli, lib } = await parity(["--compact", "news", `--region=${region}`], (transport) =>
       new TagesschauClient({ transport }).news({ regions: [region] as never }),
     );
     const label = JSON.stringify(region);
     assert.equal(cli.code, 1, label);
     assert.equal(cli.requests.length, 0, label);
-    assert.equal(cli.err, `ERROR [tagesschau.cli] ${REGION_MSG(region)}`, label);
-    assertLibRejected(lib, REGION_MSG(region), label);
+    assert.equal(cli.err, `ERROR [tagesschau.cli] ${REGION_MSG(region.trim())}`, label);
+    assertLibRejected(lib, REGION_MSG(region.trim()), label);
   }
 });
 
 test("parity: a ressort outside the seven Ressorts is rejected by the CLI and the library alike (finding #1)", async () => {
-  for (const ressort of ["Wirtschaft", "", "  ", " wirtschaft", "bogus"]) {
+  for (const ressort of ["Wirtschaft", " Wirtschaft ", "bogus"]) {
     const { cli, lib } = await parity(["--compact", "news", `--ressort=${ressort}`], (transport) =>
       new TagesschauClient({ transport }).news({ ressort: ressort as never }),
     );
     const label = JSON.stringify(ressort);
     assert.equal(cli.code, 1, label);
     assert.equal(cli.requests.length, 0, label);
-    assert.equal(cli.err, `ERROR [tagesschau.cli] ${RESSORT_MSG(ressort)}`, label);
-    assertLibRejected(lib, RESSORT_MSG(ressort), label);
+    assert.equal(cli.err, `ERROR [tagesschau.cli] ${RESSORT_MSG(ressort.trim())}`, label);
+    assertLibRejected(lib, RESSORT_MSG(ressort.trim()), label);
+  }
+});
+
+test("parity: a blank or invisible code is refused alike; a padded one goes out trimmed on both sides (D8)", async () => {
+  for (const [option, value, reason] of [
+    ["--region", "", "Invalid region: Expected a non-empty value."],
+    ["--ressort", "  ", "Invalid ressort: Expected a non-empty value."],
+    ["--region", "9\u200b", 'Invalid region: "9\\u200b" contains an invisible or control character (U+200B).'],
+  ] as const) {
+    const params = option === "--region" ? { regions: [value] } : { ressort: value };
+    const { cli, lib } = await parity(["--compact", "news", `${option}=${value}`], (transport) =>
+      new TagesschauClient({ transport }).news(params as never),
+    );
+    assert.equal(cli.code, 1, value);
+    assert.equal(cli.requests.length, 0, value);
+    assert.equal(cli.err, `ERROR [tagesschau.cli] ${reason}`, value);
+    assertLibRejected(lib, reason, value);
+  }
+  for (const [argv, params, search] of [
+    [["news", "--region= 9"], { regions: [" 9"] }, "?regions=9"],
+    [["news", "--ressort= inland\n"], { ressort: " inland\n" }, "?ressort=inland"],
+  ] as const) {
+    const { cli, lib } = await parity(["--compact", ...argv], (transport) => new TagesschauClient({ transport }).news(params as never));
+    assert.equal(cli.code, 0, argv.join(" "));
+    assert.equal(lib.ok, true, argv.join(" "));
+    assert.equal(new URL(cli.requests[0]!.url).search, search);
+    assert.deepEqual(lib.requests.map((r) => r.url), cli.requests.map((r) => r.url));
   }
 });
 

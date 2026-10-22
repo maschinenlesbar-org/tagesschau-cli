@@ -95,15 +95,20 @@ The rule is the exported `headerValueProblem` / `assertHeaderValue`, which the C
 `client.homepage()`, `client.news({ regions?, ressort?, date? })` (regions or ressort,
 not both: together they are rejected with a `TagesschauValidationError` before any request, since
 the API would apply the Ressort and silently drop the regions; each region must be one
-of `RegionValues` and the ressort one of `RessortValues`, exactly as written there —
-anything else, blank, padded or wrong-case included, is a `TagesschauValidationError`
+of `RegionValues` and the ressort one of `RessortValues` once trimmed — each is a token
+(`tokenProblem`, sent as `normalizeToken`: trimmed, NFC, case kept), so anything else, blank,
+wrong-case, with an invisible or control character included, is a `TagesschauValidationError`
 before any request, checked by the exported `regionProblem` / `ressortProblem`; `date`
-is the `YYMMDD` cursor from `nextPage`, checked by the exported `newsDateProblem`),
+is the `YYMMDD` cursor from `nextPage`, a token too, checked by the exported `newsDateProblem`),
 `client.channels()`,
 `client.search({ searchText, pageSize?, resultPage? })` (`searchText` is required; a
 blank one is rejected with a `TagesschauValidationError` before any request, checked by
 the exported `searchTextProblem` on the canonical form `search()` sends: the exported
-`normalizeText`, NFKC and trimmed, inner whitespace kept; so is a `pageSize` that is not
+`normalizeText`, NFKC and trimmed, inner whitespace kept — a text of nothing but invisible
+characters or combining marks is blank too; then the exported `textProblem` on the text as
+typed refuses a lone surrogate, a control character but TAB/LF/CR and a format character but
+ZWNJ/ZWJ, quoted visibly (`search text "a\u200bb" contains an invisible character
+(U+200B).`); so is a `pageSize` that is not
 an integer in 1..`MAX_SEARCH_INT` (2147483647, a 32-bit int upstream) or a `resultPage`
 that is not one in 0..`MAX_SEARCH_INT` — `Invalid pageSize: expected an integer from 1 to
 2147483647, got 0.` — checked by the exported `pageSizeProblem` / `resultPageProblem`). `RessortValues` and
@@ -514,7 +519,8 @@ everything that drives the CLI is in `apps/cli/test/`.
   classes, P10 strict parameters and repeated flags, P20 the stderr warning for a plain-`http:`
   base URL, P21 README links only to files the npm package ships (others by their GitHub URL),
   P23 the log on stderr (its body takes the usage-error exit code from the adapter's
-  `USAGE_EXIT`, `1` here), P24 the input corpus (the search text goes out trimmed and in NFKC,
+  `USAGE_EXIT`, `1` here), P24 the input corpus (every text and token input refuses a blank, invisible, control or half
+character, shown escaped; the --ressort, --region and --date tokens go out trimmed and NFC; the search text goes out trimmed and in NFKC,
   or is refused, on the CLI and in the library alike; no id goes into a path here), P25 the
   response corpus (a number a double can't carry exactly, or an empty answer, is an error,
   never a changed value), P26 output integrity (stdout redirected to a file and cut short is an

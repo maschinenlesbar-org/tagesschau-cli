@@ -65,16 +65,18 @@ zurückgegebenen `searchText`/`pageSize`/`resultPage` sowie `type`/`details`).
 Nachrichtenredaktion für eine Nachrichtenkategorie. Der News-Endpoint akzeptiert ein
 Ressort über `--ressort`. Die Werte, die der Client bereitstellt (`RessortValues`), sind:
 `inland`, `ausland`, `wirtschaft`, `sport`, `video`, `investigativ`, `wissen`.
-Jeden anderen Wert (auch falsch geschrieben, mit Leerraum oder leer) lehnt der Client vor
-jeder Anfrage ab (`ressortProblem`) und damit auch die CLI.
+Der Wert ist ein Token: er wird ohne Leerraum am Anfang und Ende gesendet (`normalizeToken`);
+jeden anderen Wert (auch falsch geschrieben, leer oder mit einem unsichtbaren Zeichen wie einem
+Leerzeichen ohne Breite) lehnt der Client vor jeder Anfrage ab (`ressortProblem`) und damit auch
+die CLI, maskiert angezeigt (`\u200b`).
 
 **Region (Bundesland-ID).** Ein Bundesland, bezeichnet durch eine numerische ID
 **`1`–`16`** in der Reihenfolge, in der die API die Bundesländer dokumentiert. Wird dem
 News-Endpoint über die wiederholbare Option `--region` übergeben; der Client fügt mehrere
 IDs zu einem einzigen kommagetrennten Query-Wert `regions` zusammen (z. B. `?regions=5,9`).
-Die zulässigen IDs sind als `RegionValues` bereitgestellt; jeden anderen Wert (`17`, `09`,
-` 9`, `9,10`, leer) lehnt der Client vor jeder Anfrage ab (`regionProblem`) und damit auch
-die CLI.
+Die zulässigen IDs sind als `RegionValues` bereitgestellt; eine ID wird ohne Leerraum
+gesendet (` 9` als `9`), jeden anderen Wert (`17`, `09`, `9,10`, leer, mit einem unsichtbaren
+Zeichen) lehnt der Client vor jeder Anfrage ab (`regionProblem`) und damit auch die CLI.
 
 **searchText.** Der Freitext-Suchbegriff für den Such-Endpoint (das Positionsargument
 `<text>` von `search`). Wird wie eingegeben an die API gesendet, nur vorher auf Unicode-NFKC
@@ -82,9 +84,11 @@ normalisiert (ein zerlegter Umlaut, etwa aus macOS-Dateinamen oder PDFs kopiert,
 nichts) und ohne Leerraum am Anfang und Ende (`normalizeText`; Leerzeichen innen bleiben). Die API ignoriert Groß- und Kleinschreibung, vergleicht Schreibweisen aber wörtlich
 (`Strasse` findet weit weniger Treffer als `Straße`); bei einem Text, der so eine
 ASCII-Umschrift sein kann, gibt die CLI einen Hinweis auf stderr aus (`searchSpellingHint`).
-Einen leeren, nur aus Leerraum bestehenden oder fehlenden Wert lehnt der Client
-vor jeder Anfrage ab (`searchTextProblem`, ein `TagesschauValidationError`) und damit auch
-die CLI.
+Einen leeren oder fehlenden Wert – auch einen, der nur aus Leerraum, unsichtbaren Zeichen
+(Leerzeichen ohne Breite, weiches Trennzeichen) oder Kombinationszeichen besteht – lehnt der
+Client vor jeder Anfrage ab (`searchTextProblem`, ein `TagesschauValidationError`) und damit
+auch die CLI; ebenso einen Text mit einem Steuerzeichen, einem Formatzeichen (außer ZWNJ/ZWJ)
+oder einem halben Zeichen (einzelnes Surrogat), maskiert angezeigt (`\u200b`).
 
 **pageSize / resultPage.** Die Paginierungsparameter des Such-Endpoints, bereitgestellt
 als `--page-size` / `--result-page`. `pageSize` ist die Zahl der Treffer pro Seite und muss

@@ -39,17 +39,99 @@ export function normalizeText(value: string): string {
   return value.normalize("NFKC").trim();
 }
 
+/** Characters that never make a value non-blank: whitespace, controls, format characters, combining marks. */
+const INVISIBLE = /[\s\p{Cc}\p{Cf}\p{M}]/gu;
+
+/** A lone surrogate: half of a character, which URLSearchParams would send as U+FFFD. */
+const LONE_SURROGATE = /[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/;
+
 /**
- * Why a search text is unusable, or `undefined` when it is not blank. Checked on the
- * canonical form `search()` sends ({@link normalizeText}), so an ideographic space (U+3000)
- * counts as blank too. Upstream answers an empty `searchText` with HTTP 400 and runs a
- * whitespace-only one as is, so a blank or missing text never reaches the API.
+ * True when nothing in `value` would match anything: it holds only whitespace, control and
+ * format characters (a zero-width space, a soft hyphen) and combining marks. Such a value reads
+ * as "no filter" upstream, or matches nothing, so it is refused as blank.
  */
-export function searchTextProblem(value: unknown): string | undefined {
-  if (typeof value !== "string" || normalizeText(value) === "") {
-    return "search text must not be empty.";
+function isBlank(value: string): boolean {
+  return value.replace(INVISIBLE, "") === "";
+}
+
+/** `U+200B` for the first character of `text` that `pattern` matches. */
+function codePointOf(text: string, pattern: RegExp): string {
+  const ch = pattern.exec(text)?.[0] ?? "";
+  return `U+${(ch.codePointAt(0) ?? 0).toString(16).toUpperCase().padStart(4, "0")}`;
+}
+
+/** A control character inside a text: C0 and C1, but not TAB, LF or CR (whitespace in a pasted phrase). */
+const TEXT_CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/;
+
+/** A format character inside a text, but not ZWNJ/ZWJ (U+200C/U+200D), which some scripts and emoji need. */
+const TEXT_FORMAT = /(?![\u200c\u200d])\p{Cf}/u;
+
+/**
+ * Why `value` cannot be sent as free text, or undefined when it can. Refused, before any
+ * request, as the API would match nothing or everything:
+ * - a value that is blank once trimmed (Unicode whitespace, U+00A0 included), or that holds only
+ *   invisible characters and combining marks (`isBlank`);
+ * - a lone surrogate (half of a character, sent as U+FFFD);
+ * - a control character (but TAB, LF and CR) or a format character (a zero-width space, a soft
+ *   hyphen, a bidi control; ZWNJ and ZWJ are allowed): pasted along, it makes the search find
+ *   nothing (upstream ignores a zero-width space inside a word, but a text of nothing else
+ *   found "no coverage").
+ * The reason quotes the value with every invisible character escaped (`quoteValue`).
+ */
+export function textProblem(value: string): string | undefined {
+  if (typeof value !== "string") return "Expected a string.";
+  if (isBlank(value)) return "Expected a non-empty value.";
+  if (LONE_SURROGATE.test(value)) return `${quoteValue(value)} contains half of a character (a lone surrogate).`;
+  if (TEXT_CONTROL.test(value)) return `${quoteValue(value)} contains a control character (${codePointOf(value, TEXT_CONTROL)}).`;
+  if (TEXT_FORMAT.test(value)) return `${quoteValue(value)} contains an invisible character (${codePointOf(value, TEXT_FORMAT)}).`;
+  return undefined;
+}
+
+/** A control or format character in a token (after trimming): every Cc and every Cf. */
+const TOKEN_INVISIBLE = /[\p{Cc}\p{Cf}]/u;
+
+/**
+ * Why `value` cannot be sent as a token, or undefined when it can. A token is a code the API
+ * compares exactly: a region id, a Ressort, the `date` cursor. The rules apply to the value with
+ * surrounding whitespace trimmed, as it is sent ({@link normalizeToken}): not blank (and not only
+ * invisible characters or combining marks), no lone surrogate, and no control or format
+ * character at all (a zero-width space, ZWJ, a soft hyphen, a bidi control), since an invisible
+ * character in a code only ever makes it match nothing. The reason quotes the value visibly.
+ * Each code is then checked against its allow-list or syntax (`regionProblem`,
+ * `ressortProblem`, `newsDateProblem`).
+ */
+export function tokenProblem(value: string): string | undefined {
+  if (typeof value !== "string") return "Expected a string.";
+  if (isBlank(value)) return "Expected a non-empty value.";
+  const token = value.trim();
+  if (LONE_SURROGATE.test(token)) return `${quoteValue(value)} contains half of a character (a lone surrogate).`;
+  if (TOKEN_INVISIBLE.test(token)) {
+    return `${quoteValue(value)} contains an invisible or control character (${codePointOf(token, TOKEN_INVISIBLE)}).`;
   }
   return undefined;
+}
+
+/** A token as it is sent: trimmed and in composed Unicode (NFC). Check it with {@link tokenProblem} first. */
+export function normalizeToken(value: string): string {
+  return value.trim().normalize("NFC");
+}
+
+/**
+ * Why a search text is unusable, or `undefined` when it can be sent. Blank — checked on the
+ * canonical form `search()` sends ({@link normalizeText}), so an ideographic space (U+3000), a
+ * zero-width space alone, combining marks alone or a "¨" (NFKC: a space and U+0308) count as
+ * blank too — is "search text must not be empty."; upstream answers an empty `searchText` with
+ * HTTP 400 and runs a whitespace-only or invisible one as is, finding nothing. Otherwise the
+ * {@link textProblem} rules on the text as typed: a lone surrogate, a control character or a
+ * format character (but ZWNJ/ZWJ) is refused, quoted visibly (`search text "a\u200bb" contains
+ * an invisible character (U+200B).`), never sent.
+ */
+export function searchTextProblem(value: unknown): string | undefined {
+  if (typeof value !== "string" || isBlank(normalizeText(value))) {
+    return "search text must not be empty.";
+  }
+  const problem = textProblem(value);
+  return problem === undefined ? undefined : `search text ${problem}`;
 }
 
 /**
@@ -112,16 +194,27 @@ function oneOfProblem(name: string, value: unknown, allowed: readonly string[]):
 
 /**
  * Why a `regions` entry is unusable, or `undefined` when it is one of the Bundesland
- * ids `RegionValues` ("1".."16", exactly as written there: no padding, no leading
- * zero, one id per entry). The API does not reject an unknown id.
+ * ids `RegionValues` ("1".."16" once trimmed: no leading zero, no invisible character,
+ * one id per entry). The API does not reject an unknown id.
  */
 export function regionProblem(value: unknown): string | undefined {
-  return oneOfProblem("region", value, RegionValues);
+  return codeProblem("region", value, RegionValues);
 }
 
-/** Why a `ressort` is unusable, or `undefined` when it is one of `RessortValues`. */
+/** Why a `ressort` is unusable, or `undefined` when it is one of `RessortValues` (trimmed, case kept). */
 export function ressortProblem(value: unknown): string | undefined {
-  return oneOfProblem("ressort", value, RessortValues);
+  return codeProblem("ressort", value, RessortValues);
+}
+
+/**
+ * A code of an allow-list: a string is a token ({@link tokenProblem}), compared as it is sent
+ * ({@link normalizeToken}: trimmed, NFC; case is kept), anything else must match exactly.
+ */
+function codeProblem(name: string, value: unknown, allowed: readonly string[]): string | undefined {
+  if (typeof value !== "string") return oneOfProblem(name, value, allowed);
+  const problem = tokenProblem(value);
+  if (problem !== undefined) return `Invalid ${name}: ${problem}`;
+  return oneOfProblem(name, normalizeToken(value), allowed);
 }
 
 /**

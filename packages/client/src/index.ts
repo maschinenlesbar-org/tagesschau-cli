@@ -27,6 +27,7 @@ export {
   knownKeysProblem,
   MAX_SEARCH_INT,
   normalizeText,
+  normalizeToken,
   pageSizeProblem,
   regionProblem,
   regionsProblem,
@@ -34,6 +35,8 @@ export {
   resultPageProblem,
   searchSpellingHint,
   searchTextProblem,
+  textProblem,
+  tokenProblem,
 } from "./validate.js";
 export type { Problem } from "./validate.js";
 export type { QueryParams, QueryValue } from "./query.js";

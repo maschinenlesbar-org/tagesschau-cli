@@ -31,9 +31,11 @@ Data comes from the `tagesschau` CLI — read-only, no API key. Pass `--compact`
 tagesschau --compact search "Bundestag"
 ```
 
-Multi-word queries: quote them (`search "CDU Parteitag"`). The query is sent as typed
-(current CLI versions normalise it to Unicode NFKC, so a decomposed umlaut pasted from a
-PDF or a macOS file name still matches; with an older CLI, retype such a word);
+Multi-word queries: quote them (`search "CDU Parteitag"`). The query is sent as typed,
+trimmed (current CLI versions also normalise it to Unicode NFKC, so a decomposed umlaut pasted
+from a PDF or a macOS file name still matches; with an older CLI, retype such a word). A query
+with a control or invisible character (a zero-width space or soft hyphen pasted along) is
+refused with exit 1 and the character shown as `\u200b`: retype the query without it;
 it's a keyword/phrase match, not boolean — keep terms simple, broaden if you get 0 hits.
 
 **Spell German words with `ä`, `ö`, `ü` and `ß`.** The search folds case but matches

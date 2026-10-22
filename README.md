@@ -92,7 +92,12 @@ and image metadata.
 | `--result-page <n>` | page index (`0`–`2147483647`, 0-based: `0` is the first page) |
 
 The positional `<text>` argument is required and must not be empty (rejected
-before any request). The API folds case but matches spellings literally: `Strasse`
+before any request; a text of nothing but invisible characters, such as a zero-width space,
+counts as empty). It goes out trimmed and in Unicode NFKC; a control character, a format
+character (a zero-width space, a soft hyphen, a bidi control) or half a character inside it is
+refused, shown escaped (`\u200b`), rather than sent. `--ressort`, `--region` and `--date` are
+codes: sent trimmed, and refused when blank, holding an invisible character or not one of the
+known values. The API folds case but matches spellings literally: `Strasse`
 finds far fewer hits than `Straße`, `Koeln` than `Köln`. When the text could be such an
 ASCII spelling (it has `ae`, `oe`, `ue` or `ss` and no umlaut), the CLI logs a note on
 stderr (an `INFO` record of `tagesschau.api`); search the spelling with `ä`, `ö`, `ü` or `ß` too.

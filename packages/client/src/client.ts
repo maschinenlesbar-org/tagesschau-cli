@@ -18,7 +18,9 @@ import {
   ressortProblem,
   resultPageProblem,
   normalizeText,
+  normalizeToken,
   searchTextProblem,
+  tokenProblem,
 } from "./validate.js";
 import type {
   HomepageResult,
@@ -38,14 +40,17 @@ const SEARCH_KEYS = ["searchText", "pageSize", "resultPage"] as const;
 
 /**
  * Why a news `date` cursor is unusable, or `undefined` when it is a real calendar
- * day written `YYMMDD` — the form the API puts into `nextPage` (`?date=260925`).
+ * day written `YYMMDD` — the form the API puts into `nextPage` (`?date=260925`) — once
+ * trimmed (a token: `tokenProblem`, sent as `normalizeToken`).
  */
 export function newsDateProblem(date: unknown): string | undefined {
   const shown = typeof date === "string" ? quoteValue(date) : cutForMessage(String(date));
   const problem = `Invalid date ${shown}: expected YYMMDD (e.g. 260925), as in the date parameter of nextPage.`;
   // A string only: a number such as 261004 used to be sent as is, and NaN as "NaN".
   if (typeof date !== "string") return problem;
-  const m = /^(\d{2})(\d{2})(\d{2})$/.exec(date);
+  const token = tokenProblem(date);
+  if (token !== undefined) return `Invalid date: ${token}`;
+  const m = /^(\d{2})(\d{2})(\d{2})$/.exec(normalizeToken(date));
   if (!m) return problem;
   const [yy, mm, dd] = [Number(m[1]), Number(m[2]), Number(m[3])];
   const day = new Date(Date.UTC(2000 + yy, mm - 1, dd));
@@ -130,9 +135,10 @@ export class TagesschauClient {
       if (problem !== undefined) throw new TagesschauValidationError(problem);
     }
     const query: QueryParams = {};
-    if (params.date !== undefined) query["date"] = params.date;
-    if (regions.length > 0) query["regions"] = regions.join(",");
-    if (params.ressort !== undefined) query["ressort"] = params.ressort;
+    // Every code goes out as a canonical token: trimmed, NFC (the checks above read that form).
+    if (params.date !== undefined) query["date"] = normalizeToken(params.date);
+    if (regions.length > 0) query["regions"] = regions.map((region) => normalizeToken(region as string)).join(",");
+    if (params.ressort !== undefined) query["ressort"] = normalizeToken(params.ressort);
     const path = `${API}/news/`;
     const body = await this.engine.getJson<unknown>(path, query);
     assertEnvelope(body, this.engine.describeUrl(path, query), "news", ["regional"]);

@@ -131,7 +131,7 @@ test("news passes the nextPage date cursor and validates it before any request",
   const url = new URL(mt.last().url);
   assert.equal(url.searchParams.get("date"), "260923");
   assert.equal(url.searchParams.get("regions"), "5,9");
-  for (const bad of ["2609", "20260925", "261301", "260230", "26-09-25", ""]) {
+  for (const bad of ["2609", "20260925", "261301", "260230", "26-09-25"]) {
     const m = constantJson({ news: [], regional: [] });
     await assert.rejects(
       () => clientWith(m).news({ date: bad }),
@@ -140,6 +140,15 @@ test("news passes the nextPage date cursor and validates it before any request",
     );
     assert.equal(m.calls.length, 0);
   }
+  // A blank or invisible cursor is a token refusal; a padded one is a token, sent trimmed (D8).
+  for (const [bad, reason] of [["", "Expected a non-empty value."], ["2609\u200b23", "invisible or control character (U+200B)"]] as const) {
+    const m = constantJson({ news: [], regional: [] });
+    await assert.rejects(() => clientWith(m).news({ date: bad }), (err) => err instanceof TagesschauError && err.message.startsWith("Invalid date: ") && err.message.includes(reason), bad);
+    assert.equal(m.calls.length, 0);
+  }
+  const padded = constantJson({ news: [], regional: [] });
+  await clientWith(padded).news({ regions: [" 5", "9\n"] as never, date: " 260923 " });
+  assert.equal(new URL(padded.last().url).search, "?date=260923&regions=5%2C9");
 });
 
 test("SearchResult types the echoed paging fields (compile-time check)", async () => {
