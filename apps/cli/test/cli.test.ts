@@ -449,8 +449,14 @@ test("a single-value option given twice is a usage error, never 'the last one wi
     const cli = makeCli(() => jsonResponse({ news: [], regional: [], channels: [], searchResults: [] }));
     assert.equal(await run([...argv], cli.deps), 1, argv.join(" "));
     assert.equal(cli.mt.calls.length, 0, `${argv.join(" ")} sent a request`);
-    assert.match(cli.err.join("\n"), new RegExp(`${name} may be given only once\\.`), argv.join(" "));
+    // Bug 3: the record says what is wrong, never that the (valid) second value is invalid.
+    assert.equal(untimed(cli.err[0] ?? ""), `ERROR [tagesschau.cli] ${name} may be given only once.`, argv.join(" "));
+    assert.ok(!cli.err.join("\n").includes("is invalid"), cli.err.join("\n"));
   }
+  // The same in jsonl.
+  const jsonl = makeCli(() => jsonResponse({ news: [] }));
+  assert.equal(await run(["--log-format", "jsonl", "news", "--ressort", "inland", "--ressort", "inland"], jsonl.deps), 1);
+  assert.equal((JSON.parse(jsonl.err[0] ?? "{}") as { msg?: string }).msg, "--ressort may be given only once.");
   // Flags may repeat, and so may the repeatable --region.
   const flags = makeCli(() => jsonResponse({ channels: [] }));
   assert.equal(await run(["--compact", "--compact", "channels"], flags.deps), 0);

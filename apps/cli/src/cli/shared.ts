@@ -35,7 +35,9 @@ export function parseIntArg(value: string): number {
  * a value was dropped. Flags without a value are left alone, and so is a repeatable option,
  * declared the commander way with an array default (`.option("--region <id>", …, collect, [])`):
  * each value adds to the list. Call it once on a freshly built program: the check counts per
- * Option object.
+ * Option object. The usage error reads `--ressort may be given only once.` (exit 1), raised with
+ * `command.error`: an InvalidArgumentError made commander prefix "option '--ressort <ressort>'
+ * argument 'inland' is invalid.", calling the valid second value invalid.
  */
 export function forbidRepeatedOptions(command: Command): void {
   for (const option of command.options) {
@@ -43,7 +45,9 @@ export function forbidRepeatedOptions(command: Command): void {
     const parse = option.parseArg;
     let given = false;
     const guarded = (value: string, previous: unknown): unknown => {
-      if (given) throw new InvalidArgumentError(`${option.long ?? option.short} may be given only once.`);
+      // command.error, not an InvalidArgumentError: commander would put "option '--x <v>' argument
+      // '<value>' is invalid." before it, calling a valid value invalid.
+      if (given) command.error(`error: ${option.long ?? option.short} may be given only once.`, { code: "commander.optionRepeated" });
       given = true;
       return parse === undefined ? value : parse(value, previous);
     };
