@@ -407,7 +407,13 @@ string). "try --compact" is added only when the compact form of that very answer
 probed, never assumed from the Node version. `--compact` takes V8's fast path
 (`JSON.stringify(value)`) unless the answer holds a string or key of 64 Mi characters or more
 (`holdsHugeString`, iterative, linear and without an allocation per value): on Node 26 the fast path aborts the process on a ~250 MB string from
-`JSON.parse`, but it is also the only path that prints very deep nesting there.
+`JSON.parse`, but it is also the only path that prints very deep nesting there. Both forms
+escape what `JSON.stringify` leaves raw although a terminal acts on it (`escapeControlChars`):
+DEL, C1 (U+0080–U+009F) and the bidi controls, as `\uXXXX`. Each becomes six characters, so the
+escaped length is counted first: past V8's longest string it is an `OutputError` ("The answer is
+too large to print (N characters once its control characters are escaped)."), and otherwise the
+text is built in 64 Ki chunks joined once, never one `+=` per character (that crashed the process
+with a heap out-of-memory error on 90 MB of DEL).
 
 ## The log on stderr
 
@@ -491,7 +497,10 @@ everything that drives the CLI is in `apps/cli/test/`.
   `USAGE_EXIT`, `1` here), P24 the input corpus (the search text goes out trimmed and in NFKC,
   or is refused, on the CLI and in the library alike; no id goes into a path here), P25 the
   response corpus (a number a double can't carry exactly, or an empty answer, is an error,
-  never a changed value). P24 and P25 read the library's error by its class name through
+  never a changed value), and P27 (`conformance-p27-big-and-odd-answers`: the built bin under a
+small heap prints a large flat answer with `--compact`, an answer full of DEL characters escaped
+or, past V8's longest string, as one ERROR record of `tagesschau.output`, never a heap crash). P24
+and P25 read the library's error by its class name through
   `kitParity` (`apps/cli/test/helpers.ts`). P26 (`-o` integrity) is not copied: the CLI
   writes no files. They use mock transports and local
   servers only; none reaches www.tagesschau.de.
