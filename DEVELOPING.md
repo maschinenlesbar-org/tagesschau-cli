@@ -456,7 +456,9 @@ parses it (`logFormatFromArgv`, which skips the value of the program's value opt
 as `--user-agent`, used only for the records of a parse error; a `preAction` hook then
 sets the format commander parsed, so an option's value that looks like `--log-format`
 never switches it), so commander's own usage errors are records too: its `error: …` an ERROR of
-`cli` (a `(Did you mean …?)` line joined to it), the help it shows after one an INFO
+`cli` (the value it echoes with its control and format characters escaped, `\u200b`, by
+`escapeTerminalText`, since the record escapes C0, C1 and the bidi controls but not a zero-width
+space) (a `(Did you mean …?)` line joined to it), the help it shows after one an INFO
 record per line, and help shown as an error with no `error:` line (`help` for an unknown
 command, or global options with no command) an ERROR "missing command: `tagesschau
 <subcommand>`" before that help, so every failed run has an ERROR record

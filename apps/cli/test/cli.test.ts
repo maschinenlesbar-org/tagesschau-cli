@@ -484,3 +484,18 @@ test("terminal controls are escaped in chunks: the same text as one pass, across
   assert.equal(out[0], expected);
   assert.deepEqual(JSON.parse(out[0]!), { text });
 });
+
+test("commander's echo of a rejected value shows invisible characters escaped, never raw (D10)", async () => {
+  for (const [argv, ch] of [
+    [["news", "--date", "2610​01"], "​"],
+    [["news", "--bogus­"], "­"],
+    [["frobnicate⁠"], "⁠"],
+  ] as const) {
+    const cli = makeCli(() => jsonResponse({ news: [] }));
+    assert.equal(await run([...argv], cli.deps), 1, argv.join(" "));
+    const err = cli.err.join("\n");
+    assert.ok(err.includes(`\\u${ch.charCodeAt(0).toString(16).padStart(4, "0")}`), err);
+    assert.ok(!err.includes(ch), `raw in ${err}`);
+    assert.equal(cli.mt.calls.length, 0);
+  }
+});
