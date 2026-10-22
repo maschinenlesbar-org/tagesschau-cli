@@ -66,6 +66,7 @@ new TagesschauClient({
   maxRetries: 3,              // 429 / 503: linear backoff, or Retry-After when longer (<= 30 s)
   maxRedirects: 5,            // follow up to N redirects; credential headers are
                               // dropped on cross-origin hops
+  onWarning: (message) => console.warn(message), // invalid text replaced with U+FFFD (else silent)
   maxResponseBytes: 50 << 20, // abort responses larger than this (0 = unlimited;
                               // default is 100 MiB when the option is omitted)
   userAgent: "my-app/1.0",    // default "tagesschau-cli" when omitted; a blank one is an error
@@ -361,7 +362,13 @@ action to exit 1 too, logged as an `ERROR` record of `tagesschau.cli`.
 when it names none, as the live API sends `application/json`), with `TextDecoder`: a
 Latin-1 body from a proxy or mirror reads correctly instead of turning umlauts into
 U+FFFD, and a leading byte order mark is dropped. An unknown charset label is a
-`TagesschauParseError` (`GET <url>: unsupported response charset "…".`).
+`TagesschauParseError` (`GET <url>: unsupported response charset "…".`). Text is never changed
+silently: bytes that are not valid in the charset (a `fatal` decoder first, then a replacing one
+that counts) and lone surrogates written as JSON escapes (`\ud800`, `wellFormedEscapes`) become
+U+FFFD, and the engine option `onWarning(message)` is told how many (`GET <url>: 2 characters of
+the answer were not valid text (invalid bytes or a lone surrogate) and replaced with U+FFFD.`); the
+CLI's `action()` logs it as a `WARN` record of `tagesschau.api`. One bad character never sinks a
+whole answer, and the printed JSON stays readable for `jq`.
 
 **Retry / backoff.** Transient `429` (rate limit) and `503` responses are
 retried automatically (transport failures — a refused or reset connection, a DNS
@@ -432,7 +439,7 @@ code point and ends in `… (N more characters)`. The areas are `cli` (usage err
 library's validation errors), `api` (the API's
 answers: an HTTP error status; a malformed answer — a `TagesschauParseError`: bad JSON,
 an unknown charset, a 2xx body without the documented shape, a number a double can't carry
-exactly; and
+exactly; text replaced with U+FFFD, a `WARN`; and
 the search-spelling note, an `INFO` record whose message is `searchSpellingHint()` without
 its `Note: ` prefix), `http` (the connection, the cleartext warning) and `output` (an answer
 nested too deeply or too large to print, a failed write to stdout; the CLI writes no files). Code logs through `logOf(deps)` and never writes
@@ -499,7 +506,9 @@ everything that drives the CLI is in `apps/cli/test/`.
   response corpus (a number a double can't carry exactly, or an empty answer, is an error,
   never a changed value), and P27 (`conformance-p27-big-and-odd-answers`: the built bin under a
 small heap prints a large flat answer with `--compact`, an answer full of DEL characters escaped
-or, past V8's longest string, as one ERROR record of `tagesschau.output`, never a heap crash). P24
+or, past V8's longest string, as one ERROR record of `tagesschau.output`, never a heap crash; a
+lone surrogate or invalid bytes are replaced with U+FFFD and reported in a WARN record, on the CLI
+and in the library). P24
 and P25 read the library's error by its class name through
   `kitParity` (`apps/cli/test/helpers.ts`). P26 (`-o` integrity) is not copied: the CLI
   writes no files. They use mock transports and local

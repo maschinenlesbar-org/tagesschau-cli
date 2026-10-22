@@ -152,6 +152,10 @@ search-spelling note), `http` (the connection, the cleartext warning, and one WA
 answer nested too deeply or too large to print, a failed write to stdout). A record is always one line; control characters in it are
 escaped.
 
+**Replaced text.** Bytes of an answer that are not valid in its charset, and half characters
+(lone surrogates), are replaced with U+FFFD and reported in one `WARN` record of `tagesschau.api`
+with the count and the request; the run still succeeds, and the output stays readable for `jq`.
+
 ---
 
 > **Library & internals.** Terms for the TypeScript client and its internals —
