@@ -149,7 +149,7 @@ commander's messages, unexpected errors), `api` (the API's answers: an error sta
 malformed answer — bad JSON, the wrong shape, an unknown charset, a number a double can't
 carry exactly — and the
 search-spelling note), `http` (the connection, the cleartext warning, and one WARN per retry before it waits) and `output` (an
-answer nested too deeply or too large to print, a failed write to stdout). A record is always one line; control characters in it are
+answer nested too deeply or too large to print, a failed or cut-short write to stdout). A record is always one line; control characters in it are
 escaped.
 
 **Replaced text.** Bytes of an answer that are not valid in its charset, and half characters

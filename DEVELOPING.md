@@ -464,7 +464,10 @@ and writes it, in order, once that is out, so with `2>&1 |` and a slow reader a 
 never lands inside the JSON (the search note follows the JSON on every transliterated
 search). A failed write to stdout other
 than a closed pipe (`handleOutputErrors`, in the bin shim, outside `run()`) is an ERROR
-record of `tagesschau.output` (`Could not write to stdout: …`), in the format argv asks
+record of `tagesschau.output` (`Could not write to stdout: …`) — also a write cut short when
+stdout is a regular file (`> out.json` under a file-size limit or on a full disk: EFBIG,
+ENOSPC), which `stdoutWriter` (`io.ts`) writes with `writeAll` and reports as stdout's `error`,
+where Node's stream ignored the short count and exited 0 —, in the format argv asks
 for and redacted like the run's log (`processLogger`). So are Node's own process warnings
 (`installWarningLog`, also installed by the shim): a WARN record of `tagesschau.cli`,
 `(node) <name>: <message>`, instead of Node's plain `(node:PID) Warning: …` line (e.g. with
@@ -489,7 +492,7 @@ everything that drives the CLI is in `apps/cli/test/`.
 - **`types.test.ts`** — a consumer compiled by `tsc` with `exactOptionalPropertyTypes` passes
   `undefined` for every option (starts a process, 30 s), and `undefined` means the default.
 - **`cli.test.ts`** — end-to-end command parsing, validation and exit codes — mocked client.
-- **`io.test.ts`** — stdout/stderr write errors (a closed stdout pipe exits 0 quietly; an EPIPE on stderr keeps the run's exit code; any other stdout error is an ERROR record of `tagesschau.output`; `stderrAfterStdout` holds a record behind stdout's backlog) — fake streams.
+- **`io.test.ts`** — stdout/stderr write errors (a closed stdout pipe exits 0 quietly; an EPIPE on stderr keeps the run's exit code; any other stdout error is an ERROR record of `tagesschau.output`; `stderrAfterStdout` holds a record behind stdout's backlog; `stdoutWriter` writes every byte to a stdout that is a regular file or reports the error) — fake streams.
 - **`log.test.ts`** — the record helpers of `apps/cli/src/cli/log.ts` on their own
   (`escapeForRecord`, `formatLogRecord`, `installWarningLog`); the CLI-level checks are P23's.
 - **`validate.test.ts`** — `assertValid`, the `run.ts` mapping of
@@ -508,14 +511,14 @@ everything that drives the CLI is in `apps/cli/test/`.
   `USAGE_EXIT`, `1` here), P24 the input corpus (the search text goes out trimmed and in NFKC,
   or is refused, on the CLI and in the library alike; no id goes into a path here), P25 the
   response corpus (a number a double can't carry exactly, or an empty answer, is an error,
-  never a changed value), and P27 (`conformance-p27-big-and-odd-answers`: the built bin under a
-small heap prints a large flat answer with `--compact`, an answer full of DEL characters escaped
-or, past V8's longest string, as one ERROR record of `tagesschau.output`, never a heap crash; a
-lone surrogate or invalid bytes are replaced with U+FFFD and reported in a WARN record, on the CLI
-and in the library). P24
-and P25 read the library's error by its class name through
-  `kitParity` (`apps/cli/test/helpers.ts`). P26 (`-o` integrity) is not copied: the CLI
-  writes no files. They use mock transports and local
+  never a changed value), P26 output integrity (stdout redirected to a file and cut short is an
+  `ERROR` record, exit 1; its `-o` tests are skipped, `HAS_OUTPUT_OPTION = false`: the CLI
+  writes no files), and P27 (`conformance-p27-big-and-odd-answers`: the built bin under a
+  small heap prints a large flat answer with `--compact`, an answer full of DEL characters
+  escaped or, past V8's longest string, as one ERROR record of `tagesschau.output`, never a
+  heap crash; a lone surrogate or invalid bytes are replaced with U+FFFD and reported in a
+  WARN record, on the CLI and in the library). P24 and P25 read the library's error by its
+  class name through `kitParity` (`apps/cli/test/helpers.ts`). They use mock transports and local
   servers only; none reaches www.tagesschau.de.
 
 ## Continuous integration
