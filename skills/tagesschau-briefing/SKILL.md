@@ -38,8 +38,10 @@ tagesschau --compact homepage
 ```
 
 It returns `{ news, regional, type, newStoriesCountLink }`. `news` is the editorially
-ranked top stories (~9 items); `regional` is a per-state block (up to one item per Bundesland,
-each tagged `regionId` 1–16; a state can be missing — on 2026-10-05 it had 15, no Bremen) — **ignore `regional` for a national briefing** unless the
+ranked top stories (~9 items); `regional` is a per-state block (items tagged `regionId` 1–16:
+a state can be missing, and one can have **several entries, even the same item twice** — on
+2026-10-21/22 it had 15 entries but only 13 different `sophoraId`s, Berlin/Brandenburg (4) twice
+the same item, Niedersachsen (9) three entries) — **ignore `regional` for a national briefing** unless the
 user asked for regional news (then use the **tagesschau-regional** skill).
 
 If the user scoped to a topic ("just business", "sport only"), pull that Ressort feed
@@ -52,13 +54,16 @@ tagesschau --compact news --ressort wirtschaft
 Valid `--ressort` values: `inland`, `ausland`, `wirtschaft`, `sport`, `video`,
 `investigativ`, `wissen`. `--ressort` takes **one** value per run (given twice, the CLI
 refuses with exit 1) — for two topics ("wirtschaft and sport"), run the command once per
-Ressort. A Ressort feed is much larger (50–60 items) and not editorially
-ranked — so for "top news" prefer `homepage`; use Ressort feeds to go deep on one topic.
+Ressort. A Ressort feed is usually larger (`wirtschaft` 50, `video` 82, `investigativ` 20 on
+2026-10-21) and not editorially ranked — so for "top news" prefer `homepage`; use Ressort feeds
+to go deep on one topic. Its size varies: `sport` had only 14–16 items, with no `nextPage` (no
+older page) and no `regional` key.
 
 > **Trap — `--ressort sport` is different.** Its items come from `www.sportschau.de`, carry
 > **`ressort: null`**, and the feed is **not** in date order (on 2026-09-26 it opened with
-> a two-day-old item). Sort it by `date` yourself, and file its items under *Sport* because
-> you asked for that Ressort — not under "Weitere".
+> a two-day-old item). It also **repeats items** (2026-10-21/22: 14 items with 11 different
+> `sophoraId`s, then 16 with 12). Sort it by `date` yourself, dedup it (Step 3.4), and file its
+> items under *Sport* because you asked for that Ressort — not under "Weitere".
 
 ## Step 2 — The fields that matter
 
@@ -95,8 +100,10 @@ as `{type, value}` blocks with HTML in `value`.
    `ressort` is `null` (every `--ressort sport` item). Other items whose `ressort` is `null`
    or missing go in a "Weitere"/"Video" bucket — infer a topic from `shareURL` path or `tags`
    if useful, but don't fabricate one.
-4. **Dedup across feeds.** If you pulled both `homepage` and a Ressort feed, the same
-   story appears in both — match on `sophoraId` (or `shareURL`) and keep one.
+4. **Dedup within and across feeds.** One answer can list the same item twice (the `sport`
+   feed, the homepage's `regional` block), and if you pulled both `homepage` and a Ressort
+   feed, the same story appears in both — match on `sophoraId` (or `shareURL`) and keep one,
+   always, even for a single feed.
 
 ## Step 4 — Brief the user
 
@@ -123,7 +130,8 @@ Wirtschaft
 
 Rules:
 - **Cap it.** A briefing is ~8–12 headlines. For a topic-deep request, list the top
-  ~10–15 newest of that Ressort, with a count of how many more exist.
+  ~10–15 newest of that Ressort, with a count of how many more exist — counted after the dedup
+  (different `sophoraId`s), not as the length of the `news` array.
 - Show `topline` + `title` together (the topline is the framing); add `firstSentence`
   only for the lead items, not every one.
 - Always attach `shareURL` for stories the user might open; for `null`-URL video items,
