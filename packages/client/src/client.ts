@@ -8,7 +8,7 @@
 
 import { RequestEngine, type EngineOptions } from "./engine.js";
 import type { QueryParams } from "./query.js";
-import { TagesschauParseError, TagesschauValidationError, cutForMessage } from "./errors.js";
+import { TagesschauParseError, TagesschauValidationError, cutForMessage, quoteValue } from "./errors.js";
 import {
   assertValid,
   knownKeysProblem,
@@ -41,8 +41,8 @@ const SEARCH_KEYS = ["searchText", "pageSize", "resultPage"] as const;
  * day written `YYMMDD` — the form the API puts into `nextPage` (`?date=260925`).
  */
 export function newsDateProblem(date: unknown): string | undefined {
-  const shown = typeof date === "string" ? JSON.stringify(date) : String(date);
-  const problem = `Invalid date ${cutForMessage(shown)}: expected YYMMDD (e.g. 260925), as in the date parameter of nextPage.`;
+  const shown = typeof date === "string" ? quoteValue(date) : cutForMessage(String(date));
+  const problem = `Invalid date ${shown}: expected YYMMDD (e.g. 260925), as in the date parameter of nextPage.`;
   // A string only: a number such as 261004 used to be sent as is, and NaN as "NaN".
   if (typeof date !== "string") return problem;
   const m = /^(\d{2})(\d{2})(\d{2})$/.exec(date);

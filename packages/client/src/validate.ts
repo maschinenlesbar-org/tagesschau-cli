@@ -11,7 +11,7 @@
 //   reject rather than throw synchronously; constructors throw.
 
 import { RegionValues, RessortValues } from "./enums.js";
-import { TagesschauValidationError, cutForMessage } from "./errors.js";
+import { TagesschauValidationError, quoteValue } from "./errors.js";
 
 /** A validation rule: the reason `value` is invalid, or `undefined` when it is valid. */
 export type Problem<T = unknown> = (value: T) => string | undefined;
@@ -65,7 +65,7 @@ export function knownKeysProblem(known: readonly string[]): Problem<unknown> {
     if (typeof value !== "object" || value === null || Array.isArray(value)) return "Expected an object.";
     for (const key of Object.keys(value)) {
       if (!known.includes(key)) {
-        return `Unknown key ${JSON.stringify(key.slice(0, 60))}; expected one of ${known.join(", ")}.`;
+        return `Unknown key ${quoteValue(key.slice(0, 60))}; expected one of ${known.join(", ")}.`;
       }
     }
     return undefined;
@@ -107,7 +107,7 @@ export function searchSpellingHint(searchText: string): string | undefined {
 function oneOfProblem(name: string, value: unknown, allowed: readonly string[]): string | undefined {
   // includes(), never a keyed lookup: "toString" must not pass as a known value.
   if ((allowed as readonly unknown[]).includes(value)) return undefined;
-  return `Invalid ${name} "${cutForMessage(String(value))}". Expected one of: ${allowed.join(", ")}.`;
+  return `Invalid ${name} ${quoteValue(String(value))}. Expected one of: ${allowed.join(", ")}.`;
 }
 
 /**
@@ -134,7 +134,7 @@ export const MAX_SEARCH_INT = 2_147_483_647;
 function intRangeProblem(value: unknown, min: number, max: number): string | undefined {
   if (value === undefined) return undefined;
   if (typeof value === "number" && Number.isSafeInteger(value) && value >= min && value <= max) return undefined;
-  return `expected an integer from ${min} to ${max}, got ${cutForMessage(typeof value === "string" ? JSON.stringify(value) : String(value))}.`;
+  return `expected an integer from ${min} to ${max}, got ${typeof value === "string" ? quoteValue(value) : String(value)}.`;
 }
 
 /** Why a search `pageSize` is unusable: it must be an integer in 1..MAX_SEARCH_INT. */

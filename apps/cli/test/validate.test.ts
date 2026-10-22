@@ -182,3 +182,27 @@ test("headerValueProblem: blank, control characters (tab allowed) and above U+00
   assert.equal(lib.headerValueProblem, headerValueProblem);
   assert.equal(lib.assertHeaderValue, assertHeaderValue);
 });
+
+test("a refusal quotes the value visibly: invisible and format characters escaped, never raw (D10)", async () => {
+  const c = new TagesschauClient({ transport: async () => jsonResponse({ news: [] }) });
+  const cases: Array<[string, () => Promise<unknown>, string]> = [
+    ["a zero-width space in a region", () => c.news({ regions: ["9​"] as never }), "\\u200b"],
+    ["a bidi override in a ressort", () => c.news({ ressort: "inland‮" as never }), "\\u202e"],
+    ["a soft hyphen in an unknown key", () => c.news({ ["regi­ons"]: ["9"] } as never), "\\u00ad"],
+    ["a zero-width joiner in a date", () => c.news({ date: "2610‍01" }), "\\u200d"],
+    ["a word joiner in a page size", () => c.search({ searchText: "Wahl", pageSize: "1⁠" as never }), "\\u2060"],
+  ];
+  for (const [label, call, escape] of cases) {
+    await assert.rejects(call, (err: unknown) => {
+      assert.ok(err instanceof TagesschauValidationError, label);
+      assert.ok(err.message.includes(escape), `${label}: ${err.message}`);
+      assert.ok(!/[­​‍‮⁠]/.test(err.message), `${label}: raw in ${err.message}`);
+      return true;
+    });
+  }
+  // The CLI's refusal shows it too (the log escapes bidi controls, not zero-width ones).
+  const err: string[] = [];
+  const deps: CliDeps = { io: { out: () => {}, err: (s) => err.push(s) }, createClient: () => c };
+  assert.equal(await run(["news", "--region", "9​"], deps), 1);
+  assert.ok(err.some((line) => line.includes("\\u200b")) && !err.some((line) => line.includes("​")), err.join("\n"));
+});

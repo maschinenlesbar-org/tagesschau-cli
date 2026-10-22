@@ -338,7 +338,11 @@ the library — a wrong type, a value out of range, an unknown key, an impossibl
 `ressort` with `regions`, a `transport` or `sleep` that is not a function — throws this
 class, never a plain `TagesschauError` or a raw `TypeError`; echoed values are cut at
 `MAX_MESSAGE_VALUE_LENGTH`, 500 characters, by the exported `cutForMessage`, cut the same
-way), all
+way; a value of the caller's that a refusal quotes — a region, a Ressort, a date, a key, a page
+number given as a string — goes through the exported `quoteValue`: quoted as JSON, with DEL, C1,
+U+2028/2029, lone surrogates and every format character (a zero-width space, a soft hyphen, a
+bidi control) escaped (`"9\u200b"`), cut at 500 characters with the "…" after the closing
+quote, so an invisible character in a refused value is visible), all
 extending `TagesschauError`. The CLI maps
 a `404` to exit code `4`, other errors to `1`.
 

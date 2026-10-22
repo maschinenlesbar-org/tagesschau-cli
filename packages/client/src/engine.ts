@@ -23,6 +23,7 @@ import {
   cutForMessage,
   cutText,
   echoedCredentialForms,
+  quoteValue,
   redactCredentials,
   redactSecrets,
   redactUrl,
@@ -168,7 +169,7 @@ function intOption(name: string, value: number | undefined, fallback: number, ma
     throw new TagesschauValidationError(
       // A string is quoted, so `"5000"` doesn't read like the number 5000.
       `Invalid option ${name}: expected an integer from 0 to ${max}, got ` +
-        `${cutForMessage(typeof value === "string" ? JSON.stringify(value) : String(value))}.`,
+        `${typeof value === "string" ? quoteValue(value) : cutForMessage(String(value))}.`,
     );
   }
   return value;

@@ -47,6 +47,7 @@ export {
   credentialsIn,
   cutForMessage,
   cutText,
+  quoteValue,
   MAX_MESSAGE_VALUE_LENGTH,
   echoedCredentialForms,
   redactCredentials,
