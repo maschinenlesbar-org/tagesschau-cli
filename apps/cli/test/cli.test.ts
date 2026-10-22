@@ -281,7 +281,7 @@ test("a null 2xx body is an error (exit 1), not `null` with exit 0", async () =>
   const cli = makeCli(() => jsonResponse(null));
   assert.equal(await run(["--compact", "news"], cli.deps), 1);
   assert.deepEqual(cli.out, []);
-  assert.deepEqual(cli.err.map(untimed), ['ERROR [tagesschau.api] Unexpected response shape from /api2u/news/: expected a JSON object with a "news" array.']);
+  assert.deepEqual(cli.err.map(untimed), ['ERROR [tagesschau.api] GET https://www.tagesschau.de/api2u/news/: unexpected response shape: expected a JSON object with a "news" array.']);
 });
 
 test("bidi formatting characters in server data are escaped in the JSON output", async () => {

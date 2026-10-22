@@ -58,8 +58,12 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function shapeError(path: string, expected: string): TagesschauParseError {
-  return new TagesschauParseError(`Unexpected response shape from ${path}: expected ${expected}.`);
+/**
+ * A TagesschauParseError naming the request (`GET <url>`, as the engine's `describeUrl` gives it:
+ * userinfo redacted, cut) and what the answer should have been.
+ */
+function shapeError(url: string, expected: string): TagesschauParseError {
+  return new TagesschauParseError(`GET ${url}: unexpected response shape: expected ${expected}.`);
 }
 
 /**
@@ -68,12 +72,12 @@ function shapeError(path: string, expected: string): TagesschauParseError {
  * `{}` or wrong-typed 2xx body is a TagesschauParseError instead of a silent
  * success or a TypeError in the caller. Items are not checked (their shape varies).
  */
-function assertEnvelope(body: unknown, path: string, key: string, optionalArrays: string[] = []): void {
+function assertEnvelope(body: unknown, url: string, key: string, optionalArrays: string[] = []): void {
   if (!isObject(body) || !Array.isArray(body[key])) {
-    throw shapeError(path, `a JSON object with a "${key}" array`);
+    throw shapeError(url, `a JSON object with a "${key}" array`);
   }
   for (const k of optionalArrays) {
-    if (body[k] !== undefined && !Array.isArray(body[k])) throw shapeError(path, `"${k}" to be an array`);
+    if (body[k] !== undefined && !Array.isArray(body[k])) throw shapeError(url, `"${k}" to be an array`);
   }
 }
 
@@ -88,7 +92,7 @@ export class TagesschauClient {
   async homepage(): Promise<HomepageResult> {
     const path = `${API}/homepage/`;
     const body = await this.engine.getJson<unknown>(path);
-    assertEnvelope(body, path, "news", ["regional"]);
+    assertEnvelope(body, this.engine.describeUrl(path), "news", ["regional"]);
     return body as HomepageResult;
   }
 
@@ -131,7 +135,7 @@ export class TagesschauClient {
     if (params.ressort !== undefined) query["ressort"] = params.ressort;
     const path = `${API}/news/`;
     const body = await this.engine.getJson<unknown>(path, query);
-    assertEnvelope(body, path, "news", ["regional"]);
+    assertEnvelope(body, this.engine.describeUrl(path, query), "news", ["regional"]);
     return body as NewsResult;
   }
 
@@ -139,7 +143,7 @@ export class TagesschauClient {
   async channels(): Promise<ChannelsResult> {
     const path = `${API}/channels/`;
     const body = await this.engine.getJson<unknown>(path);
-    assertEnvelope(body, path, "channels");
+    assertEnvelope(body, this.engine.describeUrl(path), "channels");
     return body as ChannelsResult;
   }
 
@@ -170,10 +174,10 @@ export class TagesschauClient {
     };
     const path = `${API}/search/`;
     const body = await this.engine.getJson<unknown>(path, query);
-    assertEnvelope(body, path, "searchResults");
+    assertEnvelope(body, this.engine.describeUrl(path, query), "searchResults");
     const total = (body as Record<string, unknown>)["totalItemCount"];
     if (total !== undefined && !(Number.isSafeInteger(total) && (total as number) >= 0)) {
-      throw shapeError(path, "a non-negative integer totalItemCount");
+      throw shapeError(this.engine.describeUrl(path, query), "a non-negative integer totalItemCount");
     }
     return body as SearchResult;
   }

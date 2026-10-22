@@ -105,19 +105,19 @@ test("a 404 raises TagesschauApiError with status 404", async () => {
 
 test("a 2xx body without the documented envelope is a TagesschauParseError", async () => {
   const cases: Array<[(c: TagesschauClient) => Promise<unknown>, unknown, string]> = [
-    [(c) => c.homepage(), null, 'from /api2u/homepage/: expected a JSON object with a "news" array.'],
-    [(c) => c.homepage(), [], 'from /api2u/homepage/: expected a JSON object with a "news" array.'],
-    [(c) => c.news(), {}, 'from /api2u/news/: expected a JSON object with a "news" array.'],
-    [(c) => c.news(), { news: [], regional: "x" }, 'from /api2u/news/: expected "regional" to be an array.'],
-    [(c) => c.channels(), { channels: {} }, 'from /api2u/channels/: expected a JSON object with a "channels" array.'],
-    [(c) => c.search({ searchText: "x" }), "text", 'from /api2u/search/: expected a JSON object with a "searchResults" array.'],
-    [(c) => c.search({ searchText: "x" }), { searchResults: [], totalItemCount: -1 }, "from /api2u/search/: expected a non-negative integer totalItemCount."],
+    [(c) => c.homepage(), null, 'GET https://www.tagesschau.de/api2u/homepage/: unexpected response shape: expected a JSON object with a "news" array.'],
+    [(c) => c.homepage(), [], 'GET https://www.tagesschau.de/api2u/homepage/: unexpected response shape: expected a JSON object with a "news" array.'],
+    [(c) => c.news(), {}, 'GET https://www.tagesschau.de/api2u/news/: unexpected response shape: expected a JSON object with a "news" array.'],
+    [(c) => c.news(), { news: [], regional: "x" }, 'GET https://www.tagesschau.de/api2u/news/: unexpected response shape: expected "regional" to be an array.'],
+    [(c) => c.channels(), { channels: {} }, 'GET https://www.tagesschau.de/api2u/channels/: unexpected response shape: expected a JSON object with a "channels" array.'],
+    [(c) => c.search({ searchText: "x" }), "text", 'GET https://www.tagesschau.de/api2u/search/?searchText=x: unexpected response shape: expected a JSON object with a "searchResults" array.'],
+    [(c) => c.search({ searchText: "x" }), { searchResults: [], totalItemCount: -1 }, "GET https://www.tagesschau.de/api2u/search/?searchText=x: unexpected response shape: expected a non-negative integer totalItemCount."],
   ];
   for (const [call, body, message] of cases) {
     const mt = constantJson(body);
     await assert.rejects(
       () => call(clientWith(mt)),
-      (err) => err instanceof TagesschauParseError && err.message === `Unexpected response shape ${message}`,
+      (err) => err instanceof TagesschauParseError && err.message === message,
       JSON.stringify(body),
     );
   }

@@ -24,6 +24,7 @@ import {
   toWellFormed,
 } from "../src/errors.js";
 import { makeMockTransport, jsonResponse, rawResponse } from "./helpers.js";
+import type { HttpResponse } from "../src/http.js";
 
 test("buildUrl normalises the path and appends the query", () => {
   const e = new RequestEngine({ baseUrl: "https://example.test/" });
@@ -60,7 +61,7 @@ test("a number the JSON cannot carry exactly is a parse error, never a changed v
     const e = new RequestEngine({ transport: makeMockTransport(() => rawResponse(body(n), "application/json")).transport });
     await assert.rejects(e.getJson("/api2u/news/"), (err: unknown) => {
       assert.ok(err instanceof TagesschauParseError, n);
-      assert.equal(err.message, `Unexpected response from /api2u/news/: the number ${n} cannot be represented exactly.`);
+      assert.equal(err.message, `GET https://www.tagesschau.de/api2u/news/: the number ${n} cannot be represented exactly.`);
       return true;
     });
   }
@@ -505,7 +506,7 @@ test("getJson decodes the body by its declared charset and drops a BOM", async (
   const unknown = makeMockTransport(() => rawResponse("{}", "application/json; charset=x-no-such"));
   await assert.rejects(
     () => new RequestEngine({ transport: unknown.transport }).getJson("/x"),
-    (err) => err instanceof TagesschauParseError && /Unsupported response charset "x-no-such"/.test(err.message),
+    (err) => err instanceof TagesschauParseError && err.message === 'GET https://www.tagesschau.de/x: unsupported response charset "x-no-such".',
   );
 });
 
@@ -679,4 +680,36 @@ test("bigIntegerKeys: a declared member's number is its exact literal as a strin
   // Without declarations the scan is the plain number check.
   assert.equal(firstInexactNumber('{"a":"1e400","b":3e-324}'), "3e-324");
   assert.deepEqual(scanNumbers('{"a":1}'), { json: '{"a":1}', inexact: undefined });
+});
+
+test("an answer error names the request: method and URL, userinfo redacted (D9)", async () => {
+  const answers: Array<[string, () => HttpResponse]> = [
+    ["not valid JSON", () => rawResponse("<html>", "text/html")],
+    ["empty response body", () => rawResponse(" ", "application/json")],
+    ["cannot be represented exactly", () => rawResponse('{"n":1e400}', "application/json")],
+    ["unsupported response charset", () => rawResponse("{}", "application/json; charset=x-bogus")],
+    ["unsupported Content-Encoding", () => ({ status: 200, headers: { "content-type": "application/json", "content-encoding": "br" }, body: Buffer.from("{}") })],
+  ];
+  const base = new URL("https://www.tagesschau.de");
+  base.username = "alice";
+  base.password = "s3cret";
+  for (const [what, respond] of answers) {
+    const e = new RequestEngine({ baseUrl: base.href, transport: makeMockTransport(respond).transport });
+    await assert.rejects(e.getJson("/items", { q: "x" }), (err: unknown) => {
+      assert.ok(err instanceof TagesschauParseError, what);
+      assert.ok(err.message.startsWith(`GET ${base.protocol}//***@${base.host}`), err.message);
+      assert.ok(err.message.includes("/items?q=x: ") && err.message.includes(what), err.message);
+      assert.ok(!err.message.includes("s3cret"), err.message);
+      return true;
+    });
+  }
+  // An HTML page names its type; a gzip body names its coding; an identity coding is no coding.
+  const html = new RequestEngine({ transport: async () => rawResponse("<html>", "text/html; charset=utf-8") });
+  await assert.rejects(html.getJson("/x"), (err: Error) =>
+    err.message === 'GET https://www.tagesschau.de/x: the answer is not valid JSON (expected JSON, got Content-Type "text/html").');
+  const gzip = new RequestEngine({ transport: async () => ({ status: 200, headers: { "content-type": "application/json", "content-encoding": "gzip" }, body: Buffer.from("{}") }) });
+  await assert.rejects(gzip.getJson("/x"), (err: Error) =>
+    err.message === 'GET https://www.tagesschau.de/x: unsupported Content-Encoding "gzip" (the client does not decompress responses).');
+  const identity = new RequestEngine({ transport: async () => ({ status: 200, headers: { "content-type": "application/json", "content-encoding": "identity" }, body: Buffer.from('{"a":1}') }) });
+  assert.deepEqual(await identity.getJson("/x"), { a: 1 });
 });
