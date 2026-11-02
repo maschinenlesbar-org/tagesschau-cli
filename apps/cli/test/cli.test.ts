@@ -567,3 +567,33 @@ test("the redaction of stdout is linear in the answer when the run carries crede
   );
   assert.equal(out, "see ftp://***@h.example/x and http://***@c.example/x?y=u@v, mail@example.org");
 });
+
+test("a --base-url with a backslash is a usage error before any request, never echoing the password", async () => {
+  const pw = "s3cretpw";
+  for (const base of [`http://u:${pw}@127.0.0.1\\@remote.example`, `https://alice:${pw}@api.example\\@evil.example`, "https://a.test\\@b.test"]) {
+    const cli = makeCli(() => jsonResponse({ channels: [] }));
+    assert.equal(await run(["--base-url", base, "channels"], cli.deps), 1, `${base}: ${cli.err.join("\n")}`);
+    assert.equal(cli.mt.calls.length, 0);
+    const text = [...cli.out, ...cli.err].join("\n");
+    assert.match(text, /backslash/);
+    assert.ok(!text.includes(pw), text);
+  }
+});
+
+test("a --base-url spelled with the slashes WHATWG skips sends its credential to the parsed host and redacts it", async () => {
+  const pw = "s3cretpw";
+  const basic = Buffer.from(`alice:${pw}`).toString("base64");
+  for (const base of [`http:///alice:${pw}@127.0.0.1:9`, `http:/alice:${pw}@127.0.0.1:9`, `http:alice:${pw}@127.0.0.1:9`]) {
+    const cli = makeCli(() => ({
+      status: 401,
+      headers: { "content-type": "text/plain" },
+      body: Buffer.from(`bad login alice:${pw} / Basic ${basic} / ${pw}`),
+    }));
+    assert.equal(await run(["--base-url", base, "--max-retries", "0", "channels"], cli.deps), 1, base);
+    assert.equal(new URL(cli.mt.last().url).host, "127.0.0.1:9", base);
+    assert.ok(!cli.mt.last().url.includes(pw), cli.mt.last().url);
+    const text = [...cli.out, ...cli.err].join("\n");
+    assert.match(text, /401/);
+    assert.ok(!text.includes(pw) && !text.includes(basic), `${base}: ${text}`);
+  }
+});

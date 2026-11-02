@@ -158,15 +158,26 @@ transport ended up on is quoted in these messages at most `MAX_MESSAGE_VALUE_LEN
 URL: the `RequestEngine` constructor runs the exported `validateBaseUrl` on the raw
 value, before the trailing-slash strip, and rejects a blank, non-`http(s)` or malformed
 base URL, one with surrounding or inner whitespace or a control character, or one with a
-query or fragment (request paths are appended to it as a string), or a `%` in the user
+query or fragment (request paths are appended to it as a string), one with a backslash
+(`A base URL cannot contain a backslash (\); write "/" instead.`), or a `%` in the user
 name or password that doesn't start an escape (write a literal `%` as `%25`; it is
 decoded for the Authorization header and would otherwise fail at request time), with a
 `TagesschauValidationError` before any request (`Invalid baseUrl: Unsupported scheme
 "ftp:". Expected an http(s) URL.`). It is a configuration error, not a transport
 failure, so it is not a `TagesschauNetworkError`; that class stays for the default
 transport's per-hop scheme check and for redirect targets. Whitespace matters because
-`new URL()` would trim it silently while the raw string is what each path is appended
-to: `"https://h/ "` would request `/%20/api2u/...`. The rules are the exported
+`new URL()` would trim it silently, so the URL requested would not be the one typed.
+WHATWG ends an http(s) host at a backslash and skips any slashes after the scheme, where
+text-based code read on: `http://u:pw@127.0.0.1\@remote.example` was loopback to the parser
+and the cleartext warning, but the request went to remote.example with `u:pw`. So, besides
+the refusal, the engine builds every request URL from the parsed base URL (`new
+URL(...).href`, userinfo cleared, trailing slashes stripped): the host is lower-cased, a
+default port dropped and the path percent-encoded as WHATWG does it, and that is the
+spelling error messages, `buildUrl` and a custom transport see. `credentialsIn` ends a
+special scheme's authority at a backslash too and skips the slashes and backslashes WHATWG
+skips after it (`http:///u:pw@host` sends `u:pw`; such a value is accepted and reaches the
+parsed host, the credential only as the header), and the engine scrubs the userinfo as typed
+and as WHATWG spells it. The rules are the exported
 `baseUrlProblem` (and its part `baseUrlWhitespaceProblem`); the CLI's `--base-url`
 parser (`parseBaseUrl`) calls the same `baseUrlProblem` and turns its reason into a
 usage error at parse time, with no rules of its own.

@@ -125,7 +125,9 @@ names the wait the server asked for.
 
 **Redirects.** The client follows up to `--max-redirects` redirects (default
 `5`). Credentials in `--base-url` (`https://user:pw@host`) go out as an
-`Authorization` header to the base URL's own origin (scheme, host and port) only:
+`Authorization` header to the base URL's own origin (scheme, host and port, as the URL
+parser reads them; a base URL with a backslash, which ends an http(s) host for the parser,
+is refused) only:
 a same-origin redirect keeps them, relative or absolute; on a **cross-origin** hop
 the client strips credential-bearing headers (`Authorization`, `X-API-Key`,
 `Cookie`) before the next request so they can never leak to an unintended host. If

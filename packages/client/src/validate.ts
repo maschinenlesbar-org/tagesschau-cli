@@ -242,10 +242,8 @@ export function resultPageProblem(value: unknown): string | undefined {
 
 /**
  * A base URL must not carry whitespace or control characters. `new URL()` trims
- * surrounding whitespace and drops tab/CR/LF silently, but the engine joins the
- * raw string to each request path, so "https://h/ " would request
- * `/%20/api2u/...` and a custom transport would see the raw value. Reject rather
- * than guess.
+ * surrounding whitespace and drops tab/CR/LF silently, so the URL requested would not
+ * be the one typed. Reject rather than guess.
  */
 export function baseUrlWhitespaceProblem(value: unknown): string | undefined {
   if (typeof value !== "string") return "Expected a string.";
@@ -259,8 +257,10 @@ export function baseUrlWhitespaceProblem(value: unknown): string | undefined {
  * characters (see {@link baseUrlWhitespaceProblem}), a parseable absolute URL, the
  * `http:` or `https:` scheme, and no query or fragment — request paths are appended
  * to the base URL as a string, so a `?` or `#` would swallow every path
- * (`http://h/?x=1` requests `/?x=1/api2u/news/`, `http://h/#f` requests `/`).
- * Userinfo is allowed (sent as Basic auth); a `%` in it must start a valid escape (`%25`
+ * (`http://h/?x=1` requests `/?x=1/api2u/news/`, `http://h/#f` requests `/`), and no
+ * backslash (WHATWG ends an http(s) host at one, as at a `/`, while text-based code reads
+ * on, so `http://u:pw@127.0.0.1\@remote.example` was checked as loopback and its
+ * credentials went to remote.example). Userinfo is allowed (sent as Basic auth); a `%` in it must start a valid escape (`%25`
  * for a literal one), as it is decoded for the Authorization header. The reasons never
  * echo the URL, so a credential in it cannot leak.
  */
@@ -278,6 +278,9 @@ export function baseUrlProblem(value: unknown): string | undefined {
     return `Unsupported scheme "${url.protocol}". Expected an http(s) URL.`;
   }
   if (/[?#]/.test(value)) return "A base URL cannot have a query (?) or fragment (#).";
+  // WHATWG reads a "\" in an http(s) URL as "/", so it ends the host: in
+  // `https://u:pw@a.example\@b.example` every reader of the base URL has to agree where.
+  if (value.includes("\\")) return 'A base URL cannot contain a backslash (\\); write "/" instead.';
   // Node decodes the userinfo into the Authorization header and throws "URI malformed" for a
   // "%" that isn't an escape — at request time, as a network error. Reject it here.
   for (const part of [url.username, url.password]) {

@@ -130,7 +130,9 @@ die Wartezeit, die der Server verlangt hat.
 
 **Weiterleitungen.** Der Client folgt bis zu `--max-redirects` Weiterleitungen (Standard
 `5`). Zugangsdaten in `--base-url` (`https://user:pw@host`) gehen als
-`Authorization`-Header nur an den Origin der Basis-URL (Schema, Host und Port): Eine
+`Authorization`-Header nur an den Origin der Basis-URL (Schema, Host und Port, wie der
+URL-Parser sie liest; eine Basis-URL mit Backslash, der für den Parser einen http(s)-Host
+beendet, wird abgelehnt): Eine
 Weiterleitung innerhalb desselben Origins behält sie, ob relativ oder absolut; bei einem
 Sprung auf einen **anderen Origin** entfernt der Client Header mit Zugangsdaten
 (`Authorization`, `X-API-Key`, `Cookie`) vor der nächsten Anfrage, damit sie nie an einen

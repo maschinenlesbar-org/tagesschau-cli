@@ -517,15 +517,6 @@ function basicAuthorization(url: string): string | undefined {
   return `Basic ${Buffer.from(pair, "utf8").toString("base64")}`;
 }
 
-/**
- * A validated base URL without its userinfo, kept otherwise exactly as written (the request
- * paths are appended to the raw string).
- */
-function withoutUserinfo(base: string): string {
-  const [userinfo] = credentialsIn(base);
-  return userinfo === undefined ? base : base.replace(`://${userinfo}@`, "://");
-}
-
 /** `<METHOD> <url> failed: `, the start of a network error's message (userinfo redacted, the URL cut). */
 function requestFailed(method: string, url: string): string {
   return `${method} ${cutForMessage(redactUrl(url))} failed: `;
@@ -579,6 +570,8 @@ export class RequestEngine {
   // JSON.stringify of a client never show it, so a password in the base URL can't be
   // logged by accident.
   readonly #baseUrl: string;
+  /** `#baseUrl` without its userinfo: what every request URL starts with (the userinfo goes as a header). */
+  readonly #requestBase: string;
   /** The base URL's userinfo, raw and percent-decoded, for scrubbing server and transport text. */
   readonly #credentials: string[];
   /**
@@ -605,18 +598,26 @@ export class RequestEngine {
     options = options ?? {};
     // Only an omitted baseUrl selects the default. The raw value is checked before
     // the trailing-slash strip, so "https://h/ " cannot slip past it: new URL()
-    // would trim it silently, but the raw string is what each path is appended to.
-    this.#baseUrl = validateBaseUrl(options.baseUrl ?? DEFAULT_BASE_URL);
-    this.#credentials = credentialsIn(this.#baseUrl).flatMap((raw) => {
+    // would trim it silently, so the URL requested would not be the one typed.
+    const baseUrl = validateBaseUrl(options.baseUrl ?? DEFAULT_BASE_URL);
+    // Requests go to the base URL as WHATWG parses it, the reading every check of it makes (the
+    // host, the cleartext warning, the Authorization header), never to a text-based reading of
+    // the string: a transport that reads the URL as text reaches the same host.
+    const parsed = new URL(baseUrl);
+    this.#baseUrl = parsed.href.replace(/\/+$/, "");
+    parsed.username = "";
+    parsed.password = "";
+    this.#requestBase = parsed.href.replace(/\/+$/, "");
+    // The userinfo as typed and as sent (WHATWG percent-encodes some of its characters).
+    const userinfos = [...new Set([...credentialsIn(baseUrl), ...credentialsIn(this.#baseUrl)])];
+    this.#credentials = userinfos.flatMap((raw) => {
       try {
         return [raw, decodeURIComponent(raw)];
       } catch {
         return [raw];
       }
     });
-    this.#echoed = credentialsIn(this.#baseUrl)
-      .flatMap(echoedCredentialForms)
-      .sort((a, b) => b.length - a.length);
+    this.#echoed = [...new Set(userinfos.flatMap(echoedCredentialForms))].sort((a, b) => b.length - a.length);
     this.transport = functionOption("transport", options.transport, nodeHttpTransport);
     // Only an omitted userAgent selects the default: a blank one is an error, not a
     // silent fallback, and one Node's header validation would throw a raw TypeError
@@ -781,7 +782,7 @@ export class RequestEngine {
     // Authorization header, per hop, so a redirect to the same origin (relative or
     // absolute) keeps it and one to another origin or scheme drops it. A transport such
     // as fetch also refuses a URL with credentials outright.
-    let url = this.composeUrl(withoutUserinfo(this.#baseUrl), path, options.query);
+    let url = this.composeUrl(this.#requestBase, path, options.query);
     let headers: Record<string, string> = {
       Accept: options.accept,
       "User-Agent": this.userAgent,

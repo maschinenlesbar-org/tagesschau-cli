@@ -152,6 +152,9 @@ test("baseUrlProblem: every base-URL rule in order; validateBaseUrl strips trail
     ["https://h/#", "A base URL cannot have a query (?) or fragment (#)."],
   ];
   for (const [v, reason] of cases) assert.equal(baseUrlProblem(v), reason, JSON.stringify(v));
+  for (const value of ["http://u:pw@127.0.0.1\\@remote.example", "https://h.example\\p", "https:\\\\h.example"]) {
+    assert.equal(baseUrlProblem(value), 'A base URL cannot contain a backslash (\\); write "/" instead.', value);
+  }
   assert.equal(validateBaseUrl("https://mirror.test/ts//"), "https://mirror.test/ts");
   assert.throws(
     () => validateBaseUrl("ftp://u:pw@h"),
