@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { run } from "../src/cli/run.js";
+import { redactionFor, run } from "../src/cli/run.js";
 import { forbidRepeatedOptions, renderJson } from "../src/cli/shared.js";
 import { buildProgram } from "../src/cli/program.js";
 import { TagesschauClient } from "@maschinenlesbar.org/tagesschau-client/internal/client";
@@ -549,4 +549,21 @@ test("finding URLs in an argument is linear: a 1 MB argument without :// is quic
   const t0 = Date.now();
   await run(["--compact", "search", many], slow.deps);
   assert.ok(Date.now() - t0 < 1500, `${Date.now() - t0} ms`);
+});
+
+test("the redaction of stdout is linear in the answer when the run carries credentials", async () => {
+  // With a URL with userinfo in argv, every stdout text is redacted. The scheme regex this
+  // replaces took ~5 s for an 80 KB `a.a.…` answer; the linear pass takes milliseconds.
+  const value = "a.".repeat(100_000);
+  const cli = makeCli(() => jsonResponse({ channels: [{ title: value }] }));
+  const started = performance.now();
+  assert.equal(await run(["--base-url", "https://alice:s3cret-Pw@mirror.example", "channels"], cli.deps), 0, cli.err.join("\n"));
+  const ms = performance.now() - started;
+  assert.ok(cli.out.join("\n").includes(value));
+  assert.ok(ms < 1500, `${Math.round(ms)} ms`);
+  // The pattern backstop still hides any URL's userinfo on stdout, and leaves other text alone.
+  const out = redactionFor(["--base-url", "https://alice:s3cret-Pw@mirror.example", "channels"]).out(
+    "see ftp://user:other@h.example/x and http://a@b@c.example/x?y=u@v, mail@example.org",
+  );
+  assert.equal(out, "see ftp://***@h.example/x and http://***@c.example/x?y=u@v, mail@example.org");
 });

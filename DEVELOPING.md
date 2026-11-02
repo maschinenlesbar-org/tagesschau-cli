@@ -200,7 +200,10 @@ it the forms a server echoes it back in (`echoedCredentialForms`, exported): the
 `Authorization: Basic` value, the decoded `user:password`, and the password alone from 4
 characters on (`redactSecrets`, exported). The CLI replaces the Basic value and the pair
 on stdout and stderr, the bare password on stderr only (on stdout a short password may
-well occur in the data). It also wraps whatever a custom transport throws in a `TagesschauNetworkError` (the original,
+well occur in the data). Behind the exact strings, the userinfo of any other URL in a
+printed text is replaced by pattern (`redactUrlUserinfo`, client `errors.ts`): one linear
+pass, each `://` found with indexOf, since it runs over the whole printed answer (a regex
+tried at every word boundary took ~5 s for an 80 KB answer of `a.a.…`). It also wraps whatever a custom transport throws in a `TagesschauNetworkError` (the original,
 scrubbed, as `cause`); `apps/cli/test/conformance-p2-library-redaction.test.ts` checks it. `apps/cli/test/conformance-p1-cli-redaction.test.ts` checks ten passwords, seven
 URL shapes and every echo path.
 

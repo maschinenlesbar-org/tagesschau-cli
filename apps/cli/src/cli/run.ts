@@ -18,6 +18,7 @@ import {
   quoteValue,
   redactCredentials,
   redactSecrets,
+  redactUrlUserinfo,
 } from "@maschinenlesbar.org/tagesschau-client/internal/errors";
 
 /**
@@ -96,15 +97,6 @@ function writeCommanderErr(command: Command, deps: CliDeps, state: { errorLogged
 }
 
 /**
- * Replace the userinfo of every URL in `text` with `***`, the form `redactUrl` gives
- * (`https://user:secret@host` becomes `https://***@host`). Text-based, so it also
- * covers a URL that does not parse; a backstop behind the exact-string redaction.
- */
-export function redactUserinfo(text: string): string {
-  return text.replace(/\b([a-z][a-z0-9+.-]*:\/\/)[^\s/?#']*@/gi, "$1***@");
-}
-
-/**
  * The names (long and short) of the program's own options that require a value
  * (`--user-agent`, `-o`). Only the program's: commander takes them out of argv wherever
  * they stand, before a subcommand sees the rest.
@@ -156,7 +148,7 @@ export interface Redaction {
  * `credentialsIn` finds it, plus its JSON-quoted form) is replaced by `***`. Only a value
  * with a scheme is a URL (a bare `a:b@c` is a search text or a User-Agent as often as a
  * credential), except as the `--base-url` value. A pattern alone can't delimit a password with spaces, quotes, `#`, `?` or `/`; the exact strings
- * can (`redactUserinfo` is the backstop behind them). Without credentials in the arguments
+ * can (the client's `redactUrlUserinfo`, one linear pass, is the backstop behind them). Without credentials in the arguments
  * the text passes through unchanged. (This CLI reads no environment variable, so the
  * arguments are the only source.)
  */
@@ -196,7 +188,7 @@ export function redactionFor(argv: readonly string[]): Redaction {
   const echoedList = [...echoed].sort((a, b) => b.length - a.length);
   const passwordList = [...passwords].sort((a, b) => b.length - a.length);
   const out = (text: string): string => {
-    let result = redactUserinfo(redactCredentials(text, list));
+    let result = redactUrlUserinfo(redactCredentials(text, list));
     for (const form of encoded) result = result.split(form).join("***%40");
     return redactSecrets(result, echoedList);
   };
