@@ -568,6 +568,17 @@ test("the redaction of stdout is linear in the answer when the run carries crede
   assert.equal(out, "see ftp://***@h.example/x and http://***@c.example/x?y=u@v, mail@example.org");
 });
 
+test("the redaction of stdout hides the userinfo of a URL glued onto the one before it (B2)", async () => {
+  // The linear pass read the first URL's authority up to the second `://` and searched on after
+  // it, so the second URL's userinfo reached stdout; the scheme regex it replaced redacted both.
+  const value = "https://host://u:p1@h and https://u:p2@x://v:q3@w";
+  const cli = makeCli(() => jsonResponse({ channels: [{ title: value }] }));
+  assert.equal(await run(["--base-url", "https://alice:s3cret-Pw@mirror.example", "--compact", "channels"], cli.deps), 0, cli.err.join("\n"));
+  const out = cli.out.join("\n");
+  assert.ok(out.includes("https://host://***@h and https://***@x://***@w"), out);
+  for (const secret of ["u:p1", "u:p2", "v:q3"]) assert.ok(!out.includes(secret), out);
+});
+
 test("a --base-url with a backslash is a usage error before any request, never echoing the password", async () => {
   const pw = "s3cretpw";
   for (const base of [`http://u:${pw}@127.0.0.1\\@remote.example`, `https://alice:${pw}@api.example\\@evil.example`, "https://a.test\\@b.test"]) {
