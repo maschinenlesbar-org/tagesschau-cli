@@ -29,7 +29,7 @@ import {
   credentialsIn,
 } from "../src/errors.js";
 import { makeMockTransport, jsonResponse, rawResponse } from "./helpers.js";
-import type { HttpResponse } from "../src/http.js";
+import type { HttpRequest, HttpResponse } from "../src/http.js";
 
 test("buildUrl normalises the path and appends the query", () => {
   const e = new RequestEngine({ baseUrl: "https://example.test/" });
@@ -1122,4 +1122,82 @@ test("a credential a server echoes percent-encoded is scrubbed, the pair and the
     assert.ok(err instanceof TagesschauApiError, String(err));
     for (const text of [err.message, err.detail ?? "", err.body]) assert.ok(!text.includes(echo) && !text.includes("s3cret"), `${echo}: ${text}`);
   }
+});
+
+// ---- a redirect's Location echoing the credential (security audit 2026-10-27, class D2) ------
+// The engine follows redirects. Every message about the request after one named the followed URL
+// through redactUrl only, which drops the URL's own userinfo but not the base URL's credentials a
+// server echoed in its path or query.
+
+test("a credential echoed in a redirect's Location never reaches a message about the request after it", async () => {
+  const pw = "it's-s3cret";
+  const base = `https://alice:${encodeURIComponent(pw)}@mirror.example`;
+  const basic = Buffer.from(`alice:${pw}`, "utf8").toString("base64");
+  const locations = [
+    `https://other.example/login?pw=${pw}`, // raw, with a ' that resolving writes as %27
+    `https://other.example/login?pw=${encodeURIComponent(pw)}`,
+    `/login/${encodeURIComponent(`alice:${pw}`)}/x`,
+    `https://other.example/auth?h=${basic}`,
+    `/relative/${pw}`,
+  ];
+  const leaks = (text: string): boolean => text.includes("s3cret") || text.includes(basic) || text.includes(encodeURIComponent(basic));
+  const redirect = (location: string): HttpResponse => ({ status: 302, headers: { location }, body: Buffer.from("") });
+  for (const location of locations) {
+    const cases: Array<[string, (req: HttpRequest, n: number) => HttpResponse | Promise<HttpResponse>]> = [
+      ["an error answer", (_req, n) => (n === 0 ? redirect(location) : rawResponse('{"message":"gone"}', "application/json", 404))],
+      ["the redirect limit", () => redirect(location)],
+      ["a transport failure", async (_req, n) => {
+        if (n === 0) return redirect(location);
+        throw new Error("socket hang up");
+      }],
+      ["the size cap", (_req, n) => (n === 0 ? redirect(location) : rawResponse("x".repeat(100), "application/json"))],
+      ["an invalid response", (_req, n) => (n === 0 ? redirect(location) : ({ status: 0 } as unknown as HttpResponse))],
+      ["a redirect without Location", (_req, n) => (n === 0 ? redirect(location) : { status: 302, headers: {}, body: Buffer.from("") })],
+    ];
+    for (const [name, answer] of cases) {
+      let n = 0;
+      const engine = new RequestEngine({
+        baseUrl: base,
+        maxRetries: 0,
+        maxRedirects: 2,
+        maxResponseBytes: 50,
+        transport: async (req) => answer(req, n++),
+      });
+      const err = await engine.getJson("/api2u/news/").catch((caught: unknown) => caught);
+      assert.ok(err instanceof TagesschauError, `${location} ${name}: ${String(err)}`);
+      const url = err instanceof TagesschauApiError ? err.url : "";
+      assert.ok(!leaks(err.message) && !leaks(url), `${location} ${name}: ${err.message} | ${url}`);
+    }
+  }
+  // onRetry's url, after a redirect.
+  const retried: string[] = [];
+  let n = 0;
+  const engine = new RequestEngine({
+    baseUrl: base,
+    maxRetries: 1,
+    sleep: async () => {},
+    transport: async () => (n++ === 0 ? redirect(locations[0] as string) : rawResponse("{}", "application/json", 503)),
+    onRetry: (event) => retried.push(event.url),
+  });
+  await engine.getJson("/x").catch(() => undefined);
+  assert.equal(retried.length, 1);
+  assert.ok(!leaks(retried[0] as string), retried[0]);
+});
+
+test("a refused redirect scheme and the origin a dropped-credentials hint names are scrubbed", async () => {
+  const pw = "s3cret-pw";
+  const base = `https://alice:${pw}@mirror.example`;
+  const run = async (location: string, then: HttpResponse): Promise<string> => {
+    let n = 0;
+    const engine = new RequestEngine({ baseUrl: base, maxRetries: 0, transport: async () => (n++ === 0 ? { status: 302, headers: { location }, body: Buffer.from("") } : then) });
+    const err = await engine.getJson("/x").catch((caught: unknown) => caught);
+    assert.ok(err instanceof TagesschauError, String(err));
+    return err.message;
+  };
+  const scheme = await run(`${pw}://elsewhere/`, rawResponse("{}", "application/json"));
+  assert.match(scheme, /unsupported scheme/);
+  assert.ok(!scheme.includes(pw), scheme);
+  const hint = await run(`https://${pw}.example/x`, rawResponse("{}", "application/json", 401));
+  assert.match(hint, /dropped the base URL's credentials/);
+  assert.ok(!hint.includes(pw), hint);
 });

@@ -154,7 +154,14 @@ scheme (e.g. `file:`, `ftp:`, `data:`) as a typed `TagesschauNetworkError` — t
 guard lives in the engine, so it holds even when a custom `transport` is injected
 that does no scheme checking of its own. A redirect target, a scheme or the URL a
 transport ended up on is quoted in these messages at most `MAX_MESSAGE_VALUE_LENGTH`
-(500) characters long (`cutForMessage`). The same holds for the configured base
+(500) characters long (`cutForMessage`). A server can echo the base URL's credential in a
+`Location` (in its path, query or host, raw or percent-encoded): every message about the request
+after a redirect (an error answer and `TagesschauApiError.url`, the redirect limit, a refused
+scheme, a transport failure, the size cap, `onRetry`'s `url`) names the URL as shown, the
+`Location` scrubbed as sent before it is resolved (`redirectTarget`; resolving first would write
+`'` as `%27`, a spelling no scrub matches), userinfo redacted; a refused scheme and the origin a
+dropped-credentials hint names are scrubbed too. The request itself goes to the `Location` as
+sent. The same holds for the configured base
 URL: the `RequestEngine` constructor runs the exported `validateBaseUrl` on the raw
 value, before the trailing-slash strip, and rejects a blank, non-`http(s)` or malformed
 base URL, one with surrounding or inner whitespace or a control character, or one with a

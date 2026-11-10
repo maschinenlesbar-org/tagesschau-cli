@@ -576,6 +576,22 @@ function originOf(url: string): string {
   }
 }
 
+/**
+ * The URL a redirect leads to, as messages name it: the `Location` with the base URL's
+ * credentials scrubbed (`scrub`) as sent, before resolving percent-encodes what is left of them
+ * in a new spelling (`'` as `%27` in a query); resolved against the URL shown so far, userinfo
+ * redacted, control and format characters stripped (it is server text bound for stderr). An
+ * unparseable value is shown cleaned as it came.
+ */
+function redirectTarget(shownUrl: string, location: string, scrub: (text: string) => string): string {
+  const sent = scrub(location);
+  try {
+    return sanitizeServerText(redactUrl(new URL(sent, shownUrl).href));
+  } catch {
+    return sanitizeServerText(sent);
+  }
+}
+
 /** Return a copy of `headers` with all credential-bearing headers removed. */
 export function stripCredentialHeaders(
   headers: Record<string, string>,
@@ -698,15 +714,19 @@ export class RequestEngine {
     }
   }
 
-  /** Tell `onRetry` about a retry, then wait. A throwing callback never breaks the request. */
-  private async backOff(attempt: number, delayMs: number, url: string, status?: number): Promise<void> {
+  /**
+   * Tell `onRetry` about a retry (`shown`: the URL as messages name it, userinfo redacted and,
+   * after a redirect, the credentials echoed in it scrubbed), then wait. A throwing callback
+   * never breaks the request.
+   */
+  private async backOff(attempt: number, delayMs: number, shown: string, status?: number): Promise<void> {
     try {
       this.onRetry?.({
         retry: attempt,
         maxRetries: this.maxRetries,
         delayMs,
         ...(status !== undefined ? { status } : {}),
-        url: redactUrl(url),
+        url: shown,
       });
     } catch {
       // a logging hook is no reason to fail the request
@@ -780,12 +800,13 @@ export class RequestEngine {
    * the cause chain. Any other `TagesschauError` passes through, and a message that names the
    * request already is not prefixed twice.
    */
-  private transportError(cause: unknown, method: string, url: string): TagesschauError {
+  private transportError(cause: unknown, method: string, url: string, shown: string): TagesschauError {
     if (cause instanceof TagesschauError && !(cause instanceof TagesschauNetworkError)) return cause;
-    const reason = cause instanceof Error ? cause.message : String(cause);
+    // A transport's text names the URL it was given; the message names the one shown.
+    const reason = (cause instanceof Error ? cause.message : String(cause)).split(url).join(shown);
     const message = sanitizeServerText(this.scrub(reason));
     const scrubbed = this.scrubCause(cause);
-    const prefix = requestFailed(method, url);
+    const prefix = requestFailed(method, shown);
     if (message.startsWith(prefix)) {
       if (cause instanceof TagesschauNetworkError && message === cause.message && scrubbed === cause) return cause;
       return new TagesschauNetworkError(message, { cause: scrubbed });
@@ -863,6 +884,11 @@ export class RequestEngine {
     if (authorization !== undefined) headers["Authorization"] = authorization;
     /** Why a redirect dropped the base URL's credentials, for a 401/403 message. */
     let dropped: string | undefined;
+    // The URL as messages name it: after a redirect, the Location as the server sent it with the
+    // base URL's credentials scrubbed, then resolved (`redirectTarget`). Resolving first would
+    // percent-encode an echoed password in a new spelling (`'` as `%27` in a query) no scrub
+    // matches. The request itself goes to the Location as sent.
+    let shown = redactUrl(url);
 
     // Only an idempotent request is sent again: request() is public, and a POST re-sent
     // after a 503 may be applied twice. The client itself sends GETs only.
@@ -885,14 +911,14 @@ export class RequestEngine {
           ...(this.maxResponseBytes > 0 ? { maxResponseBytes: this.maxResponseBytes } : {}),
         });
       } catch (cause) {
-        throw this.transportError(cause, method, url);
+        throw this.transportError(cause, method, url, shown);
       }
 
       // An injected transport may resolve with anything; a malformed HttpResponse would
       // otherwise surface below as a raw TypeError, outside the TagesschauError contract.
       const invalid = responseProblem(response);
       if (invalid !== undefined) {
-        throw new TagesschauNetworkError(`${requestFailed(method, url)}the transport returned an invalid response (${invalid}).`);
+        throw new TagesschauNetworkError(`${requestFailed(method, shown)}the transport returned an invalid response (${invalid}).`);
       }
       // A transport must not follow redirects itself (`redirect: "manual"`): one that did
       // (fetch's default) may have carried the Authorization header to another host, and
@@ -900,7 +926,7 @@ export class RequestEngine {
       const finalUrl = (response as { url?: unknown }).url;
       if (typeof finalUrl === "string" && finalUrl !== "" && originOf(finalUrl) !== originOf(url)) {
         throw new TagesschauNetworkError(
-          `${requestFailed(method, url)}the transport followed a redirect to another origin ` +
+          `${requestFailed(method, shown)}the transport followed a redirect to another origin ` +
             `(${cutForMessage(sanitizeServerText(redactUrl(this.scrub(finalUrl))))}); a transport must not follow redirects ` +
             `(HttpRequest.redirect is "manual").`,
         );
@@ -912,7 +938,7 @@ export class RequestEngine {
       // The size cap holds whatever the transport did: the default one aborts early, a custom
       // one may have read everything.
       if (this.maxResponseBytes > 0 && body.byteLength > this.maxResponseBytes) {
-        throw new TagesschauNetworkError(`${requestFailed(method, url)}${sizeLimitMessage(this.maxResponseBytes)}`);
+        throw new TagesschauNetworkError(`${requestFailed(method, shown)}${sizeLimitMessage(this.maxResponseBytes)}`);
       }
       const retryable = status === 429 || status === 503;
       // A Retry-After beyond MAX_RETRY_AFTER_MS is not retried: the error below surfaces at
@@ -926,7 +952,7 @@ export class RequestEngine {
         // burst (11 requests in 124 ms with --max-retries 10) against an API documented at
         // 60 requests an hour.
         const backoff = this.retryDelayMs * attempt;
-        await this.backOff(attempt, retryAfter === undefined ? backoff : Math.max(retryAfter, backoff), url, status);
+        await this.backOff(attempt, retryAfter === undefined ? backoff : Math.max(retryAfter, backoff), shown, status);
         continue;
       }
 
@@ -934,13 +960,13 @@ export class RequestEngine {
       if (status >= 300 && status < 400) {
         if (redirects >= this.maxRedirects) {
           throw new TagesschauNetworkError(
-            `Too many redirects (>${this.maxRedirects}) for ${method} ${cutForMessage(redactUrl(url))}`,
+            `Too many redirects (>${this.maxRedirects}) for ${method} ${cutForMessage(shown)}`,
           );
         }
         const location = firstHeader(responseHeaders["location"]);
         if (typeof location !== "string" || location.length === 0) {
           throw new TagesschauNetworkError(
-            `Redirect (HTTP ${status}) with no Location header for ${method} ${cutForMessage(redactUrl(url))}`,
+            `Redirect (HTTP ${status}) with no Location header for ${method} ${cutForMessage(shown)}`,
           );
         }
         const previousUrl = url;
@@ -949,7 +975,7 @@ export class RequestEngine {
           nextUrl = new URL(location, previousUrl);
         } catch {
           throw new TagesschauNetworkError(
-            `Redirect (HTTP ${status}) to an unusable Location for ${method} ${cutForMessage(redactUrl(previousUrl))}`,
+            `Redirect (HTTP ${status}) to an unusable Location for ${method} ${cutForMessage(shown)}`,
           );
         }
         // Enforce http(s)-only on the redirect target here in the engine, not
@@ -958,7 +984,7 @@ export class RequestEngine {
         // be handed to it verbatim. Reject anything else as a typed error.
         if (nextUrl.protocol !== "http:" && nextUrl.protocol !== "https:") {
           throw new TagesschauNetworkError(
-            `Refusing to follow redirect to unsupported scheme "${cutForMessage(nextUrl.protocol)}" (from ${method} ${cutForMessage(redactUrl(previousUrl))})`,
+            `Refusing to follow redirect to unsupported scheme "${cutForMessage(sanitizeServerText(this.scrub(nextUrl.protocol)))}" (from ${method} ${cutForMessage(shown)})`,
           );
         }
         // Userinfo in a Location is not used: credentials come from the base URL only,
@@ -974,18 +1000,19 @@ export class RequestEngine {
             dropped =
               from.protocol === "http:" && nextUrl.protocol === "https:" && from.hostname === nextUrl.hostname
                 ? "the server redirected http→https, which dropped the base URL's credentials; use an https base URL"
-                : `the redirect to ${nextUrl.origin} dropped the base URL's credentials (they are sent to their own origin only)`;
+                : `the redirect to ${cutForMessage(sanitizeServerText(this.scrub(nextUrl.origin)))} dropped the base URL's credentials (they are sent to their own origin only)`;
           }
           headers = stripCredentialHeaders(headers);
         }
         url = nextUrl.toString();
+        shown = redirectTarget(shown, location, (text) => this.scrub(text));
         redirects += 1;
         continue;
       }
 
       const contentType = String(firstHeader(responseHeaders["content-type"]) ?? "");
       if (status < 200 || status >= 300) {
-        throw this.toApiError(method, url, status, body, status === 401 || status === 403 ? dropped : undefined, {
+        throw this.toApiError(method, shown, status, body, status === 401 || status === 403 ? dropped : undefined, {
           retries: attempt,
           ...(tooLong ? { retryAfterMs: retryAfter } : {}),
         });
