@@ -221,8 +221,10 @@ writes it. An error's `detail` is scrubbed again once decoded: a JSON escape (`\
 hid an echo from the scrub of the body as sent. `TagesschauApiError.body` keeps the body as sent
 (scrubbed) unless it is JSON whose decoded text still holds an echoed form; then it is that JSON
 written again (`JSON.stringify`) with the forms as `***`, and `""` if it is nested too deeply to
-write again (`scrubBody`). The CLI replaces the Basic value and the pair
-on stdout and stderr, the bare password on stderr only (on stdout a short password may
+write again (`scrubBody`). A userinfo without a password (`https://TOKEN@host`,
+`https://TOKEN:@host`) is a token: it is sent as `Basic base64("TOKEN:")`, and its forms are
+that value, `TOKEN:` and the token alone, in place of the password. The CLI replaces the Basic value and the pair
+on stdout and stderr, the bare password (or token) on stderr only (on stdout a short password may
 well occur in the data). Behind the exact strings, the userinfo of any other URL in a
 printed text is replaced by pattern (`redactUrlUserinfo`, client `errors.ts`): one linear
 pass, each `://` found with indexOf, since it runs over the whole printed answer (a regex
