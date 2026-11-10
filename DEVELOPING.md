@@ -239,6 +239,11 @@ tried at every word boundary took ~5 s for an 80 KB answer of `a.a.…`). It als
 scrubbed, as `cause`); `apps/cli/test/conformance-p2-library-redaction.test.ts` checks it. `apps/cli/test/conformance-p1-cli-redaction.test.ts` checks ten passwords, seven
 URL shapes and every echo path.
 
+A base URL (`--base-url`, and the environment variable where the CLI reads one) is read as
+a URL however its scheme is typed (`typedUrlCredentials`): missing (`alice:pw@host`) or
+mistyped (`http//alice:pw@host`, the colon left out, whose userinfo is everything between the
+first slashes and the last `@`), so commander's echo of a refused one shows no password.
+
 **Plain `http:` warning.** `cleartextProblem(baseUrl, secrets?)` (`engine.ts`, exported)
 returns one sentence when requests to `baseUrl` would travel unencrypted — `requests to
 <host> are sent unencrypted (http:, not https:)`, or `the base URL's credentials are sent
