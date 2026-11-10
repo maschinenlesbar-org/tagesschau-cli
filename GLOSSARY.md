@@ -127,7 +127,8 @@ names the wait the server asked for.
 `5`). Credentials in `--base-url` (`https://user:pw@host`) go out as an
 `Authorization` header to the base URL's own origin (scheme, host and port, as the URL
 parser reads them; a base URL with a backslash, which ends an http(s) host for the parser,
-is refused) only:
+or one not written `https://` and the host, which the parser repairs silently (`http:host`,
+`http:///host`), is refused) only:
 a same-origin redirect keeps them, relative or absolute; on a **cross-origin** hop
 the client strips credential-bearing headers (`Authorization`, `X-API-Key`,
 `Cookie`) before the next request so they can never leak to an unintended host. If

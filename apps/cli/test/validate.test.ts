@@ -150,6 +150,12 @@ test("baseUrlProblem: every base-URL rule in order; validateBaseUrl strips trail
     ["ftp://h", 'Unsupported scheme "ftp:". Expected an http(s) URL.'],
     ["https://h/?q", "A base URL cannot have a query (?) or fragment (#)."],
     ["https://h/#", "A base URL cannot have a query (?) or fragment (#)."],
+    // The scheme not followed by exactly "//" and the host: WHATWG would repair it silently (F4).
+    ["http:h.example", 'Expected an absolute http(s) URL ("https://" and the host).'],
+    ["https:/h.example", 'Expected an absolute http(s) URL ("https://" and the host).'],
+    ["http:///h.example", 'Expected an absolute http(s) URL ("https://" and the host).'],
+    ["http:u:s3cret@h.example", 'Expected an absolute http(s) URL ("https://" and the host).'],
+    ["HTTPS://H.example", undefined],
   ];
   for (const [v, reason] of cases) assert.equal(baseUrlProblem(v), reason, JSON.stringify(v));
   for (const value of ["http://u:pw@127.0.0.1\\@remote.example", "https://h.example\\p", "https:\\\\h.example"]) {

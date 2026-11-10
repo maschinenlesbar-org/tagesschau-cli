@@ -260,7 +260,8 @@ export function baseUrlWhitespaceProblem(value: unknown): string | undefined {
  * (`http://h/?x=1` requests `/?x=1/api2u/news/`, `http://h/#f` requests `/`), and no
  * backslash (WHATWG ends an http(s) host at one, as at a `/`, while text-based code reads
  * on, so `http://u:pw@127.0.0.1\@remote.example` was checked as loopback and its
- * credentials went to remote.example). Userinfo is allowed (sent as Basic auth); a `%` in it must start a valid escape (`%25`
+ * credentials went to remote.example), and the scheme followed by exactly `//` and the host (WHATWG
+ * repairs `http:host`, `http:/host` and `http:///host` silently). Userinfo is allowed (sent as Basic auth); a `%` in it must start a valid escape (`%25`
  * for a literal one), as it is decoded for the Authorization header. The reasons never
  * echo the URL, so a credential in it cannot leak.
  */
@@ -290,6 +291,10 @@ export function baseUrlProblem(value: unknown): string | undefined {
       return 'The user name or password has a "%" that is not followed by two hex digits; write a literal "%" as %25.';
     }
   }
+  // WHATWG skips any slashes after "http:" and repairs `http:host`, `http:/host` and
+  // `http:///host` into `http://host` silently: the host requested would not be the one typed,
+  // and code that reads the value as text (a userinfo cut after "://") reads another authority.
+  if (!/^https?:\/\/[^/]/i.test(value)) return 'Expected an absolute http(s) URL ("https://" and the host).';
   return undefined;
 }
 
