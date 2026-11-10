@@ -449,7 +449,10 @@ seconds, ms under 1 s). Tests: `apps/cli/test/retry-log.test.ts`.
 
 **maxResponseBytes.** A cap on the response body size in bytes (`0` = unlimited;
 default 100 MiB), guarding against unbounded responses. The built-in transport aborts
-as soon as the cap is passed; the engine checks the body of any transport. The error
+as soon as the cap is passed; the engine checks the body of any transport. Below the cap the
+built-in transport's memory follows the bytes, not the chunks: it joins small chunks as they
+arrive (at most 1024 of them or 64 KiB unjoined), where one Buffer per one-byte chunk held about
+210 bytes of heap each. The error
 names the request and both spellings: `GET <url> failed: Response exceeded the size limit
 of 1000 bytes (maxResponseBytes; --max-response-bytes on the CLI)`.
 
@@ -571,8 +574,9 @@ character, shown escaped; the --ressort, --region and --date tokens go out trimm
   writes no files), and P27 (`conformance-p27-big-and-odd-answers`: the built bin under a
   small heap prints a large flat answer with `--compact`, an answer full of DEL characters
   escaped or, past V8's longest string, as one ERROR record of `tagesschau.output`, never a
-  heap crash; a lone surrogate or invalid bytes are replaced with U+FFFD and reported in a
-  WARN record, on the CLI and in the library). P24 and P25 read the library's error by its
+  heap crash; an answer in two million one-byte chunks is read within a 256 MB heap; a lone
+  surrogate or invalid bytes are replaced with U+FFFD and reported in a WARN record, on the
+  CLI and in the library). P24 and P25 read the library's error by its
   class name through `kitParity` (`apps/cli/test/helpers.ts`). They use mock transports and local
   servers only; none reaches www.tagesschau.de.
 
