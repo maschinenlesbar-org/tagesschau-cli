@@ -577,7 +577,17 @@ character, shown escaped; the --ressort, --region and --date tokens go out trimm
   escaped or, past V8's longest string, as one ERROR record of `tagesschau.output`, never a
   heap crash; an answer in two million one-byte chunks is read within a 256 MB heap; a lone
   surrogate or invalid bytes are replaced with U+FFFD and reported in a WARN record, on the
-  CLI and in the library). P24 and P25 read the library's error by its
+  CLI and in the library). P28–P31 come from the security audit of 2026-10-27 (reference
+  `create-cli-template`): P28 hostile error answers (a number with a long run of zeros refused
+  in linear time; unterminated control-string introducers and a 16 MB error message cleaned in
+  linear time and memory; millions of lone surrogates repaired under a small heap; the base
+  URL's credentials scrubbed from JSON-escaped error text and from a redirect's `Location`,
+  where tagesschau ends at `Too many redirects`; its 2xx-quote case is skipped, `quotedBody`
+  undefined: the client quotes no value of an answer), P29 base-URL credentials (a token
+  userinfo scrubbed in every form, a backslash or a repaired scheme refused, requests to the
+  parsed host, stdout redaction linear and covering glued URLs), P30 output links (all
+  skipped, `HAS_OUTPUT_OPTION = false`), P31 the release pipeline (`release.yml` and
+  `tools/sbom/` read as text). P24, P25 and P29 read the library's error by its
   class name through `kitParity` (`apps/cli/test/helpers.ts`). They use mock transports and local
   servers only; none reaches www.tagesschau.de.
 
