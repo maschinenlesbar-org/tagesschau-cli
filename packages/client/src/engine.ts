@@ -317,6 +317,19 @@ export function sanitizeServerText(text: string): string {
   return cutText(text, MAX_SERVER_TEXT).replace(ESCAPE_SEQUENCE, "").replace(DROPPED_CHAR, "").replace(/\s+/g, " ").trim();
 }
 
+/**
+ * `form` and its spelling in a URL (`encodeURIComponent`): a server that puts a credential into
+ * a URL, a redirect's Location or a link in its error text, percent-encodes it. A form that has
+ * no such spelling (a lone surrogate) is kept as it is.
+ */
+function urlSpellings(form: string): string[] {
+  try {
+    return [form, encodeURIComponent(form)];
+  } catch {
+    return [form];
+  }
+}
+
 /** Longest error detail kept in a message; the full body stays on `TagesschauApiError.body`. */
 export const MAX_DETAIL_LENGTH = 500;
 
@@ -649,7 +662,8 @@ export class RequestEngine {
         return [raw];
       }
     });
-    this.#echoed = [...new Set(userinfos.flatMap(echoedCredentialForms))].sort((a, b) => b.length - a.length);
+    // Each form also percent-encoded (`urlSpellings`), as a server quoting a URL writes it.
+    this.#echoed = [...new Set(userinfos.flatMap(echoedCredentialForms).flatMap(urlSpellings))].sort((a, b) => b.length - a.length);
     this.transport = functionOption("transport", options.transport, nodeHttpTransport);
     // Only an omitted userAgent selects the default: a blank one is an error, not a
     // silent fallback, and one Node's header validation would throw a raw TypeError
@@ -707,6 +721,32 @@ export class RequestEngine {
    */
   private scrub(text: string): string {
     return this.#credentials.length === 0 ? text : redactSecrets(redactCredentials(text, this.#credentials), this.#echoed);
+  }
+
+  /**
+   * An error body, already scrubbed as sent, as `TagesschauApiError.body` keeps it: when it is
+   * JSON with an escape in it, checked decoded too. An escape (`\"`, `\u00e4`) hides an echoed
+   * credential from the scrub of the text as sent, while a caller who parses the body sees it.
+   * Such a body is kept as the decoded JSON written again (`JSON.stringify`, one spelling per
+   * character) with the credential scrubbed in that spelling. A body that doesn't parse is text
+   * nobody decodes, and stays as sent; one too deeply nested to write again is left out.
+   */
+  private scrubBody(scrubbed: string): string {
+    if (this.#echoed.length === 0 || !scrubbed.includes("\\")) return scrubbed;
+    let decoded: unknown;
+    try {
+      decoded = JSON.parse(scrubbed);
+    } catch {
+      return scrubbed;
+    }
+    let rewritten: string;
+    try {
+      rewritten = JSON.stringify(decoded);
+    } catch {
+      return "";
+    }
+    const spelled = this.#echoed.map((form) => JSON.stringify(form).slice(1, -1));
+    return spelled.some((form) => rewritten.includes(form)) ? redactSecrets(rewritten, spelled) : scrubbed;
   }
 
   /**
@@ -1042,16 +1082,16 @@ export class RequestEngine {
     } catch {
       // Non-JSON error body; leave detail undefined.
     }
-    // `detail` comes straight from the (attacker-controllable) response body and
-    // ends up in the error message printed to stderr, so strip control and bidi
-    // characters, fold it onto one line and cap its length before it leaves the engine.
-    if (detail !== undefined) detail = cleanDetail(detail);
+    // `detail` comes straight from the (attacker-controllable) response body, decoded: scrubbed
+    // again (a JSON escape hid the credential from the scrub above), then stripped of control and
+    // bidi characters, folded onto one line and capped before it leaves the engine.
+    if (detail !== undefined) detail = cleanDetail(this.scrub(detail));
     if (hint !== undefined) detail = detail === undefined ? hint : `${detail}; ${hint}`;
     return new TagesschauApiError({
       status,
       url,
       method,
-      body: text,
+      body: this.scrubBody(text),
       detail,
       retries: retry.retries,
       ...(retry.retryAfterMs === undefined ? {} : { retryAfterMs: retry.retryAfterMs, maxRetryAfterMs: MAX_RETRY_AFTER_MS }),

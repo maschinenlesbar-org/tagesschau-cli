@@ -1037,3 +1037,89 @@ test("scanNumbers quotes millions of declared members within a small heap", STAR
   const out = execFileSync(process.execPath, ["--max-old-space-size=128", "--input-type=module", "-e", script], { encoding: "utf8" });
   assert.equal(out, String(n * 10 + 1));
 });
+
+// ---- the credential scrubbed from decoded error text (security audit 2026-10-27, class D) ----
+// toApiError scrubbed the body as sent and only then decoded its detail with JSON.parse: an echo
+// of the base URL's password behind a JSON escape (`s`, `\"`, `ä`) passed the scrub and
+// reached .message and .detail decoded, and .body kept it one JSON.parse away.
+
+/** `text` as a JSON string with every character written as a `\uXXXX` escape. */
+function everyCharEscaped(text: string): string {
+  return `"${Array.from(text, (ch) => Array.from({ length: ch.length }, (_, i) => `\\u${ch.charCodeAt(i).toString(16).padStart(4, "0")}`).join("")).join("")}"`;
+}
+
+test("a credential echoed with JSON escapes is scrubbed from the message, the detail and the decoded body", async () => {
+  // A password with inner spaces is scrubbed whole, never word by word (its first word too).
+  const user = "alice";
+  const pw = 'longword s3cret-pw ä"q';
+  const base = `https://${user}:${encodeURIComponent(pw)}@mirror.example`;
+  const basic = Buffer.from(`${user}:${pw}`, "utf8").toString("base64");
+  const asciiOnly = (value: string): string => JSON.stringify(value).replace(/[^\x20-\x7e]/g, (ch) => `\\u${ch.charCodeAt(0).toString(16).padStart(4, "0")}`);
+  const bodies = [
+    `{"message":${asciiOnly(`denied for ${pw}`)}}`,
+    `{"detail":${JSON.stringify(`denied for ${user}:${pw}`)}}`,
+    `{"error":${everyCharEscaped(`denied for ${pw}`)}}`,
+    `{"message":${everyCharEscaped(`Basic ${basic}`)}}`,
+  ];
+  for (const status of [401, 500]) {
+    for (const body of bodies) {
+      const engine = new RequestEngine({ baseUrl: base, maxRetries: 0, transport: async () => rawResponse(body, "application/json", status) });
+      const err = await engine.getJson("/x").catch((caught: unknown) => caught);
+      assert.ok(err instanceof TagesschauApiError, String(err));
+      const decodedBody = JSON.stringify(JSON.parse(err.body));
+      for (const [name, text] of [["message", err.message], ["detail", err.detail ?? ""], ["body", err.body], ["decoded body", decodedBody], ["parsed body", String(Object.values(JSON.parse(err.body) as object)[0])]] as Array<[string, string]>) {
+        for (const secret of [pw, "longword", "s3cret-pw", basic]) assert.ok(!text.includes(secret), `${status} ${body}: ${name} holds ${secret}: ${text}`);
+      }
+      assert.match(err.detail ?? "", /\*\*\*/, body);
+    }
+  }
+});
+
+test("an error body keeps its spelling unless a credential hides behind an escape", async () => {
+  const base = "https://alice:s3cret-pw@mirror.example";
+  const bodyOf = async (body: string): Promise<string> => {
+    const e = new RequestEngine({ baseUrl: base, maxRetries: 0, transport: async () => rawResponse(body, "application/json", 500) });
+    const err = await e.getJson("/x").catch((caught: unknown) => caught);
+    assert.ok(err instanceof TagesschauApiError, String(err));
+    return err.body;
+  };
+  // No credential, or one spelled as sent: the body as sent (scrubbed), escapes kept.
+  assert.equal(await bodyOf('{"m":"caf\\u00e9 \\"x\\""}'), '{"m":"caf\\u00e9 \\"x\\""}');
+  assert.equal(await bodyOf('{"m":"pw s3cret-pw \\u00e9"}'), '{"m":"pw *** \\u00e9"}');
+  // Escaped: written again decoded, scrubbed in that spelling.
+  assert.equal(await bodyOf('{"m":"pw s3cret\\u002dpw \\u00e9"}'), '{"m":"pw *** é"}');
+  // Not JSON: nobody decodes it, it stays as sent.
+  assert.equal(await bodyOf("pw s3cret\\u002dpw"), "pw s3cret\\u002dpw");
+  // Deeply nested: written again where this runtime can, else left out (probed, not assumed:
+  // whether JSON.stringify recurses depends on the Node version).
+  const deep = `${"[".repeat(200_000)}"s3cret\\u002dpw"${"]".repeat(200_000)}`;
+  let parses = true;
+  let writes = true;
+  try {
+    const value: unknown = JSON.parse(deep);
+    try {
+      JSON.stringify(value);
+    } catch {
+      writes = false;
+    }
+  } catch {
+    parses = false;
+  }
+  if (parses) {
+    const body = await bodyOf(deep);
+    assert.ok(!body.includes("s3cret"), body.slice(199_990, 200_030));
+    assert.equal(body === "", !writes);
+  }
+});
+
+test("a credential a server echoes percent-encoded is scrubbed, the pair and the Basic value too", async () => {
+  const pw = "my s3cret/pw";
+  const base = `https://alice:${encodeURIComponent(pw)}@mirror.example`;
+  const basic = Buffer.from(`alice:${pw}`, "utf8").toString("base64");
+  for (const echo of [encodeURIComponent(pw), encodeURIComponent(`alice:${pw}`), encodeURIComponent(basic)]) {
+    const engine = new RequestEngine({ baseUrl: base, maxRetries: 0, transport: async () => rawResponse(`{"message":"login?u=${echo}"}`, "application/json", 403) });
+    const err = await engine.getJson("/x").catch((caught: unknown) => caught);
+    assert.ok(err instanceof TagesschauApiError, String(err));
+    for (const text of [err.message, err.detail ?? "", err.body]) assert.ok(!text.includes(echo) && !text.includes("s3cret"), `${echo}: ${text}`);
+  }
+});

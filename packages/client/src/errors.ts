@@ -287,6 +287,12 @@ export class TagesschauApiError extends TagesschauError {
   readonly detail: string | undefined;
   readonly url: string;
   readonly method: string;
+  /**
+   * The response body as text, with the base URL's credentials scrubbed. It keeps its spelling,
+   * unless it is JSON whose decoded text still holds an echoed credential behind an escape: then
+   * it is that JSON written again (`JSON.stringify`, other escapes, no insignificant whitespace)
+   * with the credential as `***`, or `""` when it is nested too deeply to write again.
+   */
   readonly body: string;
   /** How many times the engine retried the request before giving up (0 when it did not). */
   readonly retries: number;

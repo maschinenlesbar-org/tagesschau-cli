@@ -209,7 +209,12 @@ reach it. The engine also scrubs the base URL's userinfo (raw and percent-decode
 error bodies and details, from transport error text and from the `cause` chain — and with
 it the forms a server echoes it back in (`echoedCredentialForms`, exported): the
 `Authorization: Basic` value, the decoded `user:password`, and the password alone from 4
-characters on (`redactSecrets`, exported). The CLI replaces the Basic value and the pair
+characters on (`redactSecrets`, exported), each also percent-encoded, as a server quoting a URL
+writes it. An error's `detail` is scrubbed again once decoded: a JSON escape (`\u0073`, `\"`)
+hid an echo from the scrub of the body as sent. `TagesschauApiError.body` keeps the body as sent
+(scrubbed) unless it is JSON whose decoded text still holds an echoed form; then it is that JSON
+written again (`JSON.stringify`) with the forms as `***`, and `""` if it is nested too deeply to
+write again (`scrubBody`). The CLI replaces the Basic value and the pair
 on stdout and stderr, the bare password on stderr only (on stdout a short password may
 well occur in the data). Behind the exact strings, the userinfo of any other URL in a
 printed text is replaced by pattern (`redactUrlUserinfo`, client `errors.ts`): one linear
