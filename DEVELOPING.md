@@ -335,9 +335,13 @@ subprocess.
 **Error types.** [`errors.ts`](packages/client/src/errors.ts): `TagesschauApiError`
 (non-2xx, carries `status`/`detail`/`url`/`method`/`body` and an `isRetryable`
 flag; `detail` — the body's `detail`, `message` or `error` string — is cleaned for
-stderr by `sanitizeServerText`: control and bidi characters dropped, whitespace folded
-onto one line, cut at `MAX_DETAIL_LENGTH` (500) characters, never inside a surrogate pair
-(`cutText`), so the message stays well-formed; `body` keeps the full text), `TagesschauNetworkError` (transport failure/timeout),
+stderr by `sanitizeServerText`: whole terminal escape sequences, the remaining control
+characters and every format character (bidi controls, zero-width characters) dropped,
+whitespace folded onto one line, cut at `MAX_DETAIL_LENGTH` (500) characters, never inside a
+surrogate pair (`cutText`), so the message stays well-formed; `body` keeps the full text. The
+cleaning reads only the first 16 384 characters of the server text and is one linear regex
+pass per step: one string append per character over a detail of a few MB exhausted a small
+heap before the cut), `TagesschauNetworkError` (transport failure/timeout),
 `TagesschauParseError` (bad JSON; a number `JSON.parse` cannot carry exactly — out of a
 double's range like `1e400`, past 2^53 and printed differently like `12345678901234567890`,
 non-zero and too small like `1e-400`, or a subnormal that would print changed like `3e-324`,
@@ -348,7 +352,7 @@ whose server sends a member past 2^53 (a 64-bit id) declares it with the engine 
 `bigIntegerKeys` (a set of member names, none by default), and the value of a declared member is
 then delivered as its exact literal, a string (`"1858054135406919680"`), whatever its size, while
 every other number keeps the rule; `scanNumbers` does both in one linear pass that skips strings,
-with no reviver; tagesschau declares none —; an empty body; a compressed one, named by its
+with no reviver, and builds its copy in batches (`TextBuilder`), never one append per member; tagesschau declares none —; an empty body; a compressed one, named by its
 Content-Encoding, since the client does not decompress; or a 2xx body without the documented
 envelope: `GET https://www.tagesschau.de/api2u/news/: unexpected response shape: expected a JSON
 object with a "news" array.` — each method checks its top-level array, `news`/`regional`,
@@ -391,7 +395,8 @@ Latin-1 body from a proxy or mirror reads correctly instead of turning umlauts i
 U+FFFD, and a leading byte order mark is dropped. An unknown charset label is a
 `TagesschauParseError` (`GET <url>: unsupported response charset "…".`). Text is never changed
 silently: bytes that are not valid in the charset (a `fatal` decoder first, then a replacing one
-that counts) and lone surrogates written as JSON escapes (`\ud800`, `wellFormedEscapes`) become
+that counts) and lone surrogates written as JSON escapes (`\ud800`, `wellFormedEscapes`, which builds its copy
+in batches, `TextBuilder`, so millions of them stay within a small heap) become
 U+FFFD, and the engine option `onWarning(message)` is told how many (`GET <url>: 2 characters of
 the answer were not valid text (invalid bytes or a lone surrogate) and replaced with U+FFFD.`); the
 CLI's `action()` logs it as a `WARN` record of `tagesschau.api`. One bad character never sinks a
