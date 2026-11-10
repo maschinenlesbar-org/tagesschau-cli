@@ -171,7 +171,10 @@ query or fragment (request paths are appended to it as a string), one with a bac
 name or password that doesn't start an escape (write a literal `%` as `%25`; it is
 decoded for the Authorization header and would otherwise fail at request time), with a
 `TagesschauValidationError` before any request (`Invalid baseUrl: Unsupported scheme
-"ftp:". Expected an http(s) URL.`). It is a configuration error, not a transport
+"ftp:". Expected an http(s) URL.`; a scheme is named only when the value spells `<scheme>://`:
+`T0kenS3cret:@host` or `user:pw@host` typed without its scheme parses as a URL whose scheme is
+the token or user name, lower-cased, which no redaction matches, so it is refused as `Expected
+an absolute http(s) URL.`). It is a configuration error, not a transport
 failure, so it is not a `TagesschauNetworkError`; that class stays for the default
 transport's per-hop scheme check and for redirect targets. Whitespace matters because
 `new URL()` would trim it silently, so the URL requested would not be the one typed.

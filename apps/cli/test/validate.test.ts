@@ -148,6 +148,10 @@ test("baseUrlProblem: every base-URL rule in order; validateBaseUrl strips trail
     ["https://h/a b", "A base URL cannot contain whitespace or control characters."],
     ["not-a-url", "Expected an absolute http(s) URL."],
     ["ftp://h", 'Unsupported scheme "ftp:". Expected an http(s) URL.'],
+    // Without "<scheme>://" the scheme WHATWG reads is the user name or token: never named (F5).
+    ["T0kenS3cret:@h.example", "Expected an absolute http(s) URL."],
+    ["alice:s3cret@h.example", "Expected an absolute http(s) URL."],
+    ["mailto:x@h.example", "Expected an absolute http(s) URL."],
     ["https://h/?q", "A base URL cannot have a query (?) or fragment (#)."],
     ["https://h/#", "A base URL cannot have a query (?) or fragment (#)."],
     // The scheme not followed by exactly "//" and the host: WHATWG would repair it silently (F4).

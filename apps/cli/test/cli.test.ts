@@ -624,3 +624,27 @@ test("a token as the --base-url user name is redacted from what the CLI prints, 
     assert.ok(!out.includes(basic) && !out.includes(`${token}:`), `${base}: ${out}`);
   }
 });
+
+test("a --base-url typed without its scheme never names its user name or token, not even as the scheme (F5)", async () => {
+  // `T0kenS3cret:@host` parses as a URL whose scheme is the token, lower-cased: the refusal named
+  // it (`Unsupported scheme "t0kens3cret:"`), a spelling no exact-string redaction matches.
+  for (const [base, secrets] of [
+    ["T0kenS3cret:@127.0.0.1:9", ["T0kenS3cret", "t0kens3cret"]],
+    ["alice:s3cret@127.0.0.1:9", ["alice", "s3cret"]],
+    ["my_user:s3cret@127.0.0.1:9", ["my_user", "s3cret"]],
+    ["T0k:@127.0.0.1:9", ["T0k", "t0k"]],
+  ] as const) {
+    const cli = makeCli(() => jsonResponse({ channels: [] }));
+    assert.equal(await run(["--base-url", base, "channels"], cli.deps), 1, base);
+    assert.equal(cli.mt.calls.length, 0, base);
+    const text = [...cli.out, ...cli.err].join("\n");
+    assert.match(text, /Expected an absolute http\(s\) URL\./, base);
+    for (const secret of secrets) assert.ok(!text.includes(secret), `${base}: ${text}`);
+    // The library's refusal quotes no value at all.
+    assert.throws(
+      () => new TagesschauClient({ baseUrl: base }),
+      (err: unknown) => err instanceof Error && secrets.every((secret) => !err.message.includes(secret)) && /Expected an absolute http\(s\) URL\./.test(err.message),
+      base,
+    );
+  }
+});
