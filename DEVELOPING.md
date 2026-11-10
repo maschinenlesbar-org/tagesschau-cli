@@ -227,7 +227,8 @@ writes it. An error's `detail` is scrubbed again once decoded: a JSON escape (`\
 hid an echo from the scrub of the body as sent. `TagesschauApiError.body` keeps the body as sent
 (scrubbed) unless it is JSON whose decoded text still holds an echoed form; then it is that JSON
 written again (`JSON.stringify`) with the forms as `***`, and `""` if it is nested too deeply to
-write again (`scrubBody`). A userinfo without a password (`https://TOKEN@host`,
+write again (`scrubBody`). The header text a parse error quotes (the Content-Type, the
+Content-Encoding, an unknown charset) and the number literal it names are scrubbed too. A userinfo without a password (`https://TOKEN@host`,
 `https://TOKEN:@host`) is a token: it is sent as `Basic base64("TOKEN:")`, and its forms are
 that value, `TOKEN:` and the token alone, in place of the password. The CLI replaces the Basic value and the pair
 on stdout and stderr, the bare password (or token) on stderr only (on stdout a short password may

@@ -1254,3 +1254,21 @@ test("a base URL whose scheme is not followed by // and the host is rejected at 
     assert.doesNotThrow(() => new RequestEngine({ transport: makeMockTransport(() => jsonResponse({})).transport, baseUrl }), baseUrl);
   }
 });
+
+test("the base URL's credential is scrubbed from a Content-Type, Content-Encoding or charset a parse error quotes (D)", async () => {
+  // Header text is no decoded error detail: it was cleaned and cut, never scrubbed.
+  const pw = "s3cret-pw";
+  const basic = Buffer.from(`alice:${pw}`, "utf8").toString("base64");
+  const base = `https://alice:${pw}@mirror.example`;
+  for (const headers of [
+    { "content-type": `text/html; x=${pw}` },
+    { "content-type": `application/json; charset=x-${pw}` },
+    { "content-type": "application/json", "content-encoding": `gzip-${basic}` },
+  ]) {
+    const engine = new RequestEngine({ baseUrl: base, maxRetries: 0, transport: async () => ({ status: 200, headers, body: Buffer.from("<html>") }) });
+    const err = await engine.getJson("/x").catch((caught: unknown) => caught);
+    assert.ok(err instanceof TagesschauParseError, String(err));
+    assert.ok(!err.message.includes(pw) && !err.message.includes(basic), err.message);
+    assert.match(err.message, /\*\*\*/);
+  }
+});
