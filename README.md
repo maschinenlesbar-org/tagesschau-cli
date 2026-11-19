@@ -34,6 +34,58 @@ Check it works:
 tagesschau --help
 ```
 
+### Docker
+
+From 0.10.0 every release is also a container image for linux/amd64 and linux/arm64 on the
+GitHub Container Registry, made from the same tarball as the npm package. It needs no Node.js and no
+install:
+
+```bash
+docker run --rm --read-only --cap-drop ALL --security-opt no-new-privileges \
+  ghcr.io/maschinenlesbar-org/tagesschau-cli:latest homepage
+```
+
+The image's entrypoint is the program, so the command follows the image name directly;
+`… tagesschau-cli:latest tagesschau homepage` works too.
+
+In a container with a memory limit (`--memory`) the default `--max-response-bytes` is an eighth
+of that limit (at most the usual 100 MiB), so an oversized answer is refused with a clear
+error instead of the container being killed for memory. The largest answers, the homepage and a
+Bundesland's feed with their full article texts, are about 0.6 MB.
+The CLI needs at least 12 processes and threads (`--pids-limit 12`): below that it refuses with
+an error, and with 4 or fewer Node.js itself hangs before the CLI can check.
+
+`latest` is the newest release. For scripts, name a release and pin its digest, which the
+[release notes](https://github.com/maschinenlesbar-org/tagesschau-cli/releases) give:
+`…/tagesschau-cli:0.10.0@sha256:<digest>`. Each image carries signed build provenance;
+check it with
+
+```bash
+gh attestation verify oci://ghcr.io/maschinenlesbar-org/tagesschau-cli:latest \
+  --repo maschinenlesbar-org/tagesschau-cli
+```
+
+### MCP server
+
+From 0.10.0 the same news is also an [MCP](https://modelcontextprotocol.io/) server for AI agents,
+`@maschinenlesbar.org/tagesschau-mcp` (command `tagesschau-mcp`, image
+`ghcr.io/maschinenlesbar-org/tagesschau-mcp`): six read-only tools, a briefing (breaking news,
+the top stories as ranked, Ressort feeds newest first), the regional news of Bundesländer by
+name, how much and how recently a topic is covered, the live streams, a feed with its older
+pages and an article's text, with the API's traps handled (the sport feed's repeats and missing
+ressort, one request per state, Berlin and Brandenburg as a pair, no Ressort with a region, the
+0-based search page), on stdio or Streamable HTTP. Setup for Claude Code, Claude Desktop and VS
+Code: [MCP.md](https://github.com/maschinenlesbar-org/tagesschau-cli/blob/main/MCP.md).
+
+```bash
+npm i -g @maschinenlesbar.org/tagesschau-mcp
+claude mcp add tagesschau -- tagesschau-mcp
+```
+
+The content stays ARD's copyrighted editorial content for private, non-commercial use: every
+result says so, and running the server as a service for others may need ARD-aktuell's
+permission (we provide the tool, not the data).
+
 ## Quickstart
 
 No setup needed — the API needs no key. (Access is keyless, but the content is
@@ -239,6 +291,7 @@ These apply to every command and may be given **before or after** the command na
 - **[Usage.md](https://github.com/maschinenlesbar-org/tagesschau-cli/blob/main/Usage.md)** — full use-case-driven cookbook.
 - **[GLOSSARY.md](https://github.com/maschinenlesbar-org/tagesschau-cli/blob/main/GLOSSARY.md)** — every command, flag and domain term explained.
 - **[DEVELOPING.md](https://github.com/maschinenlesbar-org/tagesschau-cli/blob/main/DEVELOPING.md)** — TypeScript library usage, architecture, testing, CI.
+- **[MCP.md](https://github.com/maschinenlesbar-org/tagesschau-cli/blob/main/MCP.md)** — the MCP server: tools, setup, options.
 - **[SKILLS.md](https://github.com/maschinenlesbar-org/tagesschau-cli/blob/main/SKILLS.md)** — Claude Code Agent Skills bundled with this repo (news
   briefing, regional news, topic tracker, live streams), installable as a plugin.
 

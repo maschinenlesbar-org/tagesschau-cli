@@ -40,6 +40,8 @@ import {
   TagesschauClient,
   TagesschauApiError,
   TagesschauValidationError,
+  getBriefing,
+  getRegionalNews,
 } from "@maschinenlesbar.org/tagesschau-cli";
 
 const client = new TagesschauClient(); // defaults to https://www.tagesschau.de
@@ -55,6 +57,13 @@ try {
   if (err instanceof TagesschauValidationError) console.error(err.message); // search text must not be empty.
   else if (err instanceof TagesschauApiError) console.error(err.status, err.detail);
 }
+
+// The skills' use cases, with their traps built in (see "MCP server" below): breaking news first,
+// the top stories as ranked, the sport feed sorted and listed once; a state by name, one request
+// per state, a topic filtered here because the API drops the region when a Ressort is sent.
+const briefing = await getBriefing(client, { ressorts: ["sport"], topStories: true });
+const bavaria = await getRegionalNews(client, { states: ["Bayern"], topic: "Wirtschaft" });
+const article = await client.article(briefing.topStories[0]?.articleId ?? ""); // an item's content[]
 ```
 
 ### Client options
@@ -101,6 +110,11 @@ wrong-case, with an invisible or control character included, is a `TagesschauVal
 before any request, checked by the exported `regionProblem` / `ressortProblem`; `date`
 is the `YYMMDD` cursor from `nextPage`, a token too, checked by the exported `newsDateProblem`),
 `client.channels()`,
+`client.article(id)` (one item in full: the answer of its `details` URL; `id` is that URL, its
+path or the path under /api2u/ without `.json`, as `articleIdOf` reads it; another host, a query,
+a dot segment or an escape is a `TagesschauValidationError` before any request, checked by the
+exported `articleIdProblem`; the request goes to the client's base URL; a gone item is the API's
+404),
 `client.search({ searchText, pageSize?, resultPage? })` (`searchText` is required; a
 blank one is rejected with a `TagesschauValidationError` before any request, checked by
 the exported `searchTextProblem` on the canonical form `search()` sends: the exported
@@ -267,13 +281,17 @@ apps/cli/            # @maschinenlesbar.org/tagesschau-cli — the published pac
   test/              # CLI tests and every conformance-*.test.ts
 packages/client/     # @maschinenlesbar.org/tagesschau-client — private, shipped inside the CLI's tarball
   src/               # the API client (below)
-  test/              # tests that only touch the client, + the transport helpers
+  test/              # tests that only touch the client, + the transport helpers and fixtures (a mock of the API)
+apps/mcp/            # @maschinenlesbar.org/tagesschau-mcp — the MCP server, released with the CLI
+packages/log/        # the log records (text/jsonl), shared by both apps
+tools/image/         # the container images of both apps (build, push, smoke, SBOM)
+tools/interop/       # the built MCP server against the official MCP client (own lockfile)
 tools/pack/          # prepack/postpack: ship the client (dist/node_modules) and commander in the tarball
-tools/bump.mjs       # version bump + commit + tag (npm run bump)
+tools/bump.mjs       # version bump + commit + tag of every published app (npm run bump)
 tsconfig.docs.json   # TypeDoc only: the package entry, with the client read from its sources
 ```
 
-- **The client is its own package** so a later MCP app can share it with the CLI. It is
+- **The client is its own package** so the MCP app shares it with the CLI. It is
   never published on its own: `apps/cli`'s `prepack` copies it into
   `apps/cli/dist/node_modules/`, where the CLI's imports find it, and the tarball ships it
   as plain files — so npm lists only commander (bundled) as a dependency, never the
@@ -287,9 +305,10 @@ tsconfig.docs.json   # TypeDoc only: the package entry, with the client read fro
   tests (not bundled). Only `"."` is part of the library.
 - **Dependencies point one way:** the app depends on the client, the client on nothing
   in the workspace.
-- **The version lives in `apps/cli/package.json`.** The root has none; a plain
-  `npm version` at the root is refused. Release with `npm run bump -- <patch|minor|major>`,
-  which bumps the app, commits (the bare version as the message) and tags `vX.Y.Z`.
+- **The version lives in `apps/cli/package.json`** (and, the same, in `apps/mcp/package.json`).
+  The root has none; a plain `npm version` at the root is refused. Release with
+  `npm run bump -- <patch|minor|major>`, which bumps every published app together, commits (the
+  bare version as the message) and tags `vX.Y.Z`.
 - **TypeScript:** `tsconfig.base.json` holds the compiler options; every workspace has a
   `tsconfig.json` (`src/`) and a `tsconfig.test.json` (`test/`), and the root
   `tsconfig.json`/`tsconfig.test.json` reference them, built with `tsc -b`.
@@ -306,6 +325,7 @@ packages/client/src/
     errors.ts    # TagesschauError / *ApiError / *NetworkError / *ParseError / *ValidationError
     validate.ts  # the Problem type + assertValid: input rules shared by library and CLI
     client.ts    # TagesschauClient — the news surface over the engine
+    operations.ts # the skills' use cases: getBriefing / getRegionalNews / getTopicCoverage / getLiveStreams / getNewsFeed / getArticle
     index.ts     # the client's public surface (the library entry re-exports it)
 apps/cli/src/cli/
     io.ts        # injectable I/O seam (stdout/stderr/file), the logger and the clock
@@ -600,9 +620,12 @@ character, shown escaped; the --ressort, --region and --date tokens go out trimm
 
 GitHub Actions workflows under `.github/workflows/`:
 
-- **ci.yml** — type-check, build and test on Node 22/24/26 for every push and PR; then pack the
-  real tarball, check the pack left nothing behind, install it globally with the registry out
-  of reach and run the bin.
+- **ci.yml** — type-check, build and test on Node 22/24/26 for every push and PR; then pack each
+  published app (the CLI and the MCP server), check the pack left nothing behind, install it
+  globally with the registry out of reach and run its bins; its `interop` job runs the MCP
+  server against the official client.
+- **images.yml** — build, smoke-test and scan both container images on every push and weekly
+  (see [Container image](#container-image)).
 - **release.yml** — on a `v*` tag (made by `npm run bump`), three jobs: `pack` (read-only:
   verify the tag matches `apps/cli/package.json`, the release notes, test,
   `npm pack --workspace apps/cli`, the tarball's and the notes' sha256 as job outputs), `sbom`
@@ -612,13 +635,116 @@ GitHub Actions workflows under `.github/workflows/`:
   downloaded tarball and notes against the pack job's digests and runs only `gh release create`
   (tarball, both SBOMs, notes). To update the SBOM tool, change its version in
   `tools/sbom/package.json` and run `npm install --package-lock-only --ignore-scripts` there;
-  like `tools/docs/`, its install is never chained into an npm script.
-- **publish.yml** — manual dispatch from the release tag (`gh workflow run publish.yml --ref vX.Y.Z`; the version is the tag's): `npm publish --workspace apps/cli` via OIDC **Trusted Publishing** (no stored `NPM_TOKEN`) with provenance.
+  like `tools/docs/`, its install is never chained into an npm script. The release also carries
+  both image archives, their SBOMs, `SHA256SUMS` and signed provenance (see
+  [Container image](#container-image)).
+- **publish.yml** — manual dispatch from the release tag (`gh workflow run publish.yml --ref vX.Y.Z`; the version is the tag's): publishes the release's own files, both tarballs to npm via OIDC **Trusted
+  Publishing** (no stored `NPM_TOKEN`) with provenance and both images to ghcr.io, each checked
+  first against the immutable release and the provenance `release.yml` signed.
 - **docs.yml** — build the project website (`site/`, English and German) with the TypeDoc API docs
   under `/api/`, and deploy both to GitHub Pages on each `v*` tag.
   TypeDoc runs from the isolated, lockfile-pinned `tools/docs/` toolchain because it
   needs the TypeScript 6 compiler API, which TypeScript 7 no longer ships; locally,
   run `npm ci --prefix tools/docs` once before `npm run docs`.
+
+## MCP server (apps/mcp)
+
+`apps/mcp` is the second published app, `@maschinenlesbar.org/tagesschau-mcp` (bin
+`tagesschau-mcp`), released in lockstep with the CLI: `npm run bump` bumps every
+published app under `apps/` together, one version, one tag. Its npm README is the root
+`MCP.md` (prepack packs `<APP>.md` for an app that has one).
+
+| Module | Role |
+|---|---|
+| `packages/client/src/operations.ts` | The skills' use cases as library functions (getBriefing, getRegionalNews, getTopicCoverage, getLiveStreams, getNewsFeed, getArticle), with their traps built in. A briefing keeps the homepage's editorial order, leads with `breakingNews`, sorts each Ressort feed newest first (the feeds are not in date order) and lists every item once by `sophoraId` (the sport feed repeats items; stories already among the top stories are dropped from the Ressort lists); a Ressort feed's items are grouped under that Ressort even without their own (every sport item). A Bundesland is resolved by `resolveState`: region id, name, code, English name or a city of the skill's table, umlauts and case folded by `fold`; "Frankfurt" alone is `ambiguous` (am Main: Hessen, Oder: Brandenburg). Each state is one request of its own (states asked together share one page, and a quiet state was crowded out); an item already listed under an earlier state of the call is counted (`alsoUnder`), not repeated; a topic is matched here on title, topline, teaser and tags, since the API drops the region when a Ressort is sent. The search's page is 1-based (the API's `resultPage` is 0-based), its hits are split into stories and videos, newest first, near-identical ones (one title the same day) listed once, with a timeline by Europe/Berlin days. Channels keep `streams` whole (an object by protocol). An article is `client.article(id)`: its text blocks with HTML dropped (`plainText`), boxes and related items with their `articleId`, media counted; a 404 is `empty` with the reason (Depublizierung). Public API of both packages. |
+| `packages/log` | The log records (text/jsonl), shared by both apps; `createLogger({ program })`. |
+| `src/mcp/tools.ts` | This repo's: the six tools (flat input schemas with limits, no root combinators; one object output schema each; descriptions under 2000 characters), the instructions (the API's budget of 60 requests an hour; summarise and link, never republish), the licence (ARD-aktuell's editorial content: copyrighted, private and non-commercial use only, no republication, the CC BY-NC-ND exception and the terms' link), the hints the server's messages give. A result's `source` is the request it came from, several in braces (`{homepage/,news/?ressort=sport}`); a state's name becomes its region id there. |
+| `src/mcp/api.ts` | This repo's: how the kit reaches the client (`TagesschauClient` as `Client`, `TagesschauError` as `ClientError`, `TagesschauNetworkError` as `NetworkError`, `apiBase`). `apiBase` is the base URL plus `/api2u`, which every request goes to. |
+| `src/mcp/server.ts` | The McpServer factory, the tool types, `callTool`: deadline (`--call-timeout`) plus the client's cancellation, cleaned and fitted answers, failures as `isError` results. |
+| `src/mcp/result.ts` | `cleanStrings` (control, bidi, zero-width characters dropped in the value), `fitResult` (whole list entries dropped under `--max-result-chars`, `nextOffset`). |
+| `src/mcp/limiter.ts` | One per process around the upstream transport: 2 in flight, 120 a minute, pause on 429, a bounded queue. |
+| `src/mcp/http.ts` | node:http adapter for the SDK's `createMcpHandler`: POST /mcp, /healthz, Host and Origin checks (the SDK does neither), 1 MiB body, 8 requests at once, timeouts. |
+| `src/mcp/config.ts`, `run.ts`, `index.ts` | Options (`node:util` parseArgs), argv -> exit code, the bin (console into log records, SIGINT/SIGTERM, stdin's end). |
+
+The protocol is the SDK's: `@modelcontextprotocol/server` 2.4.0, bundled with its core and zod
+(prepack). It serves the 2026-07-28 revision and the 2025 handshake (2025-11-25, 2025-06-18)
+statelessly, on stdio (`serveStdio`) and HTTP. The SDK bundles AJV 8.18 into its own code to
+validate tool arguments against the input schemas; an SBOM doesn't list that copy.
+
+Accepted SDK behaviour on stdio: a client that sends `notifications/initialized` and a request
+before the answer to its `initialize` (the MCP lifecycle says it must wait) gets its answers
+late, at the next event on the connection, because `serveStdio` decides the protocol era from
+the opening exchange. Real clients wait, so nothing is worked around here.
+
+**The kit.** Everything in `apps/mcp` but `tools.ts`, `api.ts`, `test/helpers.ts`,
+`test/tools.test.ts` and the conformance tests' adapter blocks, plus `packages/log`,
+`apps/cli/src/cli/limits.ts`, `tools/image/` (but `smoke.json`), `tools/interop/` (but
+`interop.json`), `tools/bump.mjs`, `tools/pack/` and the workflows `ci.yml`, `images.yml`,
+`release.yml` and `publish.yml`, is the kit of `create-cli-template` (in the api-cli workspace),
+the same in every repository with an MCP server: a fix lands there first and comes here with
+`npm run sync-kit -- ../tagesschau-cli` (run in create-cli-template; `--check` lists the
+drift).
+
+Tests (`apps/mcp/test`) run in-process over the SDK's InMemoryTransport with raw JSON-RPC (the
+kit's `harness.ts`). The rules every server follows are the shared conformance tests
+`conformance-m1-…` to `conformance-m10-…` (protocol and tool rules, HTTP, Host and Origin,
+stdio with the built bin, config, limiter, result shaping, drain, call errors, MCP.md), each with
+an adapter block naming this repo's calls and mock answers; `tools.test.ts` holds this server's
+own (the six tools, the traps). The mock API is the client's `test/fixtures.ts` (`tagesschauApi`,
+`tagesschauAnswer`): it answers like the API (the feeds by `ressort`, `regions` and `date`, the
+search by text and page, an article by its path, 404 for an unknown one) over live answers of
+2026-11-19 cut to the fields the tools read: the homepage (10 top stories, 14 regional items), 12
+items of the sport feed (two repeated, one from 2024, no ressort), the first 10 of Berlin's feed
+(rbb items tagged with Berlin and Brandenburg), a search for "Bundestag" (109 hits), the 8
+channels and one article's details. The stdio tests start the built bin (30 s each).
+`tools/interop/` checks the built server against the official client 2.4.0 (stdio and HTTP;
+legacy, auto and pinned 2026-07-28) in ci.yml's `interop` job; it has its own lockfile and is
+never installed by the workspace, release or publish runs; the calls it makes and the mock's
+answers (one per path: the homepage, a feed, the search, the channels, one article) are in `tools/interop/interop.json`.
+
+## Container image
+
+`tools/image/` builds both apps' images (Dockerfile targets `cli` and `mcp`) from their release
+tarballs (`npm pack` output), never from source: `ADD` unpacks it onto distroless Node 24 (Debian 13, `nonroot`, uid 65532), so the image
+holds exactly the files npm users get. The base, BuildKit, the test registry, skopeo (local runs
+only), syft and grype are pinned in `pins.json`; bump them in the deps round. A Node or Debian
+security fix reaches the image only through a new base digest, so it means a patch release.
+
+| Script | What it does |
+|---|---|
+| `build.mjs` | Multi-arch OCI archive (amd64, arm64), reproducible: no provenance or SBOM attestation, timestamps from `SOURCE_DATE_EPOCH` (default: the HEAD commit's time). Two builds give the same index digest; compare index digests, not files. |
+| `push.mjs` | Copies the archive to a registry with skopeo (`--all --preserve-digests`) and checks the digest the registry serves. Used for the local test registry and for ghcr.io. |
+| `smoke.mjs` | Runs the image read-only, without capabilities, as an arbitrary uid: `--version`, `--help`, a network error, one request to a mock upstream (`smoke.json`: `channels` against two recorded channels), and `docker stop`, which must end a waiting call with 143 in under 5 s. |
+| `sbom.mjs` | One CycloneDX SBOM per platform with syft, and with `--gate true` grype over them: a fixable high or critical finding fails. Accepted findings go into `.grype.yaml` with a reason. CI only. |
+
+Locally (colima; the scripts never read your docker config, so no credential helper is asked;
+on macOS port 5000 is often taken by the AirPlay receiver, hence 5055):
+
+```bash
+export DOCKER_HOST=unix://$HOME/.colima/default/docker.sock
+npm pack --workspace apps/cli --pack-destination dist-artifacts
+node tools/image/build.mjs --app cli --tarball dist-artifacts/<tarball>.tgz --out dist-artifacts/cli.oci.tar
+docker run -d -p 127.0.0.1:5055:5000 <registry pin from pins.json>
+node tools/image/push.mjs --archive dist-artifacts/cli.oci.tar --to 127.0.0.1:5055/tagesschau-cli:dev
+node tools/image/smoke.mjs --app cli --image 127.0.0.1:5055/tagesschau-cli@<index digest>
+```
+
+In CI: `images.yml` does all of it on every push and weekly, with the arm64 image smoke-tested on
+an arm64 runner and the vulnerability gate. In `release.yml` the job `image` builds from the
+checked tarball and records the archive's digest, `image-sbom` makes the SBOMs (no gate: the
+scanner's database changes daily), `attest` signs build provenance for the tarball, the archive
+and the image index, and the release attaches the archive, the image SBOMs and `SHA256SUMS`.
+`publish.yml` publishes the release's own files: both tarballs to npm and both archives to
+`ghcr.io/maschinenlesbar-org/tagesschau-cli` and `…/tagesschau-mcp` (with the run's `GITHUB_TOKEN`), each checked
+first against the immutable release (`gh release verify-asset`) and the provenance `release.yml`
+signed for that tag (`gh attestation verify`).
+`apps/cli/test/conformance-p32-image-pipeline.test.ts` (shared) pins these rules.
+
+As PID 1 the bin shim listens for SIGINT, SIGTERM and SIGHUP (`exitOnSignalsAsPid1`): without
+a listener the kernel drops them, and `docker stop` would wait 10 s and kill. In a container
+the CLI reads the cgroup limits (`limits.ts`): under a memory limit the default
+`--max-response-bytes` is an eighth of it, under a pids limit below 12 it refuses before any
+request, and a leading program name (`docker run <image> tagesschau homepage`) is dropped.
 
 ## Website
 
