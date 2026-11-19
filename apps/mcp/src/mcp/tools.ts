@@ -83,10 +83,10 @@ const state: JsonSchema = {
 };
 const offset: JsonSchema = { type: "integer", minimum: 0, maximum: 10_000, description: "Where the page starts (default 0)." };
 
-/** The region id of a state's name, or the name itself when it resolves to none (for `source`). */
-const regionOf = (name: string): string => {
+/** The region id of a state's name, or undefined when it resolves to none (ambiguous, unknown: no request). */
+const regionOf = (name: string): string | undefined => {
   const lookup = resolveState(name);
-  return lookup.status === "ok" ? lookup.state.id : name;
+  return lookup.status === "ok" ? lookup.state.id : undefined;
 };
 
 /** One path, or several in braces, under the API base. */
@@ -121,7 +121,7 @@ export const TOOLS: readonly ToolDefinition[] = [
     title: "Regional news by Bundesland",
     description: [
       'The regional news of one to four Bundesländer, by name, from the ARD broadcasters (BR, WDR, NDR, MDR, SWR, rbb, hr, SR, Radio Bremen), newest first per state. Use it for "Nachrichten aus Bayern", "was gibt es Neues in NRW?", "Regionalnachrichten Berlin und Hamburg", "news from Saxony", "what\'s happening in Cologne?", "Sachsen headlines".',
-      "Give states by name, code, region id or a big city (München -> Bayern); Frankfurt alone is ambiguous (am Main: Hessen, Oder: Brandenburg): ask which. Sachsen and Sachsen-Anhalt are different states. Each state is one request of its own, since states asked together share one page. Berlin and Brandenburg come as a pair (rbb): either feed has items of both (regions); say Berlin/Brandenburg. For a topic within a state (Bayern + Wirtschaft) give topic: it is matched here on title, topline, teaser and tags, because the API drops the region when a Ressort is sent; say you filtered. Regional items have no ressort; most NDR and MDR items have no firstSentence (use the topline); each links to the broadcaster's site (shareURL, broadcaster). Lead each state with its name, cap at perState with the count left (more). An empty state: \"Aktuell keine regionalen Meldungen für …\".",
+      "Give states by name, code, region id or a big city (München -> Bayern); Frankfurt alone is ambiguous (am Main: Hessen, Oder: Brandenburg): ask which. Sachsen and Sachsen-Anhalt are different states. Each state is one request of its own, since states asked together share one page. Berlin and Brandenburg come as a pair (rbb): either feed has items of both (regions); say Berlin/Brandenburg. For a topic within a state (Bayern + Wirtschaft) give topic: it is matched here on title, topline, teaser and tags, because the API drops the region when a Ressort is sent; say you filtered. Regional items have no ressort; most NDR and MDR items have no firstSentence (use the topline); each links to the broadcaster's site (shareURL, broadcaster). Lead each state with its name and its newest item's date (a regional feed can be days old: say so), cap at perState with the count left (more). An empty state: \"Aktuell keine regionalen Meldungen für …\".",
       RULES,
     ].join("\n\n"),
     inputSchema: input(
@@ -134,8 +134,11 @@ export const TOOLS: readonly ToolDefinition[] = [
     ),
     outputSchema: output({ verdict: str_, states: arr, stories: arr, notes: arr, query: str_, candidates: arr }),
     source: (args) => {
-      const ids = [...new Set((list(args, "states") ?? []).map((s) => regionOf(s)))];
-      return ids.length === 1 ? `news/?regions=${encodeURIComponent(ids[0] as string)}` : `news/?regions={${ids.map((id) => encodeURIComponent(id)).join(",")}}`;
+      const names = list(args, "states") ?? [];
+      const ids = [...new Set(names.map((s) => regionOf(s)))];
+      // A state that resolves to none was answered without a request: the feed's path alone.
+      if (ids.length === 0 || ids.includes(undefined)) return "news/";
+      return ids.length === 1 ? `news/?regions=${ids[0] as string}` : `news/?regions={${ids.join(",")}}`;
     },
     async run(args, context) {
       return { ...(await getRegionalNews(context.client, { states: list(args, "states") ?? [], topic: str(args, "topic"), perState: num(args, "perState") })) };
@@ -212,6 +215,7 @@ export const TOOLS: readonly ToolDefinition[] = [
       const r = str(args, "ressort");
       const s = str(args, "state");
       const query = buildQueryString({ date: str(args, "date"), regions: s === undefined ? undefined : regionOf(s), ressort: r });
+      if (s !== undefined && regionOf(s) === undefined) return "news/";
       return query === "" ? "news/" : `news/?${query}`;
     },
     paged: (args) => ({ list: "items", offset: num(args, "offset") ?? 0 }),

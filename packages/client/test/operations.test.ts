@@ -116,7 +116,8 @@ test("regional: Berlin is one request of its own; its items carry Berlin and Bra
   assert.equal(r.stories.length, 10);
   assert.ok(r.stories.every((s) => s.state === "Berlin" && s.broadcaster === "rbb"));
   assert.deepEqual(r.stories[0]?.regions, ["Berlin", "Brandenburg"]);
-  assert.deepEqual(r.states[0], { query: "Berlin", id: "3", name: "Berlin", items: 10, matched: 10, alsoUnder: 0, shown: 10, more: 0, broadcasters: ["rbb"], nextDate: "261112" });
+  assert.deepEqual(r.states[0], { query: "Berlin", id: "3", name: "Berlin", items: 10, matched: 10, alsoUnder: 0, shown: 10, more: 0, broadcasters: ["rbb"], newest: "2026-11-19T20:38:17.000+01:00", nextDate: "261112" });
+  assert.equal(r.verdict, "Berlin: 10 shown of 10, newest 2026-11-19");
   assert.match(r.notes.join(" "), /Berlin and Brandenburg come as a pair/);
 });
 

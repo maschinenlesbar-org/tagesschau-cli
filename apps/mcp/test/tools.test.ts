@@ -61,6 +61,7 @@ test("getRegionalNews: a state by city, one request each; Frankfurt is ambiguous
   const frankfurt = (await connection.call("getRegionalNews", { states: ["Frankfurt"] })).structuredContent ?? {};
   assert.equal(frankfurt["status"], "ambiguous");
   assert.equal((frankfurt["candidates"] as unknown[]).length, 2);
+  assert.equal(frankfurt["source"], `${API}/news/`, "no request was made for an ambiguous name");
   assert.equal(transport.calls.length, before);
   const topic = (await connection.call("getRegionalNews", { states: ["Berlin"], topic: "Sperrmüll" })).structuredContent ?? {};
   assert.deepEqual((topic["stories"] as { sophoraId: string }[]).map((s) => s.sophoraId), ["rbb-bsr-dementiert-kostenlose-sperrmuell-abholung-102"]);

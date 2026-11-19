@@ -439,6 +439,8 @@ export interface StateCount {
   shown: number;
   more: number;
   broadcasters: string[];
+  /** The date of the state's newest item: a regional feed can be days old (BR's was two). */
+  newest?: string;
   /** getNewsFeed's cursor for this state's older items. */
   nextDate?: string;
 }
@@ -514,6 +516,7 @@ export async function getRegionalNews(client: TagesschauClient, input: RegionalI
     const shown = fresh.items.slice(0, perState);
     stories.push(...shown.map((h) => ({ ...h, state: state.name })));
     const nextDate = nextDateOf(feed.nextPage);
+    const newest = newestFirst(all)[0]?.date;
     states.push({
       query,
       id: state.id,
@@ -524,6 +527,7 @@ export async function getRegionalNews(client: TagesschauClient, input: RegionalI
       shown: shown.length,
       more: fresh.items.length - shown.length,
       broadcasters: [...new Set(all.flatMap((h) => (h.broadcaster === undefined ? [] : [h.broadcaster])))],
+      ...(newest === undefined ? {} : { newest }),
       ...(nextDate === undefined ? {} : { nextDate }),
     });
   }
@@ -546,7 +550,9 @@ export async function getRegionalNews(client: TagesschauClient, input: RegionalI
   return {
     status,
     ...(reason === undefined ? {} : { reason }),
-    verdict: states.map((s) => `${s.name}: ${s.shown} shown of ${s.matched - s.alsoUnder}${topic === undefined ? "" : ` mentioning ${quoteValue(topic)} (of ${s.items})`}`).join("; "),
+    verdict: states
+      .map((s) => `${s.name}: ${s.shown} shown of ${s.matched - s.alsoUnder}${topic === undefined ? "" : ` mentioning ${quoteValue(topic)} (of ${s.items})`}${s.newest === undefined ? "" : `, newest ${s.newest.slice(0, 10)}`}`)
+      .join("; "),
     states,
     stories,
     notes,
