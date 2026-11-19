@@ -126,3 +126,17 @@ test("getArticle: the text a page of blocks at a time; an id that is gone is emp
   assert.equal(transport.calls.length, 2);
   await connection.close();
 });
+
+test("the server's transport keeps to the API's 60 requests an hour", async () => {
+  const { serverTransport } = await import("../src/mcp/api.js");
+  let sent = 0;
+  const base = () => {
+    sent += 1;
+    return Promise.resolve({ status: 200, headers: {}, body: Buffer.from("{}") });
+  };
+  const transport = serverTransport(base);
+  const request = { method: "GET", url: "https://www.tagesschau.de/api2u/homepage/" };
+  for (let i = 0; i < 60; i += 1) await transport(request);
+  await assert.rejects(transport(request), /not sent: the Tagesschau API allows 60 requests an hour/);
+  assert.equal(sent, 60);
+});

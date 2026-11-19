@@ -110,8 +110,10 @@ Every tool only reads. An answer is JSON (`structuredContent` and the same as te
   belongs behind a proxy that authenticates.
 - **Gentle with the upstream.** One server process sends at most 2 requests at a time and 120 a
   minute to the API, pauses on HTTP 429, and stops a tool call after its deadline. The API's
-  community documentation asks for at most 60 requests an hour: the tools answer a question with
-  one to four requests, and the instructions tell a model not to loop pages or states unasked.
+  community documentation asks for at most 60 requests an hour, and the server keeps to that: a
+  request beyond 60 in the last hour is refused before it is sent, and the tool's answer says when
+  the next one is possible. The tools answer a question with one to four requests, and the
+  instructions tell a model not to loop pages or states unasked.
 - **Results are data.** Text from the API is cleaned (control, bidi and zero-width characters
   removed), but it is still other people's text: a model can be told things in it. The server
   can't act on that (it has no tool that writes), but other tools in the same session could.
