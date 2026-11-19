@@ -1,0 +1,38 @@
+{
+  "comment": "What tools/image/smoke.mjs needs that is particular to this repo: the bin (its log topic), a command that makes one request, the exit code of a network error, the mock's answer to that request (by path, under --base-url http://mock:8080; the client adds /api2u), and a string the printed answer contains. The answer is the first two channels of the live feed, recorded on 2026-11-19.",
+  "bin": "tagesschau",
+  "command": [
+    "channels"
+  ],
+  "networkErrorExit": 1,
+  "answers": {
+    "/api2u/channels/": {
+      "channels": [
+        {
+          "sophoraId": "tagesschau-vierundzwanzig-13690",
+          "title": "Im Livestream: tagesschau24",
+          "streams": {
+            "adaptivestreaming": "https://tagesschau-live.ard-mcdn.de/tagesschau/live/hls/de/master.m3u8"
+          },
+          "copyright": "tagesschau",
+          "type": "video"
+        },
+        {
+          "sophoraId": "video-1686628",
+          "title": "tagesschau in 100 Sekunden",
+          "date": "2026-11-19T18:32:04.078+01:00",
+          "streams": {
+            "h264s": "https://tagesschau-progressive.ard-mcdn.de/video/2026/1119/TV-20261119-1829-5300.webs.h264.mp4",
+            "h264m": "https://tagesschau-progressive.ard-mcdn.de/video/2026/1119/TV-20261119-1829-5300.webm.h264.mp4",
+            "h264xl": "https://tagesschau-progressive.ard-mcdn.de/video/2026/1119/TV-20261119-1829-5300.webxl.h264.mp4",
+            "adaptivestreaming": "https://adaptive.tagesschau.de/i/video/2026/1119/TV-20261119-1829-5300.,webl.h264,webs.h264,webm.h264,webxl.h264,webxxl.h264,.mp4.csmil/master.m3u8"
+          },
+          "copyright": "tagesschau",
+          "type": "video"
+        }
+      ],
+      "type": "channels"
+    }
+  },
+  "expectStdout": "Im Livestream: tagesschau24"
+}
