@@ -12,6 +12,7 @@ import { MAX_TIMEOUT_MS } from "@maschinenlesbar.org/tagesschau-client/internal/
 import { MAX_REDIRECTS, MAX_RETRIES } from "@maschinenlesbar.org/tagesschau-client/internal/engine";
 import { forbidRepeatedOptions, parseBaseUrl, parseBoundedInt, parseHeaderValue, parseIntArg } from "./shared.js";
 import { registerNewsCommands } from "./commands/news.js";
+import { readContainerLimits } from "./limits.js";
 import { DEFAULT_LOG_FORMAT, logFormatProblem } from "./log.js";
 
 /**
@@ -36,6 +37,8 @@ export const VERSION = readVersion();
 export const defaultDeps: CliDeps = {
   io: defaultIO,
   createClient: (options) => new TagesschauClient(options),
+  // In a container: the memory and pids limits (cgroup), for action()'s checks.
+  limits: () => readContainerLimits(),
 };
 
 /** commander value-parser for `--log-format`. */
