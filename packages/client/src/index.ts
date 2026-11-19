@@ -20,6 +20,9 @@ export { MAX_TIMEOUT_MS, nodeHttpTransport } from "./http.js";
 export type { Transport, HttpRequest, HttpResponse } from "./http.js";
 export { buildQueryString } from "./query.js";
 export {
+  articleIdOf,
+  articleIdProblem,
+  MAX_ARTICLE_ID_LENGTH,
   assertValid,
   baseUrlProblem,
   baseUrlWhitespaceProblem,
@@ -58,5 +61,6 @@ export {
   toWellFormed,
 } from "./errors.js";
 
+export * from "./operations.js";
 export * from "./enums.js";
 export * from "./types.js";

@@ -181,3 +181,29 @@ test("search refuses an unknown or misspelled key before any request", async () 
     assert.equal(mt.calls.length, 0);
   }
 });
+
+test("article: an item's details URL, its path or its id reach /api2u/<id>.json on the client's own base URL", async () => {
+  for (const id of [
+    "https://www.tagesschau.de/api2u/inland/innenpolitik/gipfel-100.json",
+    "/api2u/inland/innenpolitik/gipfel-100.json",
+    " inland/innenpolitik/gipfel-100 ",
+  ]) {
+    const mt = constantJson({ title: "Gipfel", content: [] });
+    const client = new TagesschauClient({ transport: mt.transport, baseUrl: "http://127.0.0.1:9" });
+    assert.deepEqual(await client.article(id), { title: "Gipfel", content: [] });
+    assert.equal(mt.last().url, "http://127.0.0.1:9/api2u/inland/innenpolitik/gipfel-100.json", id);
+  }
+});
+
+test("article: another host, a query, a dot segment, an escape or an empty id is refused before any request", async () => {
+  const mt = constantJson({ title: "x" });
+  for (const id of ["", "https://evil.example/api2u/a.json", "http://www.tagesschau.de/api2u/a.json", "https://www.tagesschau.de:8443/api2u/a.json", "https://u:p@www.tagesschau.de/api2u/a.json", "https://www.tagesschau.de/api2u/a.json#x", "a/../b", "a//b", "a%2fb", "a/b?c", "A"]) {
+    await assert.rejects(clientWith(mt).article(id), TagesschauValidationError, id);
+  }
+  await assert.rejects(clientWith(mt).article("x".repeat(301)), TagesschauValidationError);
+  assert.equal(mt.calls.length, 0);
+});
+
+test("article: an answer without a title is a parse error naming the request", async () => {
+  await assert.rejects(clientWith(constantJson([])).article("a/b"), (e: unknown) => e instanceof TagesschauParseError && /GET .*\/api2u\/a\/b\.json: unexpected response shape/.test(e.message));
+});

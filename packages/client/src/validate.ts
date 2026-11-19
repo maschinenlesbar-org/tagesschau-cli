@@ -11,7 +11,7 @@
 //   reject rather than throw synchronously; constructors throw.
 
 import { RegionValues, RessortValues } from "./enums.js";
-import { TagesschauValidationError, quoteValue } from "./errors.js";
+import { TagesschauValidationError, cutForMessage, quoteValue } from "./errors.js";
 
 /** A validation rule: the reason `value` is invalid, or `undefined` when it is valid. */
 export type Problem<T = unknown> = (value: T) => string | undefined;
@@ -318,4 +318,47 @@ export function headerValueProblem(value: unknown): string | undefined {
     if (c > 0xff) return "Value contains characters outside Latin-1 (above U+00FF).";
   }
   return undefined;
+}
+
+/** An article id: the path of an item's `details` URL under /api2u/, without `.json` (lowercase segments). */
+const ARTICLE_ID = /^[a-z0-9][a-z0-9_-]*(?:\/[a-z0-9][a-z0-9_-]*)*$/;
+
+/** The longest article id accepted (the longest seen live is under 150 characters). */
+export const MAX_ARTICLE_ID_LENGTH = 300;
+
+/**
+ * The article id in `value`, or undefined when there is none. Taken as an item's `details` URL
+ * (`https://www.tagesschau.de/api2u/inland/innenpolitik/gipfel-100.json`: that host, no query,
+ * no fragment, no userinfo), as that URL's path (`/api2u/….json`) or as the id itself
+ * (`inland/innenpolitik/gipfel-100`); surrounding whitespace aside. The id is lowercase letters,
+ * digits, `-` and `_` in `/`-separated segments, so no `..`, no `%` escape and no other host
+ * can reach the request.
+ */
+export function articleIdOf(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  let text = value.trim();
+  if (/^https?:/i.test(text)) {
+    let url: URL;
+    try {
+      url = new URL(text);
+    } catch {
+      return undefined;
+    }
+    if (url.protocol !== "https:" || url.hostname !== "www.tagesschau.de" || url.port !== "") return undefined;
+    if (url.username !== "" || url.password !== "" || url.search !== "" || url.hash !== "" || /[?#]/.test(text)) return undefined;
+    text = url.pathname;
+  }
+  if (text.startsWith("/api2u/")) text = text.slice("/api2u/".length);
+  if (text.endsWith(".json")) text = text.slice(0, -".json".length);
+  return text.length <= MAX_ARTICLE_ID_LENGTH && ARTICLE_ID.test(text) ? text : undefined;
+}
+
+/** Why `value` is no article id (see {@link articleIdOf}), or undefined when it is one. */
+export function articleIdProblem(value: unknown): string | undefined {
+  if (articleIdOf(value) !== undefined) return undefined;
+  const shown = typeof value === "string" ? quoteValue(value) : cutForMessage(String(value));
+  return (
+    `Invalid article id ${shown}: expected an item's details URL (https://www.tagesschau.de/api2u/….json) ` +
+    "or its path under /api2u/ without .json (inland/innenpolitik/gipfel-koalition-willige-ukraine-100), as an answer gives it."
+  );
 }

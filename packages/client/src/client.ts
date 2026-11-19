@@ -10,6 +10,8 @@ import { RequestEngine, type EngineOptions } from "./engine.js";
 import type { QueryParams } from "./query.js";
 import { TagesschauParseError, TagesschauValidationError, cutForMessage, quoteValue } from "./errors.js";
 import {
+  articleIdOf,
+  articleIdProblem,
   assertValid,
   knownKeysProblem,
   pageSizeProblem,
@@ -23,6 +25,7 @@ import {
   tokenProblem,
 } from "./validate.js";
 import type {
+  NewsItem,
   HomepageResult,
   NewsResult,
   ChannelsResult,
@@ -143,6 +146,24 @@ export class TagesschauClient {
     const body = await this.engine.getJson<unknown>(path, query);
     assertEnvelope(body, this.engine.describeUrl(path, query), "news", ["regional"]);
     return body as NewsResult;
+  }
+
+  /**
+   * One item in full (its `content[]` blocks): the answer of the item's `details` URL. `id` is
+   * that URL, its path, or the path under /api2u/ without `.json` (`articleIdOf`); anything else
+   * (another host, a query, `..`, an escape) is a `TagesschauValidationError` before any request.
+   * The request goes to the client's base URL, whatever host the URL named. An item that is gone
+   * (depublished) is the API's 404, a `TagesschauApiError`.
+   */
+  async article(id: string): Promise<NewsItem> {
+    const problem = articleIdProblem(id);
+    if (problem !== undefined) throw new TagesschauValidationError(problem);
+    const path = `${API}/${articleIdOf(id) as string}.json`;
+    const body = await this.engine.getJson<unknown>(path);
+    if (!isObject(body) || typeof body["title"] !== "string") {
+      throw shapeError(this.engine.describeUrl(path), 'a JSON object with a "title" string');
+    }
+    return body as NewsItem;
   }
 
   /** The live/broadcast channels. */
