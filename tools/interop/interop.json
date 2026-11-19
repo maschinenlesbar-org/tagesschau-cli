@@ -1,0 +1,604 @@
+{
+  "comment": "What tools/interop/interop.mjs needs that is particular to this repo: the mock upstream's answer per path (under --base-url http://127.0.0.1:<port>; the live answers of 2026-11-19, cut down), how many tools the server lists, and the calls to make with what each must answer.",
+  "answers": {
+    "/api2u/homepage/": {
+      "news": [
+        {
+          "sophoraId": "gipfel-koalition-willige-ukraine-100",
+          "title": "Merz will baldige Russland-Gespräche auf neutralem Boden",
+          "topline": "Gipfel der \"Koalition der Willigen\"",
+          "firstSentence": "Die \"Koalition der Willigen\" verspricht, der Ukraine \"so lange wie nötig\" zu helfen.",
+          "date": "2026-11-19T20:22:45.609+01:00",
+          "ressort": "inland",
+          "breakingNews": false,
+          "type": "story",
+          "regionId": 0,
+          "regionIds": [],
+          "shareURL": "https://www.tagesschau.de/inland/innenpolitik/gipfel-koalition-willige-ukraine-100.html",
+          "details": "https://www.tagesschau.de/api2u/inland/innenpolitik/gipfel-koalition-willige-ukraine-100.json",
+          "tags": [
+            {
+              "tag": "Koalition der Willigen"
+            },
+            {
+              "tag": "Ukraine"
+            },
+            {
+              "tag": "Merz"
+            },
+            {
+              "tag": "Macron"
+            }
+          ]
+        },
+        {
+          "sophoraId": "liveblog-apec-gipfel-xi-trump-putin-100",
+          "title": "++ Wadephul sieht Chance auf Schritt Richtung Frieden ++",
+          "topline": "Internationale Gipfel",
+          "firstSentence": "APEC-Gipfel in China und Ukraine-Gipfel in Berlin - die Entwicklungen zu den Treffen in unserem Liveblog.",
+          "date": "2026-11-19T21:29:09.685+01:00",
+          "breakingNews": false,
+          "type": "story",
+          "regionId": 0,
+          "regionIds": [],
+          "shareURL": "https://www.tagesschau.de/newsticker/liveblog-apec-gipfel-xi-trump-putin-100.html",
+          "details": "https://www.tagesschau.de/api2u/newsticker/liveblog-apec-gipfel-xi-trump-putin-100.json",
+          "tags": [
+            {
+              "tag": "Liveblog"
+            },
+            {
+              "tag": "APEC"
+            },
+            {
+              "tag": "Xi Jinping"
+            },
+            {
+              "tag": "Trump"
+            },
+            {
+              "tag": "Putin"
+            },
+            {
+              "tag": "Berlin"
+            },
+            {
+              "tag": "Ukraine"
+            }
+          ]
+        },
+        {
+          "sophoraId": "gipfel-trump-putin-xi-shenzhen-100",
+          "title": "Appelle für Weltfrieden und gegen Atomkrieg",
+          "topline": "Dreiergipfel mit Putin, Xi und Trump",
+          "firstSentence": "Putin sprach von einer \"gemeinsamen Verantwortung\" für den Weltfrieden.",
+          "date": "2026-11-19T16:32:13.286+01:00",
+          "ressort": "ausland",
+          "breakingNews": false,
+          "type": "story",
+          "regionId": 0,
+          "regionIds": [],
+          "shareURL": "https://www.tagesschau.de/ausland/asien/gipfel-trump-putin-xi-shenzhen-100.html",
+          "details": "https://www.tagesschau.de/api2u/ausland/asien/gipfel-trump-putin-xi-shenzhen-100.json",
+          "tags": [
+            {
+              "tag": "Putin"
+            },
+            {
+              "tag": "Trump"
+            },
+            {
+              "tag": "Xi Jinping"
+            },
+            {
+              "tag": "APEC"
+            },
+            {
+              "tag": "Russland"
+            },
+            {
+              "tag": "China"
+            },
+            {
+              "tag": "USA"
+            }
+          ]
+        },
+        {
+          "sophoraId": "anthropic-boersengang-ki-boom-100",
+          "title": "Was der Rekord-Börsengang von Anthropic bedeutet",
+          "topline": "Künstliche Intelligenz",
+          "firstSentence": "Der Rekordbörsengang von Anthropic weckt neue Hoffnungen im KI-Sektor. Doch die Risiken sind enorm.",
+          "date": "2026-11-19T17:54:27.587+01:00",
+          "ressort": "wirtschaft",
+          "breakingNews": false,
+          "type": "story",
+          "regionId": 0,
+          "regionIds": [],
+          "shareURL": "https://www.tagesschau.de/wirtschaft/finanzen/anthropic-boersengang-ki-boom-100.html",
+          "details": "https://www.tagesschau.de/api2u/wirtschaft/finanzen/anthropic-boersengang-ki-boom-100.json",
+          "tags": [
+            {
+              "tag": "Anthropic"
+            },
+            {
+              "tag": "Börsengang"
+            },
+            {
+              "tag": "KI"
+            },
+            {
+              "tag": "Nvidia"
+            },
+            {
+              "tag": "Tech-Konzerne"
+            }
+          ]
+        }
+      ],
+      "regional": [
+        {
+          "sophoraId": "swr-kompass-test-sorgt-weiter-fuer-aerger-verbaende-kritisieren-ablauf-und-nutzen-100",
+          "title": "Kompass-Test sorgt weiter für Ärger: Verbände kritisieren Ablauf und Nutzen",
+          "topline": "Baden-Württemberg",
+          "firstSentence": "Der Test Kompass 4 gilt als Orientierung für den Schulwechsel.",
+          "date": "2026-11-19T20:59:42.000+01:00",
+          "breakingNews": false,
+          "type": "story",
+          "regionId": 1,
+          "regionIds": [
+            1
+          ],
+          "shareURL": "https://www.swr.de/swraktuell/baden-wuerttemberg/kompass-test-grundschulen-kritik-an-organisation-nutzen-eltern-100.html",
+          "details": "https://www.tagesschau.de/api2u/inland/regional/badenwuerttemberg/swr-kompass-test-sorgt-weiter-fuer-aerger-verbaende-kritisieren-ablauf-und-nutzen-100.json",
+          "tags": [
+            {
+              "tag": "SWR"
+            },
+            {
+              "tag": "Baden-Württemberg"
+            }
+          ]
+        },
+        {
+          "sophoraId": "rbb-staeblein-schlaegt-engere-zusammenarbeit-mit-mitteldeutscher-kirche-vor-102",
+          "title": "Evangelische Kirche Berlin-Brandenburg beschließt Fusionsgespräche",
+          "topline": "Brandenburg, Berlin",
+          "date": "2026-11-19T20:38:17.000+01:00",
+          "breakingNews": false,
+          "type": "story",
+          "regionId": 4,
+          "regionIds": [
+            3,
+            4
+          ],
+          "shareURL": "https://www.rbb24.de/wirtschaft/beitrag/2026/11/berlin-mitteldeutschland-kirchenparlament-fusion.html",
+          "details": "https://www.tagesschau.de/api2u/inland/regional/brandenburg/rbb-staeblein-schlaegt-engere-zusammenarbeit-mit-mitteldeutscher-kirche-vor-102.json",
+          "tags": [
+            {
+              "tag": "rbb"
+            },
+            {
+              "tag": "Brandenburg"
+            },
+            {
+              "tag": "Berlin"
+            }
+          ]
+        }
+      ],
+      "type": "news"
+    },
+    "/api2u/news/": {
+      "news": [
+        {
+          "sophoraId": "rbb-staeblein-schlaegt-engere-zusammenarbeit-mit-mitteldeutscher-kirche-vor-102",
+          "title": "Evangelische Kirche Berlin-Brandenburg beschließt Fusionsgespräche",
+          "topline": "Brandenburg, Berlin",
+          "date": "2026-11-19T20:38:17.000+01:00",
+          "breakingNews": false,
+          "type": "story",
+          "regionId": 4,
+          "regionIds": [
+            3,
+            4
+          ],
+          "shareURL": "https://www.rbb24.de/wirtschaft/beitrag/2026/11/berlin-mitteldeutschland-kirchenparlament-fusion.html",
+          "details": "https://www.tagesschau.de/api2u/inland/regional/brandenburg/rbb-staeblein-schlaegt-engere-zusammenarbeit-mit-mitteldeutscher-kirche-vor-102.json",
+          "tags": [
+            {
+              "tag": "rbb"
+            },
+            {
+              "tag": "Brandenburg"
+            },
+            {
+              "tag": "Berlin"
+            }
+          ]
+        },
+        {
+          "sophoraId": "rbb-berlin-lichtenberg-grundstein-fuer-erste-stapelschule-gelegt-100",
+          "title": "Berlin-Lichtenberg: Grundstein für erste \"Stapelschule\" gelegt",
+          "topline": "Berlin",
+          "date": "2026-11-19T20:37:39.000+01:00",
+          "breakingNews": false,
+          "type": "story",
+          "regionId": 3,
+          "regionIds": [
+            3
+          ],
+          "shareURL": "https://www.rbb24.de/politik/beitrag/2026/11/berlin-schulbauoffensive-gestapelte-schule-grundstein-lichtenberg.html",
+          "details": "https://www.tagesschau.de/api2u/inland/regional/berlin/rbb-berlin-lichtenberg-grundstein-fuer-erste-stapelschule-gelegt-100.json",
+          "tags": [
+            {
+              "tag": "rbb"
+            },
+            {
+              "tag": "Berlin"
+            }
+          ]
+        },
+        {
+          "sophoraId": "rbb-bsr-dementiert-kostenlose-sperrmuell-abholung-102",
+          "title": "BSR dementiert kostenlose Sperrmüll-Abholung",
+          "topline": "Berlin",
+          "date": "2026-11-19T20:27:51.000+01:00",
+          "breakingNews": false,
+          "type": "story",
+          "regionId": 3,
+          "regionIds": [
+            3
+          ],
+          "shareURL": "https://www.rbb24.de/panorama/beitrag/2026/11/bsr-warnung-falschinformationen-sperrmuell.html",
+          "details": "https://www.tagesschau.de/api2u/inland/regional/berlin/rbb-bsr-dementiert-kostenlose-sperrmuell-abholung-102.json",
+          "tags": [
+            {
+              "tag": "rbb"
+            },
+            {
+              "tag": "Berlin"
+            }
+          ]
+        },
+        {
+          "sophoraId": "rbb-ticketverkauf-fuer-wiedereroeffnung-des-pergamonmuseums-beginnt-im-dezember-102",
+          "title": "Ticketverkauf für Wiedereröffnung des Pergamonmuseums beginnt im Dezember",
+          "topline": "Berlin",
+          "firstSentence": "Nach jahrelanger Sanierung sollen erste Teile des berühmten Pergamonmuseums wieder öffnen.",
+          "date": "2026-11-19T16:54:49.000+01:00",
+          "breakingNews": false,
+          "type": "story",
+          "regionId": 3,
+          "regionIds": [
+            3
+          ],
+          "shareURL": "https://www.rbb24.de/kultur/beitrag/2026/11/berlin-pergamonmuseum-ticketverkauf.html",
+          "details": "https://www.tagesschau.de/api2u/inland/regional/berlin/rbb-ticketverkauf-fuer-wiedereroeffnung-des-pergamonmuseums-beginnt-im-dezember-102.json",
+          "tags": [
+            {
+              "tag": "rbb"
+            },
+            {
+              "tag": "Berlin"
+            }
+          ]
+        },
+        {
+          "sophoraId": "rbb-verkehr-in-berlin-wegen-staatsbesuchen-ab-donnerstag-beeintraechtigt-100",
+          "title": "Verkehrseinschränkungen in Berlin und am BER wegen Ukraine-Gipfel",
+          "topline": "Berlin",
+          "firstSentence": "Staatsbesuch, Wirtschaftsforum und \"Gen-Z\"-Demo: Am Donnerstag und Freitag kommt es in Berlin zu größeren Verkehrsbehinderungen.",
+          "date": "2026-11-19T16:27:47.000+01:00",
+          "breakingNews": false,
+          "type": "story",
+          "regionId": 3,
+          "regionIds": [
+            3
+          ],
+          "shareURL": "https://www.rbb24.de/panorama/beitrag/2026/11/ukraine-gipfel-macron-burnham-merz-berlin-selenskyj-sperrungen-polizei.html",
+          "details": "https://www.tagesschau.de/api2u/inland/regional/berlin/rbb-verkehr-in-berlin-wegen-staatsbesuchen-ab-donnerstag-beeintraechtigt-100.json",
+          "tags": [
+            {
+              "tag": "rbb"
+            },
+            {
+              "tag": "Berlin"
+            }
+          ]
+        }
+      ],
+      "regional": [],
+      "nextPage": "https://www.tagesschau.de/api2u/news?date=261112&regions=3",
+      "type": "news"
+    },
+    "/api2u/search/": {
+      "details": "https://www.tagesschau.de/api2u/search",
+      "searchText": "Bundestag",
+      "pageSize": 10,
+      "resultPage": 0,
+      "totalItemCount": 109,
+      "type": "search",
+      "searchResults": [
+        {
+          "sophoraId": "video-1686002",
+          "title": "Koalitionsausschuss einigt sich auf Stromsteuersenkung und Spritpreisdeckel",
+          "date": "2026-11-18T18:42:41.574+01:00",
+          "type": "video",
+          "tags": [
+            {
+              "tag": "Schwerpunkt"
+            },
+            {
+              "tag": "Stromsteuer"
+            },
+            {
+              "tag": "Spritpreise"
+            },
+            {
+              "tag": "Koalition"
+            },
+            {
+              "tag": "Koalitionsausschuss"
+            }
+          ],
+          "streams": {
+            "adaptivestreaming": "https://adaptive.tagesschau.de/i/video/2026/1118/TV-20261118-1836-4600.,webl.h264,webs.h264,webm.h264,webxl.h264,webxxl.h264,.mp4.csmil/master.m3u8",
+            "h264s": "https://tagesschau-progressive.ard-mcdn.de/video/2026/1118/TV-20261118-1836-4600.webs.h264.mp4"
+          }
+        },
+        {
+          "sophoraId": "video-1685896",
+          "title": "Keine Neuauszählungen der BSW-Stimmen nach vergangener Bundestagswahl",
+          "date": "2026-11-18T15:57:19.502+01:00",
+          "type": "video",
+          "tags": [
+            {
+              "tag": "Schwerpunkt"
+            },
+            {
+              "tag": "BSW"
+            },
+            {
+              "tag": "Bundesverfassungsgericht"
+            },
+            {
+              "tag": "Stimmen"
+            }
+          ],
+          "streams": {
+            "adaptivestreaming": "https://adaptive.tagesschau.de/i/video/2026/1118/TV-20261118-1549-3800.,webl.h264,webs.h264,webm.h264,webxl.h264,webxxl.h264,.mp4.csmil/master.m3u8",
+            "h264s": "https://tagesschau-progressive.ard-mcdn.de/video/2026/1118/TV-20261118-1549-3800.webs.h264.mp4"
+          }
+        },
+        {
+          "sophoraId": "swr-bw-kritisiert-neues-startchancen-gesetz-100",
+          "title": "BW kritisiert neues Startchancen-Gesetz",
+          "date": "2026-11-17T20:13:41.000+01:00",
+          "type": "video",
+          "tags": [],
+          "streams": {
+            "adaptivestreaming": "https://swr-adaptive.ard-mcdn.de/i/swr/swraktuell/bw/tv/einzelbeitraege/2365550,.avc-270,.avc-360,.avc-540,.avc-720,.avc-1080,.mp4.csmil/master.m3u8"
+          }
+        },
+        {
+          "sophoraId": "swr-kita-gesetz-des-bundes-oezdemir-kuendigt-widerstand-an-kommunen-erleichtert-100",
+          "title": "Kita-Gesetz des Bundes: Özdemir kündigt Widerstand an - Kommunen erleichtert",
+          "topline": "Baden-Württemberg",
+          "firstSentence": "Der Bundestag verabschiedet ein Kita-Gesetz, möchte aber bei der Finanzierung mittelfristig aussteigen.",
+          "date": "2026-11-17T20:13:41.000+01:00",
+          "breakingNews": false,
+          "type": "story",
+          "regionId": 1,
+          "regionIds": [
+            1
+          ],
+          "shareURL": "https://www.swr.de/swraktuell/baden-wuerttemberg/ministerpraesident-oezdemir-wir-muessen-alle-verlaesslich-sein-das-gilt-auch-fuer-den-bund-100.html",
+          "details": "https://www.tagesschau.de/api2u/inland/regional/badenwuerttemberg/swr-kita-gesetz-des-bundes-oezdemir-kuendigt-widerstand-an-kommunen-erleichtert-100.json",
+          "tags": [
+            {
+              "tag": "SWR"
+            },
+            {
+              "tag": "Baden-Württemberg"
+            }
+          ]
+        }
+      ]
+    },
+    "/api2u/channels/": {
+      "channels": [
+        {
+          "sophoraId": "tagesschau-vierundzwanzig-13690",
+          "title": "Im Livestream: tagesschau24",
+          "streams": {
+            "adaptivestreaming": "https://tagesschau-live.ard-mcdn.de/tagesschau/live/hls/de/master.m3u8"
+          },
+          "copyright": "tagesschau",
+          "type": "video"
+        },
+        {
+          "sophoraId": "video-1686628",
+          "title": "tagesschau in 100 Sekunden",
+          "date": "2026-11-19T18:32:04.078+01:00",
+          "streams": {
+            "h264s": "https://tagesschau-progressive.ard-mcdn.de/video/2026/1119/TV-20261119-1829-5300.webs.h264.mp4",
+            "h264m": "https://tagesschau-progressive.ard-mcdn.de/video/2026/1119/TV-20261119-1829-5300.webm.h264.mp4",
+            "h264xl": "https://tagesschau-progressive.ard-mcdn.de/video/2026/1119/TV-20261119-1829-5300.webxl.h264.mp4",
+            "adaptivestreaming": "https://adaptive.tagesschau.de/i/video/2026/1119/TV-20261119-1829-5300.,webl.h264,webs.h264,webm.h264,webxl.h264,webxxl.h264,.mp4.csmil/master.m3u8"
+          },
+          "copyright": "tagesschau",
+          "type": "video"
+        },
+        {
+          "sophoraId": "ts-82086",
+          "title": "tagesschau",
+          "date": "2026-11-19T17:00:00.000+01:00",
+          "streams": {
+            "h264s": "https://tagesschau-progressive.ard-mcdn.de/video/2026/1119/TV-20261119-1720-4600.webs.h264.mp4",
+            "h264m": "https://tagesschau-progressive.ard-mcdn.de/video/2026/1119/TV-20261119-1720-4600.webm.h264.mp4",
+            "h264xl": "https://tagesschau-progressive.ard-mcdn.de/video/2026/1119/TV-20261119-1720-4600.webxl.h264.mp4",
+            "adaptivestreaming": "https://adaptive.tagesschau.de/i/video/2026/1119/TV-20261119-1720-4600.,webl.h264,webs.h264,webm.h264,webxl.h264,webxxl.h264,.mp4.csmil/master.m3u8"
+          },
+          "copyright": "tagesschau",
+          "type": "video"
+        }
+      ],
+      "type": "channels"
+    },
+    "/api2u/inland/innenpolitik/gipfel-koalition-willige-ukraine-100.json": {
+      "sophoraId": "gipfel-koalition-willige-ukraine-100",
+      "title": "Merz will baldige Russland-Gespräche auf neutralem Boden",
+      "topline": "Gipfel der \"Koalition der Willigen\"",
+      "firstSentence": "Die \"Koalition der Willigen\" verspricht, der Ukraine \"so lange wie nötig\" zu helfen.",
+      "date": "2026-11-19T20:22:45.609+01:00",
+      "ressort": "inland",
+      "breakingNews": false,
+      "type": "story",
+      "regionId": 0,
+      "regionIds": [],
+      "shareURL": "https://www.tagesschau.de/inland/innenpolitik/gipfel-koalition-willige-ukraine-100.html",
+      "details": "https://www.tagesschau.de/api2u/inland/innenpolitik/gipfel-koalition-willige-ukraine-100.json",
+      "tags": [
+        {
+          "tag": "Koalition der Willigen"
+        },
+        {
+          "tag": "Ukraine"
+        },
+        {
+          "tag": "Merz"
+        },
+        {
+          "tag": "Macron"
+        }
+      ],
+      "content": [
+        {
+          "value": "<strong>Die \"Koalition der Willigen\" verspricht, der Ukraine \"so lange wie nötig\" zu helfen. Nach dem Gipfel in Berlin rief Kanzler Merz Russlands Präsident Putin auf, die Waffen niederzulegen. Einen Frieden könne es nur mit Beteiligung Europas geben.</strong>",
+          "type": "text"
+        },
+        {
+          "value": "Mit dem bisher größten Gipfeltreffen der sogenannten Koalition der Willigen im Berliner Kanzleramt haben 40 Länder ihre anhaltende Unterstützung für die Ukraine im Abwehrkampf gegen Russland demonstriert. Bundeskanzler Friedrich Merz (CDU) empfing unter anderen den ukrainischen Präsidenten Wolodymyr Selenskyj und die US-Unterhändler Steve Witkoff und Jared Kushner, die zwischen der Ukraine und Russland vermitteln.",
+          "type": "text"
+        },
+        {
+          "value": "Merz erklärte nach dem Gipfel: \"So lange es nötig ist, werden wir Kiew unterstützen.\" Die Koalition der Willigen unterstütze die Ukraine nicht, um den Krieg zu verlängern. \"Wir wollen diesen Krieg beenden. Wir leisten unseren Beitrag, damit sich die Ukraine wirkungsvoll verteidigt, solange sie es muss\", sagte er. \"Wir leisten diese Beiträge, um Friedensverhandlungen überhaupt erst zu ermöglichen und sie aus einer Position der Stärke heraus zu führen.\"",
+          "type": "text"
+        },
+        {
+          "value": "\"Aber dieser Krieg muss enden mit einer Ukraine, die ihre territoriale Integrität bewahrt, die starke Sicherheitsgarantien auf ihrer Seite hat und die vor allem eingebettet ist in europäische Sicherheit\", so der Bundeskanzler weiter. Er betonte die Notwendigkeit einer diplomatischen Lösung und die Gesprächsbereitschaft Europas. \"Wir wissen, dass dieser Krieg nur endet, wenn es eine diplomatische Lösung gibt.\"",
+          "type": "text"
+        },
+        {
+          "value": "<h2>Gespräche auf neutralem Boden</h2>",
+          "type": "headline"
+        },
+        {
+          "value": "Man sei \"selbstverständlich bereit\", mit dem russischen Präsidenten Wladimir Putin zu sprechen. An Gesprächen sollten die Ukraine, Russland, die Vereinigten Staaten und Europa teilnehmen. \"Diese Gespräche sollen nun auch bald stattfinden.\" Das könnte zum Beispiel in den Vereinigten Arabischen Emiraten geschehen. \"Dass wir da nach Orten suchen, wo sie auf neutralem Boden stattfinden können, das dürfte offensichtlich sein\", sagte Merz. Russlands Präsident Putin hatte zuvor von einer Einladung der Europäer nach Moskau gesprochen.",
+          "type": "text"
+        },
+        {
+          "video": {
+            "sophoraId": "video-1686748",
+            "title": "Bundeskanzler Merz begrüßt \"Koalition der Willingen\" für Beratungen zur Urkaine-Unterstützung in Berlin"
+          },
+          "type": "video"
+        },
+        {
+          "box": {
+            "title": "Xis Choreografie - assistiert von Trump und Putin",
+            "subtitle": "Dreiergipfel in Shenzhen",
+            "text": "Gastgeber China gelang es, ein Thema zu setzen, das vor allem seinen eigenen Interessen dient. ",
+            "link": "<a href=\"https://www.tagesschau.de/api2u/ausland/asien/dreiergipfel-xi-trump-putin-100.json\" type=\"intern\">mehr</a>"
+          },
+          "type": "box"
+        },
+        {
+          "related": [
+            {
+              "title": "Mit Diplomatie und Druck",
+              "details": "https://www.tagesschau.de/api2u/ausland/europa/ukraine-unterstuetzung-treffen-berlin-100.json"
+            }
+          ],
+          "type": "related"
+        },
+        {
+          "quotation": {
+            "text": "\"Auf geht’s, die ganze Stadt an die Seite der Jugend!\""
+          },
+          "type": "quotation"
+        }
+      ]
+    }
+  },
+  "tools": 6,
+  "calls": [
+    {
+      "name": "getBriefing",
+      "arguments": {},
+      "expect": {
+        "status": "ok",
+        "topStories.0.sophoraId": "gipfel-koalition-willige-ukraine-100",
+        "regionalLeftOut": 2
+      }
+    },
+    {
+      "name": "getRegionalNews",
+      "arguments": {
+        "states": [
+          "Berlin"
+        ],
+        "perState": 2
+      },
+      "expect": {
+        "status": "ok",
+        "states.0.id": "3",
+        "states.0.nextDate": "261112",
+        "stories.0.broadcaster": "rbb"
+      }
+    },
+    {
+      "name": "getTopicCoverage",
+      "arguments": {
+        "query": "Bundestag",
+        "pageSize": 10
+      },
+      "expect": {
+        "status": "ok",
+        "total": 109,
+        "pages": 11
+      }
+    },
+    {
+      "name": "getLiveStreams",
+      "arguments": {},
+      "expect": {
+        "status": "ok",
+        "channels.0.kind": "live",
+        "channels.0.hls": "https://tagesschau-live.ard-mcdn.de/tagesschau/live/hls/de/master.m3u8"
+      }
+    },
+    {
+      "name": "getArticle",
+      "arguments": {
+        "article": "inland/innenpolitik/gipfel-koalition-willige-ukraine-100",
+        "limit": 2
+      },
+      "expect": {
+        "status": "ok",
+        "nextOffset": 2
+      }
+    },
+    {
+      "name": "getRegionalNews",
+      "arguments": {
+        "states": [
+          "Berlin"
+        ],
+        "perState": 500
+      },
+      "error": true
+    }
+  ]
+}
