@@ -331,7 +331,7 @@ apps/cli/src/cli/
     io.ts        # injectable I/O seam (stdout/stderr/file), the logger and the clock
     log.ts       # the stderr log: records with ts, level, topic; --log-format text|jsonl
     shared.ts    # option parsers, global-option resolver, JSON renderer
-    commands/    # homepage / news / channels / search
+    commands/    # homepage / news / article / channels / search
     program.ts   # assembles the commander program from injectable deps
     run.ts       # parses argv -> exit code (no process.exit; testable)
     index.ts     # #! bin shim

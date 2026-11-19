@@ -14,7 +14,7 @@ JSON you can pipe straight into [`jq`](https://jqlang.github.io/jq/).
 
 - **Works out of the box** — no account, no API key, no configuration. Install and read.
 - **Clean JSON output** — pretty-printed by default, `--compact` for one-line/scripting.
-- **Four commands** — `homepage`, `news`, `channels`, `search`.
+- **Five commands** — `homepage`, `news`, `article`, `channels`, `search`.
 - **Read-only** — every call is a plain GET; nothing is written, nothing is sent except the query.
 
 > Want to use this as a TypeScript library or understand how it's built?
@@ -107,6 +107,7 @@ tagesschau homepage | jq -r '.news[].title'
 ```text
 homepage                                     curated front-page feed (top + regional)
 news     [--ressort <r>] [--region <id>…]   news feed, optionally filtered
+article  <id>                                one item in full (its content blocks)
 channels                                     live/broadcast channels
 search   <text> [--page-size <n>] [--result-page <n>]   full-text search
 ```
@@ -130,6 +131,19 @@ national, `regionId: 0`), so the CLI refuses `--ressort` together with `--region
 (exit `1`, no request). For a topic within a state, fetch the region feed and
 filter it locally (see [Usage.md](https://github.com/maschinenlesbar-org/tagesschau-cli/blob/main/Usage.md), use case 6). The
 **[Glossary](https://github.com/maschinenlesbar-org/tagesschau-cli/blob/main/GLOSSARY.md)** decodes every term.
+
+### `article`
+
+One item in full: its `content` blocks (paragraphs, headings, quotes, boxes), which the feeds
+leave out. `<id>` is the item's `details` URL as a feed or search answer gives it
+(`https://www.tagesschau.de/api2u/inland/….json`), or its path under `/api2u/` with or without
+`.json` (`inland/innenpolitik/gipfel-koalition-willige-ukraine-100`). Anything else — another
+host, a query, `..` — is refused before any request (exit `1`). An item that has been taken
+down is the API's `404` (exit `4`).
+
+```bash
+tagesschau article "$(tagesschau homepage | jq -r '.news[0].details')" | jq -r '.content[] | select(.type=="text") | .value'
+```
 
 ### `channels`
 

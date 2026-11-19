@@ -75,6 +75,19 @@ export function registerNewsCommands(program: Command, deps: CliDeps): void {
     );
 
   program
+    .command("article <id>")
+    .description(
+      "One item in full (its content blocks): the item's details URL, or its path under /api2u/ without .json",
+    )
+    .action(
+      action(deps, async ({ client, global }, [id]) => {
+        // An id that is no item of www.tagesschau.de/api2u is refused by client.article() itself
+        // (articleIdProblem), before any request.
+        renderJson(deps, global, await client.article(id as string));
+      }),
+    );
+
+  program
     .command("channels")
     .description("The live/broadcast channels")
     .action(

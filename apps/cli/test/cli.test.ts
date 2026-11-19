@@ -648,3 +648,35 @@ test("a --base-url typed without its scheme never names its user name or token, 
     );
   }
 });
+
+test("article fetches one item by its details URL or its path", async () => {
+  const item = { title: "Gipfel", content: [{ type: "text", value: "Absatz." }] };
+  for (const id of [
+    "https://www.tagesschau.de/api2u/inland/innenpolitik/gipfel-100.json",
+    "inland/innenpolitik/gipfel-100",
+    "/api2u/inland/innenpolitik/gipfel-100.json",
+  ]) {
+    const cli = makeCli(() => jsonResponse(item));
+    assert.equal(await run(["--compact", "article", id], cli.deps), 0, id);
+    assert.equal(new URL(cli.mt.last().url).pathname, "/api2u/inland/innenpolitik/gipfel-100.json", id);
+    assert.deepEqual(JSON.parse(cli.out.join("")), item, id);
+  }
+});
+
+test("article refuses an id of another host, with a query or a path escape, before any request", async () => {
+  for (const id of [
+    "https://example.org/api2u/inland/x-100.json",
+    "inland/x-100?foo=1",
+    "../secret",
+    "",
+  ]) {
+    const cli = makeCli(() => jsonResponse({ title: "x" }));
+    assert.equal(await run(["article", id], cli.deps), 1, id);
+    assert.equal(cli.mt.calls.length, 0, id);
+  }
+});
+
+test("article: an item that is gone is the API's 404, exit 4", async () => {
+  const cli = makeCli(() => jsonResponse({ message: "Not Found" }, 404));
+  assert.equal(await run(["article", "inland/weg-100"], cli.deps), 4);
+});

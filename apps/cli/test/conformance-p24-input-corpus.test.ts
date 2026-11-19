@@ -43,21 +43,25 @@ const textInputs: Input[] = [
   { name: "search <text>", argv: (v) => ["search", v], lib: (c, v) => c.search({ searchText: v }), sent: (u) => u.searchParams.get("searchText") },
 ];
 /**
- * Every token: no id goes into a path here (every endpoint has a fixed path), but the codes are
- * tokens sent as query parameters: --ressort and --region (checked against their allow-lists, so
- * the corpus's ids are all refused) and the --date cursor (YYMMDD).
+ * Every token: the codes sent as query parameters — --ressort and --region (checked against their
+ * allow-lists, so the corpus's ids are all refused) and the --date cursor (YYMMDD) — and the one
+ * id that goes into a path, `article <id>` (an item's path under /api2u/).
  */
 const idInputs: Input[] = [
   { name: "news --ressort", argv: (v) => ["news", "--ressort", v], lib: (c, v) => c.news({ ressort: v as never }), sent: (u) => u.searchParams.get("ressort") },
   { name: "news --region", argv: (v) => ["news", "--region", v], lib: (c, v) => c.news({ regions: [v] as never }), sent: (u) => u.searchParams.get("regions") },
   { name: "news --date", argv: (v) => ["news", "--date", v], lib: (c, v) => c.news({ date: v }), sent: (u) => u.searchParams.get("date") },
+  { name: "article <id>", argv: (v) => ["article", v], lib: (c, v) => c.article(v), sent: (u) => decodeURIComponent(u.pathname.replace(/^\/api2u\//, "").replace(/\.json$/, "")) },
 ];
 /** Every comma-separated list option. None: --region repeats instead, each value a token above. */
 const listInputs: Array<Input<string[] | null>> = [];
 /** The token as the repo sends it (trimmed, NFC). */
 const canonicalId = (value: string): string => value.trim().normalize("NFC");
-/** A valid answer to any of these requests (a news feed and a search result in one). */
-const respond = (_req: HttpRequest): HttpResponse => jsonResponse({ news: [], regional: [], searchResults: [], totalItemCount: 0 });
+/** A valid answer to any of these requests: an item for an article's path, else a news feed and a search result in one. */
+const respond = (req: HttpRequest): HttpResponse =>
+  new URL(req.url).pathname.endsWith(".json")
+    ? jsonResponse({ title: "Item" })
+    : jsonResponse({ news: [], regional: [], searchResults: [], totalItemCount: 0 });
 // --------------------------------------------------------------------------------------
 
 /** Values every input refuses: blank, only invisible characters or combining marks, a lone surrogate, a control or format character. */

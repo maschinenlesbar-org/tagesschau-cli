@@ -156,6 +156,16 @@ the default, is the first page); `--page-size` must be `>= 1`. Both are at most
 tagesschau search "Wahl" --page-size 20 --result-page 1
 ```
 
+### 8b. Read one article in full
+
+Why: the feeds give an item's title, teaser and links, not its text. `article` fetches the
+item's `content` blocks; pass the item's `details` URL (or its path under `/api2u/`).
+
+```bash
+url=$(tagesschau homepage | jq -r '.news[0].details')
+tagesschau article "$url" | jq -r '.content[] | select(.type=="text") | .value'
+```
+
 ### 9. List the live / broadcast channels
 
 Why: discover the linear and streaming programme feeds and their stream URLs.
