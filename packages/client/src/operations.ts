@@ -755,7 +755,8 @@ function kindOf(title: string, date: string | undefined): Channel["kind"] {
  * protocol, read whole (the HLS link is `adaptivestreaming`); a channel without streams is listed
  * as unavailable, never with a blank link. Grouped live, editions, accessible. Two entries of one
  * title (two tagesschau editions) are both kept, told apart by date. `show` narrows to the titles
- * containing it; none is `empty`, naming the titles there are, never a guessed link.
+ * containing it, or its words in another inflection (Einfache Sprache); none is `empty`, naming
+ * the titles there are, never a guessed link.
  */
 export async function getLiveStreams(client: TagesschauClient, input: { show?: string | undefined } = {}): Promise<LiveStreams> {
   const show = input.show === undefined ? undefined : freeText("show", input.show, 100);
@@ -776,7 +777,9 @@ export async function getLiveStreams(client: TagesschauClient, input: { show?: s
     .map((c, i) => ({ c, i }))
     .sort((a, b) => order[a.c.kind] - order[b.c.kind] || a.i - b.i)
     .map(({ c }) => c);
-  const channels = show === undefined ? all : all.filter((c) => fold(c.title).includes(fold(show)));
+  // The title as typed (folded, spaces aside), or its words with an inflection left aside: the
+  // channel is "tagesschau in Einfacher Sprache", a user types "Einfache Sprache".
+  const channels = show === undefined ? all : all.filter((c) => fold(c.title).includes(fold(show)) || mentionsWords(c.title, show));
   const notes = ["HLS links (.m3u8) play in VLC, mpv, Safari or any HLS player; h264 links are MP4 files of a dated edition."];
   const titles = all.map((c) => c.title);
   const repeated = [...new Set(titles.filter((t, i) => titles.indexOf(t) !== i))];

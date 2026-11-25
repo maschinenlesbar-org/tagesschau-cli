@@ -249,6 +249,10 @@ test("live streams: a show narrows by title; one not offered is empty naming tho
   const mock = tagesschauApi({ channels });
   const sign = await getLiveStreams(client(mock), { show: "Gebärdensprache" });
   assert.deepEqual(sign.channels.map((c) => c.title), ["tagesschau mit Gebärdensprache"]);
+  // The title says "in Einfacher Sprache"; a user types the name as "Einfache Sprache".
+  for (const show of ["Einfache Sprache", "tagesschau in Einfache Sprache", "einfacher sprache"]) {
+    assert.deepEqual((await getLiveStreams(client(mock), { show })).channels.map((c) => c.title), ["tagesschau in Einfacher Sprache"], show);
+  }
   const extra = await getLiveStreams(client(mock), { show: "extra" });
   assert.deepEqual([extra.channels[0]?.available, extra.channels[0]?.hls], [false, undefined]);
   assert.match(extra.verdict, /1 without a stream right now/);
