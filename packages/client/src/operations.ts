@@ -751,11 +751,20 @@ function kindOf(title: string, date: string | undefined): Channel["kind"] {
 }
 
 /**
+ * True when `show` asks for the livestream by its channel's name (tagesschau24, the livestream,
+ * live): the livestream's title names the programme running now ("Im Livestream: morgenmagazin").
+ */
+function asksForLivestream(show: string): boolean {
+  return ["tagesschau24", ""].includes(fold(show).replace(/live(?:stream)?$/, ""));
+}
+
+/**
  * The live and broadcast channels with their playable links: `streams` is an object keyed by
  * protocol, read whole (the HLS link is `adaptivestreaming`); a channel without streams is listed
  * as unavailable, never with a blank link. Grouped live, editions, accessible. Two entries of one
  * title (two tagesschau editions) are both kept, told apart by date. `show` narrows to the titles
- * containing it, or its words in another inflection (Einfache Sprache); none is `empty`, naming
+ * containing it, or its words in another inflection (Einfache Sprache), and tagesschau24 or
+ * "livestream" the livestream whatever programme its title names; none is `empty`, naming
  * the titles there are, never a guessed link.
  */
 export async function getLiveStreams(client: TagesschauClient, input: { show?: string | undefined } = {}): Promise<LiveStreams> {
@@ -779,8 +788,11 @@ export async function getLiveStreams(client: TagesschauClient, input: { show?: s
     .map(({ c }) => c);
   // The title as typed (folded, spaces aside), or its words with an inflection left aside: the
   // channel is "tagesschau in Einfacher Sprache", a user types "Einfache Sprache".
-  const channels = show === undefined ? all : all.filter((c) => fold(c.title).includes(fold(show)) || mentionsWords(c.title, show));
+  const live = show !== undefined && asksForLivestream(show);
+  const channels = show === undefined ? all : all.filter((c) => (live && c.kind === "live") || fold(c.title).includes(fold(show)) || mentionsWords(c.title, show));
   const notes = ["HLS links (.m3u8) play in VLC, mpv, Safari or any HLS player; h264 links are MP4 files of a dated edition."];
+  const renamed = channels.find((c) => c.kind === "live" && !fold(c.title).includes("tagesschau24"));
+  if (renamed !== undefined) notes.push(`The livestream is tagesschau24's, the same link all day; its title names the programme running now (${quoteValue(renamed.title)}).`);
   const titles = all.map((c) => c.title);
   const repeated = [...new Set(titles.filter((t, i) => titles.indexOf(t) !== i))];
   if (repeated.length > 0) notes.push(`Listed more than once: ${repeated.map((t) => quoteValue(t)).join(", ")}: different editions, told apart by date.`);

@@ -38,7 +38,7 @@ Returns `{ channels: [...], type }`. There are ~8 channels. Each entry:
 
 | Field | Meaning |
 |---|---|
-| `title` | Channel name, e.g. `Im Livestream: tagesschau24`, `tagesschau`, `tagesthemen`, `tagesschau in 100 Sekunden`, `tagesschau in Einfacher Sprache`, `tagesschau mit Gebärdensprache`, `tagesschau vor 20 Jahren` |
+| `title` | Channel name, e.g. `Im Livestream: tagesschau24` (the livestream's title names the programme running now — `Im Livestream: morgenmagazin` in the morning — and it is the tagesschau24 stream either way), `tagesschau`, `tagesthemen`, `tagesschau in 100 Sekunden`, `tagesschau in Einfacher Sprache`, `tagesschau mit Gebärdensprache`, `tagesschau vor 20 Jahren` |
 | `streams` | **Object** of `{ <protocol>: <url> }` — usually `{ "adaptivestreaming": "https://…/master.m3u8" }`. This is the playable link |
 | `type` | Typically `video` |
 | `copyright` | Rights holder (`tagesschau`) |
@@ -84,4 +84,5 @@ Rules:
 - Read the URL from `streams.adaptivestreaming` (or whatever protocol key exists); if a
   channel has no `streams`, say it's currently unavailable rather than emitting a blank.
 - Don't fabricate availability — the feed lists what ARD currently offers; if a requested
-  format (e.g. a specific show) isn't in the list, say so.
+  format (e.g. a specific show) isn't in the list, say so. tagesschau24 is always the
+  entry whose title starts `Im Livestream:` (and has no `date`), whatever show it names.

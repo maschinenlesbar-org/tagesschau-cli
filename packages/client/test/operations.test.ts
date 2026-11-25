@@ -244,6 +244,20 @@ test("live streams: the livestream first with its HLS link and no date; editions
   assert.ok(Object.keys(s.channels[1]?.streams ?? {}).length > 1, "every protocol, not one flat link");
 });
 
+test("live streams: tagesschau24 or the livestream asked by name finds the livestream while it carries another show's title", async () => {
+  // Live on 2026-11-23 at 07:43 CET: the livestream ran as "Im Livestream: morgenmagazin", same HLS link.
+  const channels = CHANNELS.map((c, i) => (i === 0 ? variant(c, { title: "Im Livestream: morgenmagazin" }) : c));
+  const mock = tagesschauApi({ channels });
+  for (const show of ["tagesschau24", "tagesschau 24", "tagesschau24 live", "Livestream", "live"]) {
+    const s = await getLiveStreams(client(mock), { show });
+    assert.equal(s.status, "ok", show);
+    assert.deepEqual(s.channels.map((c) => [c.title, c.kind]), [["Im Livestream: morgenmagazin", "live"]], show);
+    assert.match(s.notes.join(" "), /livestream is tagesschau24's.*names the programme running now/, show);
+  }
+  assert.deepEqual((await getLiveStreams(client(mock), { show: "morgenmagazin" })).channels.map((c) => c.kind), ["live"]);
+  assert.equal((await getLiveStreams(client(mock), { show: "tagesthemen" })).channels.length, 1, "another show is no livestream");
+});
+
 test("live streams: a show narrows by title; one not offered is empty naming those there are; a channel without streams is unavailable", async () => {
   const channels = [...CHANNELS, { sophoraId: "x-1", title: "tagesschau extra", date: "2026-11-19T22:00:00.000+01:00", type: "video" }];
   const mock = tagesschauApi({ channels });
