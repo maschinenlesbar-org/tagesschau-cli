@@ -9,6 +9,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { TagesschauClient } from "../src/client.js";
+import type { JsonObject } from "../src/types.js";
 import { TagesschauParseError, TagesschauValidationError } from "../src/errors.js";
 import {
   broadcasterOf,
@@ -346,6 +347,24 @@ test("article: an item without text (a podcast webview) is empty, saying so and 
 test("article: an answer with a blank title is a parse error naming the shape, not a TypeError", async () => {
   const mock = tagesschauApi({ articles: { "inland/leer-100": variant(ARTICLE, { title: "   " }) } });
   await assert.rejects(getArticle(client(mock), { article: "inland/leer-100" }), (err: unknown) => err instanceof TagesschauParseError && /inland\/leer-100.*no title/.test(err.message));
+});
+
+test("shape drift: items that all lack a title are a parse error in every feed tool, never 'no news'; some without one are a note", async () => {
+  // A renamed field (headline for title) made every feed tool say "nothing to report right now".
+  const renamed = (items: readonly JsonObject[]): JsonObject[] => items.map(({ title, ...rest }) => ({ ...rest, headline: title ?? null }));
+  const mock = tagesschauApi({ homepage: renamed(HOMEPAGE_NEWS), ressorts: { inland: renamed(HOMEPAGE_NEWS) }, regions: { "13": renamed(HOMEPAGE_NEWS) }, search: renamed(SEARCH_RESULTS), channels: renamed(CHANNELS) });
+  const drift = (err: unknown): boolean => err instanceof TagesschauParseError && /none with a title: the answer's shape has changed/.test(err.message);
+  await assert.rejects(getBriefing(client(mock), {}), drift);
+  await assert.rejects(getBriefing(client(mock), { ressorts: ["inland"] }), drift);
+  await assert.rejects(getRegionalNews(client(mock), { states: ["Sachsen"] }), drift);
+  await assert.rejects(getNewsFeed(client(mock), {}), drift);
+  await assert.rejects(getTopicCoverage(client(mock), { query: "Bundestag", pageSize: 10 }), drift);
+  await assert.rejects(getLiveStreams(client(mock), {}), drift);
+  // Two of the homepage's items without a title: the rest is listed, and a note counts them.
+  const some = tagesschauApi({ homepage: HOMEPAGE_NEWS.map((item, i) => (i < 2 ? variant(item, { title: " " }) : item)) });
+  const b = await getBriefing(client(some), {});
+  assert.equal(b.topStories.length, HOMEPAGE_NEWS.length - 2);
+  assert.match(b.notes.join(" "), /2 items without a title left out \(homepage\)/);
 });
 
 // ---- helpers ---------------------------------------------------------------------------

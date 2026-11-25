@@ -173,6 +173,7 @@ export const TOOLS: readonly ToolDefinition[] = [
       duplicatesDropped: int,
       timeline: obj,
       spellingNote: str_,
+      notes: arr,
     }),
     source: (args) =>
       `search/?${buildQueryString({ searchText: (str(args, "query") ?? "").normalize("NFKC").trim(), pageSize: num(args, "pageSize") ?? 25, resultPage: (num(args, "page") ?? 1) - 1 })}`,
@@ -210,7 +211,7 @@ export const TOOLS: readonly ToolDefinition[] = [
       offset,
       limit: { type: "integer", minimum: 1, maximum: 100, description: "How many items (default 30)." },
     }),
-    outputSchema: output({ filter: obj, items: arr, repeatsDropped: int, nextDate: str_, total: int, nextOffset: int, query: str_, candidates: arr }),
+    outputSchema: output({ filter: obj, items: arr, repeatsDropped: int, nextDate: str_, total: int, nextOffset: int, query: str_, candidates: arr, notes: arr }),
     source: (args) => {
       const r = str(args, "ressort");
       const s = str(args, "state");

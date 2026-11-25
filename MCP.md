@@ -80,7 +80,9 @@ so a topic within a state is filtered here, as a word (a word's start, or from 4
 compound's end: "Eis" finds Eishockey, never Preise; "Wahl" finds Landtagswahl); "Frankfurt" alone is ambiguous (am Main or Oder) and
 asked back, never guessed; the search page is 1-based (the API's is 0-based) and matches spellings
 literally (a note says when to try ä, ö, ü or ß); an article that is gone (taken offline after a
-while, Depublizierung) says so.
+while, Depublizierung) says so. A feed whose items all come without a title is an error (the API's
+answer changed its shape), never an empty "nothing to report"; items without one among others are
+left out and counted in a note.
 
 Every tool only reads. An answer is JSON (`structuredContent` and the same as text), with the
 `source` it came from (whole, never cut like the data; an answer a redirect fetched from another

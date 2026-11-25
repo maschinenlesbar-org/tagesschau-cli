@@ -10,7 +10,8 @@
 //   videos apart, newest first, near-identical hits once, a timeline of the page;
 // - getLiveStreams (tagesschau-watch-live): the channels with their playable HLS link;
 // - getNewsFeed and getArticle: the news feed with its page cursor, and one item's text.
-// Ambiguity is reported, never guessed; an empty answer says what was asked and what to change.
+// Ambiguity is reported, never guessed; an empty answer says what was asked and what to change, and
+// a feed whose items all lack a title is a parse error (the answer's shape changed), never "no news".
 // The call's cancellation reaches every request through the transport.
 
 import { newsDateProblem, type TagesschauClient } from "./client.js";
@@ -128,6 +129,30 @@ export function headlineOf(item: NewsItem, options: { group?: string; teaser?: b
     ...(tags.length > 0 ? { tags } : {}),
     ...(stream === undefined ? {} : { stream }),
   };
+}
+
+/**
+ * The headlines of a feed's `items` (those with a title) and how many had none. When every item
+ * lacks one, the answer's shape has changed (a renamed field): a TagesschauParseError naming
+ * `what`, never an empty feed a model reports as a quiet news day.
+ */
+function readFeed(items: readonly unknown[], what: string, options: { group?: string; teaser?: boolean } = {}): { headlines: Headline[]; untitled: number } {
+  const headlines: Headline[] = [];
+  for (const item of items) {
+    const h = headlineOf(item as NewsItem, options);
+    if (h !== undefined) headlines.push(h);
+  }
+  if (items.length > 0 && headlines.length === 0) {
+    throw new TagesschauParseError(`The API sent ${items.length} items for ${what}, none with a title: the answer's shape has changed, and they can't be read. This is no empty feed.`);
+  }
+  return { headlines, untitled: items.length - headlines.length };
+}
+
+/** The note for items left out without a title, by where they came from; undefined for none. */
+function untitledNote(counts: readonly (readonly [string, number])[]): string | undefined {
+  const some = counts.filter(([, n]) => n > 0);
+  const total = some.reduce((sum, [, n]) => sum + n, 0);
+  return total === 0 ? undefined : `${total} items without a title left out (${some.map(([what, n]) => (some.length === 1 ? what : `${what} ${n}`)).join(", ")}).`;
 }
 
 /** The key two copies of one item share: the sophoraId, else the shareURL, else the title. */
@@ -390,23 +415,20 @@ export async function getBriefing(client: TagesschauClient, input: BriefingInput
   const counts: RessortCount[] = [];
   const notes: string[] = [];
   let regionalLeftOut: number | undefined;
+  const untitled: [string, number][] = [];
   if (withTop) {
     const home = await client.homepage();
-    const items = home.news.flatMap((item) => {
-      const h = headlineOf(item);
-      if (h === undefined) return [];
-      return [{ ...h, group: h.ressort ?? (h.type === "video" ? "video" : "weitere") }];
-    });
+    const read = readFeed(home.news, "the homepage");
+    untitled.push(["homepage", read.untitled]);
+    const items = read.headlines.map((h) => ({ ...h, group: h.ressort ?? (h.type === "video" ? "video" : "weitere") }));
     for (const h of dedup(items, seen).items) (h.breakingNews ? breaking : topStories).push(h);
     regionalLeftOut = home.regional.length;
   }
   for (const ressort of ressorts) {
     const feed = await client.news({ ressort });
-    const items = feed.news.flatMap((item) => {
-      const h = headlineOf(item, { group: ressort });
-      return h === undefined ? [] : [h];
-    });
-    const own = dedup(items);
+    const read = readFeed(feed.news, `the ${ressort} feed`, { group: ressort });
+    untitled.push([ressort, read.untitled]);
+    const own = dedup(read.headlines);
     const fresh = dedup(own.items, seen);
     const sorted = newestFirst(fresh.items);
     const lead = sorted.filter((h) => h.breakingNews);
@@ -428,6 +450,8 @@ export async function getBriefing(client: TagesschauClient, input: BriefingInput
     notes.push("The sport feed comes from sportschau.de: its items carry no ressort, are not in date order and repeat; here they are sorted newest first, listed once and grouped under sport.");
   }
   if (ressorts.length > 0) notes.push("Ressort feeds are not editorially ranked: their items are listed newest first; only topStories keep the homepage's ranking.");
+  const leftOut = untitledNote(untitled);
+  if (leftOut !== undefined) notes.push(leftOut);
   const total = breaking.length + topStories.length + ressortStories.length;
   const parts = [
     breaking.length === 0 ? "no breaking news" : `${breaking.length} breaking (Eilmeldung)`,
@@ -541,12 +565,12 @@ export async function getRegionalNews(client: TagesschauClient, input: RegionalI
   const listed = new Set<string>();
   const states: StateCount[] = [];
   const stories: (Headline & { state: string })[] = [];
+  const untitled: [string, number][] = [];
   for (const { query, state } of resolved) {
     const feed = await client.news({ regions: [state.id] });
-    const all = dedup(feed.news.flatMap((item) => {
-      const h = headlineOf(item);
-      return h === undefined ? [] : [h];
-    })).items;
+    const read = readFeed(feed.news, `${state.name}'s feed`);
+    untitled.push([state.name, read.untitled]);
+    const all = dedup(read.headlines).items;
     const matched = newestFirst(topic === undefined ? all : all.filter((h) => mentions(h, topic)));
     const fresh = dedup(matched, listed);
     const shown = fresh.items.slice(0, perState);
@@ -575,6 +599,8 @@ export async function getRegionalNews(client: TagesschauClient, input: RegionalI
     notes.push(`Filtered here for ${quoteValue(topic)} as a word (or a word's start, or from 4 letters a compound's end) on title, topline, teaser and tags: the API can't combine a region with a Ressort (it drops the region). Regional items have no ressort, and MDR items no tags.`);
   }
   notes.push("firstSentence is missing on most NDR and MDR items: use the topline. Each item links to its broadcaster's site (shareURL).");
+  const leftOut = untitledNote(untitled);
+  if (leftOut !== undefined) notes.push(leftOut);
   const empty = states.filter((s) => s.shown === 0 && s.alsoUnder === 0);
   const status = stories.length === 0 ? "empty" : "ok";
   const reason =
@@ -630,6 +656,8 @@ export interface Coverage {
   /** This page's hits by age (Europe/Berlin calendar days): is coverage rising or fading? */
   timeline: { today: number; lastSevenDays: number; older: number; newest?: string; oldest?: string };
   spellingNote?: string;
+  /** Hits left out (without a title). */
+  notes?: string[];
 }
 
 /** The calendar day of `time` in Europe/Berlin, as days since the epoch. */
@@ -659,10 +687,8 @@ export async function getTopicCoverage(client: TagesschauClient, input: Coverage
   const query = answer.searchText ?? input.query.normalize("NFKC").trim();
   const total = answer.totalItemCount ?? answer.searchResults.length;
   const pages = Math.ceil(total / pageSize);
-  const hits = answer.searchResults.flatMap((item) => {
-    const h = headlineOf(item, { teaser: true });
-    return h === undefined ? [] : [h];
-  });
+  const read = readFeed(answer.searchResults, "the search", { teaser: true });
+  const hits = read.headlines;
   const byId = dedup(hits);
   // Near-identical: the same title on the same day (live coverage repeats videos).
   const seenTitles = new Set<string>();
@@ -714,6 +740,7 @@ export async function getTopicCoverage(client: TagesschauClient, input: Coverage
     duplicatesDropped,
     timeline,
     ...(spellingNote === undefined ? {} : { spellingNote }),
+    ...(read.untitled === 0 ? {} : { notes: [untitledNote([["search", read.untitled]]) as string] }),
   };
 }
 
@@ -771,6 +798,8 @@ export async function getLiveStreams(client: TagesschauClient, input: { show?: s
   const show = input.show === undefined ? undefined : freeText("show", input.show, 100);
   const answer = await client.channels();
   const order = { live: 0, edition: 1, accessible: 2 } as const;
+  // Every channel without a title: the answer's shape changed (readFeed's rule), not "no channel".
+  readFeed(answer.channels.map((item) => (isObject(item) ? { title: item["title"] } : item)), "the channels");
   const all = answer.channels
     .flatMap((item): Channel[] => {
       const title = text(item, "title");
@@ -833,6 +862,8 @@ export type NewsFeed =
       repeatsDropped: number;
       /** The cursor of the next, older page: pass it back as date. */
       nextDate?: string;
+      /** Items left out (without a title). */
+      notes?: string[];
     }
   | { status: "ambiguous"; query: string; reason: string; candidates: { id: Region; name: string }[] };
 
@@ -863,11 +894,8 @@ export async function getNewsFeed(client: TagesschauClient, input: NewsFeedInput
   }
   const date = input.date?.trim();
   const feed = await client.news({ ...(ressort === undefined ? {} : { ressort }), ...(state === undefined ? {} : { regions: [state.id] }), ...(date === undefined ? {} : { date }) });
-  const all = feed.news.flatMap((item) => {
-    const h = headlineOf(item, { ...(ressort === undefined ? {} : { group: ressort }) });
-    return h === undefined ? [] : [h];
-  });
-  const { items, dropped } = dedup(all);
+  const read = readFeed(feed.news, "the feed", { ...(ressort === undefined ? {} : { group: ressort }) });
+  const { items, dropped } = dedup(read.headlines);
   const nextDate = nextDateOf(feed.nextPage);
   const filter = { ...(ressort === undefined ? {} : { ressort }), ...(state === undefined ? {} : { state: state.name, region: state.id }), ...(date === undefined ? {} : { date }) };
   return {
@@ -877,6 +905,7 @@ export async function getNewsFeed(client: TagesschauClient, input: NewsFeedInput
     items,
     repeatsDropped: dropped,
     ...(nextDate === undefined ? {} : { nextDate }),
+    ...(read.untitled === 0 ? {} : { notes: [untitledNote([["feed", read.untitled]]) as string] }),
   };
 }
 
