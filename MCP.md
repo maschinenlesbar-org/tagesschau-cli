@@ -135,7 +135,9 @@ where the reason is).
   at most 60 requests an hour, and the server keeps to that: a request beyond 60 in the last hour is
   refused before it is sent, and the tool's answer says when the next one is possible. The tools
   answer a question with one to four requests, and the instructions tell a model not to loop pages
-  or states unasked.
+  or states unasked. A briefing or regional call whose later feed is refused (or runs into the
+  deadline, or fails) after others were read answers with those, naming the feeds not read
+  (`not read: Bremen, Sachsen`), and sends nothing more.
 - **Results are data.** Text from the API, keys included, is cleaned (control, bidi, zero-width, tag
   and other invisible characters removed, but an emoji keeps its joiners; a key that cleaning makes
   equal to another stays, as `name~2`), but it is still other people's text: a model can be told

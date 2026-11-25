@@ -9,9 +9,12 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import http from "node:http";
+import { nodeHttpTransport } from "../src/mcp/api.js";
+import { limitTransport } from "../src/mcp/limiter.js";
 import { listTools } from "../src/mcp/server.js";
 import { connect } from "./harness.js";
-import { HOMEPAGE_NEWS, tagesschauApi, variant } from "./helpers.js";
+import { HOMEPAGE_NEWS, tagesschauAnswer, tagesschauApi, variant } from "./helpers.js";
 
 const API = "https://www.tagesschau.de/api2u";
 
@@ -136,6 +139,32 @@ test("getArticle: an offset past the last block is empty, saying how many blocks
     assert.equal(past["blockCount"], 9);
   }
   await connection.close();
+});
+
+test("getRegionalNews: a state still loading at the call deadline is named as not read in time; the states read are the answer", async () => {
+  // A real transport, as the server runs it (the limiter passes the call's signal to each request):
+  // Berlin answers, Bremen never does. The call failed whole, after "Request timed out after 30000ms".
+  const server = http.createServer((req, res) => {
+    const url = new URL(req.url ?? "/", "http://x");
+    if (url.searchParams.get("regions") !== "3") return;
+    const answer = tagesschauAnswer({ method: "GET", url: `https://www.tagesschau.de${req.url ?? "/"}` });
+    res.writeHead(answer.status, { "content-type": "application/json" }).end(answer.body);
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const { port } = server.address() as { port: number };
+  try {
+    const connection = await connect({ transport: { transport: limitTransport(nodeHttpTransport) }, config: { baseUrl: `http://127.0.0.1:${port}`, callTimeoutMs: 400 } });
+    const result = await connection.call("getRegionalNews", { states: ["Berlin", "Bremen"] });
+    await connection.close();
+    const content = result.structuredContent ?? {};
+    assert.equal(content["status"], "ok", result.content[0]?.text);
+    assert.deepEqual((content["states"] as { name: string }[]).map((st) => st.name), ["Berlin"]);
+    assert.match((content["notes"] as string[]).join(" "), /Not read: Bremen \(the call's time ran out, or it was cancelled, first\)/);
+    assert.doesNotMatch(result.content[0]?.text ?? "", /timed out after 30000ms/);
+  } finally {
+    server.closeAllConnections();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
 });
 
 test("the server's transport keeps to the API's 60 requests an hour", async () => {

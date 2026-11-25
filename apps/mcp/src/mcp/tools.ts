@@ -113,7 +113,7 @@ export const TOOLS: readonly ToolDefinition[] = [
       return paths([...top, ...ressorts.map((r) => `news/?ressort=${encodeURIComponent(r)}`)]);
     },
     async run(args, context) {
-      return { ...(await getBriefing(context.client, { ressorts: list(args, "ressorts"), topStories: args["topStories"] === true, perRessort: num(args, "perRessort") })) };
+      return { ...(await getBriefing(context.client, { ressorts: list(args, "ressorts"), topStories: args["topStories"] === true, perRessort: num(args, "perRessort"), signal: context.signal })) };
     },
   },
   {
@@ -141,7 +141,7 @@ export const TOOLS: readonly ToolDefinition[] = [
       return ids.length === 1 ? `news/?regions=${ids[0] as string}` : `news/?regions={${ids.join(",")}}`;
     },
     async run(args, context) {
-      return { ...(await getRegionalNews(context.client, { states: list(args, "states") ?? [], topic: str(args, "topic"), perState: num(args, "perState") })) };
+      return { ...(await getRegionalNews(context.client, { states: list(args, "states") ?? [], topic: str(args, "topic"), perState: num(args, "perState"), signal: context.signal })) };
     },
   },
   {

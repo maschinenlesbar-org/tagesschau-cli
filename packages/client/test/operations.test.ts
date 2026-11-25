@@ -10,7 +10,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { TagesschauClient } from "../src/client.js";
 import type { JsonObject } from "../src/types.js";
-import { TagesschauParseError, TagesschauValidationError } from "../src/errors.js";
+import { TagesschauNetworkError, TagesschauParseError, TagesschauValidationError } from "../src/errors.js";
+import { hourlyBudget } from "../src/budget.js";
 import {
   broadcasterOf,
   fold,
@@ -23,7 +24,7 @@ import {
   plainText,
   resolveState,
 } from "../src/operations.js";
-import { ARTICLE, CHANNELS, HOMEPAGE_NEWS, SEARCH_RESULTS, tagesschauApi, variant } from "./fixtures.js";
+import { ARTICLE, CHANNELS, HOMEPAGE_NEWS, SEARCH_RESULTS, tagesschauAnswer, tagesschauApi, variant } from "./fixtures.js";
 import { jsonResponse, makeMockTransport } from "./helpers.js";
 
 const client = (mock: ReturnType<typeof tagesschauApi>) => new TagesschauClient({ transport: mock.transport });
@@ -399,6 +400,39 @@ test("shape drift: items that all lack a title are a parse error in every feed t
   const b = await getBriefing(client(some), {});
   assert.equal(b.topStories.length, HOMEPAGE_NEWS.length - 2);
   assert.match(b.notes.join(" "), /2 items without a title left out \(homepage\)/);
+});
+
+test("a request refused or failed after others were read leaves the states and feeds read, naming those not read", async () => {
+  // The hourly budget had two slots left for four states: two feeds were read, then the call failed whole.
+  const mock = tagesschauApi();
+  const two = new TagesschauClient({ transport: hourlyBudget(mock.transport, { max: 2 }) });
+  const r = await getRegionalNews(two, { states: ["Berlin", "Hamburg", "Bremen", "Sachsen"] });
+  assert.ok(r.status === "ok", JSON.stringify(r));
+  assert.deepEqual(r.states.map((st) => st.name), ["Berlin", "Hamburg"]);
+  assert.match(r.verdict, /not read: Bremen, Sachsen/);
+  assert.match(r.notes.join(" "), /Not read: Bremen, Sachsen \(GET .*regions=5 failed: not sent: the Tagesschau API allows 2 requests an hour/);
+  assert.equal(mock.calls.length, 2, "nothing more is tried after a refusal");
+  const brief = tagesschauApi();
+  const b = await getBriefing(new TagesschauClient({ transport: hourlyBudget(brief.transport, { max: 2 }) }), { ressorts: ["inland", "sport", "wissen"], topStories: true });
+  assert.equal(b.status, "ok");
+  assert.deepEqual(b.ressorts.map((c) => c.ressort), ["inland"]);
+  assert.match(b.verdict, /not read: sport, wissen/);
+  // The first request failing is the call failing, as before; so is a shape the server can't read.
+  const down = makeMockTransport(() => {
+    throw new TagesschauNetworkError("connect ECONNREFUSED");
+  });
+  await assert.rejects(getRegionalNews(new TagesschauClient({ transport: down.transport, maxRetries: 0 }), { states: ["Bayern", "Berlin"] }), /ECONNREFUSED/);
+  assert.equal(down.calls.length, 1);
+  // A caller's deadline that stopped the second request is named as such, not as the request's failure.
+  const deadline = new AbortController();
+  const slow = makeMockTransport((request) => {
+    if (request.url.includes("regions=3")) return tagesschauAnswer(request);
+    deadline.abort();
+    throw new TagesschauNetworkError("Request aborted by its caller before it finished");
+  });
+  const cut = await getRegionalNews(new TagesschauClient({ transport: slow.transport }), { states: ["Berlin", "Bremen"], signal: deadline.signal });
+  assert.ok(cut.status === "ok");
+  assert.match(cut.notes.join(" "), /Not read: Bremen \(the call's time ran out, or it was cancelled, first\)/);
 });
 
 // ---- helpers ---------------------------------------------------------------------------

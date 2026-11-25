@@ -15,7 +15,7 @@
 // The call's cancellation reaches every request through the transport.
 
 import { newsDateProblem, type TagesschauClient } from "./client.js";
-import { TagesschauApiError, TagesschauParseError, TagesschauValidationError, quoteValue } from "./errors.js";
+import { TagesschauApiError, TagesschauNetworkError, TagesschauParseError, TagesschauValidationError, quoteValue } from "./errors.js";
 import type { Region, Ressort } from "./enums.js";
 import type { JsonObject, JsonValue, NewsItem } from "./types.js";
 import { articleIdOf, articleIdProblem, ressortProblem, searchSpellingHint, searchTextProblem, textProblem } from "./validate.js";
@@ -246,6 +246,25 @@ export function mentionsWords(field: string, topic: string): boolean {
   return false;
 }
 
+/**
+ * True for a failure after which the feeds already read still stand: a request that failed or was
+ * refused (the network, the hourly budget, an HTTP error, the caller's deadline), not an answer
+ * this code can't read.
+ */
+function leavesWhatWasRead(err: unknown): boolean {
+  return err instanceof TagesschauNetworkError || err instanceof TagesschauApiError;
+}
+
+/** Why a feed wasn't read, for a note: the caller's deadline or cancellation (`signal` aborted), else the error. */
+function whyNotRead(err: unknown, signal: AbortSignal | undefined): string {
+  return signal?.aborted === true ? "the call's time ran out, or it was cancelled, first" : err instanceof Error ? err.message : String(err);
+}
+
+/** The note for feeds not read after a failure, and what to do. */
+function notReadNote(names: readonly string[], why: string): string {
+  return `Not read: ${names.join(", ")} (${why}). The answer holds what was read before; ask for the rest later, not in a loop.`;
+}
+
 /** `value` as a 1-based count within `min`..`max`, else the default; a non-integer is refused. */
 function countOf(name: string, value: number | undefined, min: number, max: number, fallback: number): number {
   if (value === undefined) return fallback;
@@ -362,6 +381,8 @@ export interface BriefingInput {
   topStories?: boolean | undefined;
   /** At most this many items per Ressort feed, newest first (1–30, default 10). */
   perRessort?: number | undefined;
+  /** The caller's deadline or cancellation: a feed missing after it aborted is noted as such. */
+  signal?: AbortSignal | undefined;
 }
 
 /** One Ressort feed of a briefing, counted. */
@@ -436,8 +457,23 @@ export async function getBriefing(client: TagesschauClient, input: BriefingInput
     for (const h of dedup(items, seen).items) (h.breakingNews ? breaking : topStories).push(h);
     regionalLeftOut = home.regional.length;
   }
+  const notRead: string[] = [];
+  let why = "";
   for (const ressort of ressorts) {
-    const feed = await client.news({ ressort });
+    if (notRead.length > 0) {
+      notRead.push(ressort);
+      continue;
+    }
+    let feed: Awaited<ReturnType<TagesschauClient["news"]>>;
+    try {
+      feed = await client.news({ ressort });
+    } catch (err) {
+      // A feed that fails after others were read leaves those (the hourly budget spent, the deadline).
+      if (!(withTop || counts.length > 0) || !leavesWhatWasRead(err)) throw err;
+      notRead.push(ressort);
+      why = whyNotRead(err, input.signal);
+      continue;
+    }
     const read = readFeed(feed.news, `the ${ressort} feed`, { group: ressort });
     untitled.push([ressort, read.untitled]);
     const own = dedup(read.headlines);
@@ -464,15 +500,19 @@ export async function getBriefing(client: TagesschauClient, input: BriefingInput
   if (ressorts.length > 0) notes.push("Ressort feeds are not editorially ranked: their items are listed newest first; only topStories keep the homepage's ranking.");
   const leftOut = untitledNote(untitled);
   if (leftOut !== undefined) notes.push(leftOut);
+  if (notRead.length > 0) notes.push(notReadNote(notRead, why));
   const total = breaking.length + topStories.length + ressortStories.length;
   const parts = [
     breaking.length === 0 ? "no breaking news" : `${breaking.length} breaking (Eilmeldung)`,
     ...(withTop ? [`${topStories.length} top stories`] : []),
     ...counts.map((c) => `${c.shown} of ${c.unique} ${c.ressort}${c.more > 0 ? ` (${c.more} more)` : ""}`),
+    ...(notRead.length > 0 ? [`not read: ${notRead.join(", ")}`] : []),
   ];
   return {
     status: total === 0 ? "empty" : "ok",
-    ...(total === 0 ? { reason: `The feeds came back empty (${[...(withTop ? ["homepage"] : []), ...ressorts].join(", ")}): nothing to report right now, no outage implied.` } : {}),
+    ...(total === 0
+      ? { reason: `The feeds came back empty (${[...(withTop ? ["homepage"] : []), ...counts.map((c) => c.ressort)].join(", ")}): nothing to report right now, no outage implied.${notRead.length > 0 ? ` ${notReadNote(notRead, why)}` : ""}` }
+      : {}),
     verdict: parts.join("; "),
     breaking,
     topStories,
@@ -496,6 +536,8 @@ export interface RegionalInput {
   topic?: string | undefined;
   /** At most this many items per state, newest first (1–30, default 10). */
   perState?: number | undefined;
+  /** The caller's deadline or cancellation: a state missing after it aborted is noted as such. */
+  signal?: AbortSignal | undefined;
 }
 
 /** One state of a regional answer, counted. */
@@ -578,8 +620,23 @@ export async function getRegionalNews(client: TagesschauClient, input: RegionalI
   const states: StateCount[] = [];
   const stories: (Headline & { state: string })[] = [];
   const untitled: [string, number][] = [];
+  const notRead: string[] = [];
+  let why = "";
   for (const { query, state } of resolved) {
-    const feed = await client.news({ regions: [state.id] });
+    if (notRead.length > 0) {
+      notRead.push(state.name);
+      continue;
+    }
+    let feed: Awaited<ReturnType<TagesschauClient["news"]>>;
+    try {
+      feed = await client.news({ regions: [state.id] });
+    } catch (err) {
+      // A state that fails after others were read leaves those (the hourly budget spent, the deadline).
+      if (states.length === 0 || !leavesWhatWasRead(err)) throw err;
+      notRead.push(state.name);
+      why = whyNotRead(err, input.signal);
+      continue;
+    }
     const read = readFeed(feed.news, `${state.name}'s feed`);
     untitled.push([state.name, read.untitled]);
     const all = dedup(read.headlines).items;
@@ -613,19 +670,20 @@ export async function getRegionalNews(client: TagesschauClient, input: RegionalI
   notes.push("firstSentence is missing on most NDR and MDR items: use the topline. Each item links to its broadcaster's site (shareURL).");
   const leftOut = untitledNote(untitled);
   if (leftOut !== undefined) notes.push(leftOut);
+  if (notRead.length > 0) notes.push(notReadNote(notRead, why));
   const empty = states.filter((s) => s.shown === 0 && s.alsoUnder === 0);
   const status = stories.length === 0 ? "empty" : "ok";
-  const reason =
-    empty.length === 0
-      ? undefined
-      : empty
-          .map((s) => (topic !== undefined && s.items > 0 ? `None of ${s.name}'s ${s.items} current items mentions ${quoteValue(topic)}; try a broader word or no topic.` : `Aktuell keine regionalen Meldungen für ${s.name}.`))
-          .join(" ");
+  const reasons = [
+    ...empty.map((s) => (topic !== undefined && s.items > 0 ? `None of ${s.name}'s ${s.items} current items mentions ${quoteValue(topic)}; try a broader word or no topic.` : `Aktuell keine regionalen Meldungen für ${s.name}.`)),
+    ...(status === "empty" && notRead.length > 0 ? [notReadNote(notRead, why)] : []),
+  ];
+  const reason = reasons.length === 0 ? undefined : reasons.join(" ");
   return {
     status,
     ...(reason === undefined ? {} : { reason }),
     verdict: states
       .map((s) => `${s.name}: ${s.shown} shown of ${s.matched - s.alsoUnder}${topic === undefined ? "" : ` mentioning ${quoteValue(topic)} (of ${s.items})`}${s.newest === undefined ? "" : `, newest ${s.newest.slice(0, 10)}`}`)
+      .concat(notRead.length > 0 ? [`not read: ${notRead.join(", ")}`] : [])
       .join("; "),
     states,
     stories,
