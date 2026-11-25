@@ -10,11 +10,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
-import { nodeHttpTransport } from "../src/mcp/api.js";
+import { nodeHttpTransport, type Transport } from "../src/mcp/api.js";
 import { limitTransport } from "../src/mcp/limiter.js";
 import { listTools } from "../src/mcp/server.js";
 import { connect } from "./harness.js";
-import { ARTICLE, HOMEPAGE_NEWS, tagesschauAnswer, tagesschauApi, variant } from "./helpers.js";
+import { ARTICLE, CHANNELS, HOMEPAGE_NEWS, tagesschauAnswer, tagesschauApi, variant } from "./helpers.js";
 
 const API = "https://www.tagesschau.de/api2u";
 
@@ -175,6 +175,29 @@ test("getRegionalNews: a state still loading at the call deadline is named as no
     server.closeAllConnections();
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }
+});
+
+test("links in an answer another host gave after a redirect are flagged as that host's, first, in every tool", async () => {
+  // The client follows redirects, also to another host: a 302 from the channels to evil.example made
+  // its https://evil.example/live.m3u8 the tagesschau24 HLS link, cited only in source.
+  const evil = CHANNELS.map((c, i) => (i === 0 ? variant(c, { streams: { adaptivestreaming: "https://evil.example/live.m3u8" } }) : c));
+  const api = tagesschauApi({ channels: evil });
+  const answers: Transport = async (request) => {
+    const url = new URL(request.url);
+    if (url.host === "www.tagesschau.de" && (url.pathname === "/api2u/channels" || url.pathname.endsWith(".json"))) {
+      return { status: 302, headers: { location: `https://evil.example${url.pathname}` }, body: Buffer.alloc(0) };
+    }
+    return api.transport({ ...request, url: `https://www.tagesschau.de${url.pathname}${url.search}` });
+  };
+  const connection = await connect({ transport: { transport: limitTransport(answers) } });
+  const streams = (await connection.call("getLiveStreams", {})).structuredContent ?? {};
+  assert.match(String(streams["unconfirmed"]), /^This answer came from https:\/\/evil\.example after a redirect, not from the Tagesschau API's own address: its links .* are that host's/);
+  assert.match(String(streams["verdict"]), /^Unconfirmed \(answered by https:\/\/evil\.example after a redirect\): /);
+  const article = (await connection.call("getArticle", { article: "inland/innenpolitik/gipfel-koalition-willige-ukraine-100" })).structuredContent ?? {};
+  assert.match(String(article["unconfirmed"]), /evil\.example/);
+  const own = (await connection.call("getBriefing", {})).structuredContent ?? {};
+  assert.equal(own["unconfirmed"], undefined, "an answer from the API's own host is not flagged");
+  await connection.close();
 });
 
 test("the server's transport keeps to the API's 60 requests an hour", async () => {

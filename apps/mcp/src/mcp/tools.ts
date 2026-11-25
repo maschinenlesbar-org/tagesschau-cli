@@ -20,6 +20,7 @@ import {
   articleIdOf,
   resolveState,
 } from "@maschinenlesbar.org/tagesschau-client";
+import { callScope } from "./limiter.js";
 import type { JsonSchema, ToolDefinition } from "./server.js";
 
 /** The service, as results and messages name it. */
@@ -57,6 +58,7 @@ const output = (properties: Record<string, JsonSchema>): JsonSchema => ({
     status: { type: "string", enum: ["ok", "ambiguous", "empty"], description: "ok: the answer; ambiguous: a name fits two states, ask which one and call again; empty: nothing there (reason says why and what to change)." },
     source: { type: "string" },
     licence: { type: "string" },
+    unconfirmed: { type: "string", description: "Set when another host answered after a redirect: its links (shareURL, hls, streams) are that host's, not tagesschau.de's. Say so first; don't hand them out as Tagesschau's." },
     truncated: { type: "boolean", description: "True when the answer holds only part of a list (size cap): nextOffset says where to go on; or a text cut at its end (it ends in \"…[cut, N characters in all]\")." },
     reason: { type: "string" },
     ...properties,
@@ -92,7 +94,24 @@ const regionOf = (name: string): string | undefined => {
 /** One path, or several in braces, under the API base. */
 const paths = (list: readonly string[]): string => (list.length === 1 ? (list[0] as string) : `{${list.join(",")}}`);
 
-export const TOOLS: readonly ToolDefinition[] = [
+/**
+ * An answer another host gave after a redirect (the client follows redirects, also to another
+ * origin) is flagged first: the kit cites that host in `source` and logs it, but the answer's links
+ * (a stream, an article page) are what a model hands out. Flagged, not withheld: tagesschau.de may
+ * move its API to another host of its own, and the answer is still what that host sent.
+ */
+function flagRedirected(answer: Record<string, unknown>): Record<string, unknown> {
+  const elsewhere = [...(callScope.getStore()?.redirects?.answered.keys() ?? [])];
+  if (elsewhere.length === 0) return answer;
+  const hosts = elsewhere.join(", ");
+  return {
+    ...answer,
+    unconfirmed: `This answer came from ${hosts} after a redirect, not from the Tagesschau API's own address: its links (shareURL, hls, streams) are that host's. Say so first, and don't hand them out as Tagesschau's.`,
+    ...(typeof answer["verdict"] === "string" ? { verdict: `Unconfirmed (answered by ${hosts} after a redirect): ${answer["verdict"]}` } : {}),
+  };
+}
+
+const DEFINITIONS: readonly ToolDefinition[] = [
   {
     name: "getBriefing",
     title: "News briefing",
@@ -286,3 +305,6 @@ export const TOOLS: readonly ToolDefinition[] = [
     },
   },
 ];
+
+/** The tools, each answer flagged when another host gave it after a redirect (flagRedirected). */
+export const TOOLS: readonly ToolDefinition[] = DEFINITIONS.map((tool) => ({ ...tool, run: async (args, context) => flagRedirected(await tool.run(args, context)) }));
