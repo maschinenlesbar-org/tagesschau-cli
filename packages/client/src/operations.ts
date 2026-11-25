@@ -962,7 +962,15 @@ export type Article =
       media?: Record<string, number>;
     };
 
-const ENTITIES: Readonly<Record<string, string>> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
+/** The named entities German news text uses; a soft hyphen (shy) is dropped. Case matters (Auml, auml); the six basic ones in any case. */
+const ENTITIES: Readonly<Record<string, string>> = {
+  amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ",
+  bdquo: "„", ldquo: "“", rdquo: "”", sbquo: "‚", lsquo: "‘", rsquo: "’", laquo: "«", raquo: "»", lsaquo: "‹", rsaquo: "›",
+  ndash: "–", mdash: "—", hellip: "…", shy: "", euro: "€", sect: "§", deg: "°", middot: "·", bull: "•", copy: "©", reg: "®", trade: "™",
+  times: "×", divide: "÷", plusmn: "±", frac12: "½", frac14: "¼", frac34: "¾", sup2: "²", sup3: "³", micro: "µ", para: "¶", thinsp: " ", ensp: " ", emsp: " ",
+  auml: "ä", ouml: "ö", uuml: "ü", Auml: "Ä", Ouml: "Ö", Uuml: "Ü", szlig: "ß", eacute: "é", egrave: "è", agrave: "à", aacute: "á", ccedil: "ç", oacute: "ó", iacute: "í", ntilde: "ñ", Eacute: "É",
+};
+const BASIC_ENTITIES = new Set(["amp", "lt", "gt", "quot", "apos", "nbsp"]);
 
 /** What a tag (the text between "<" and ">") becomes: a bullet for li, a line break for br and a closed block, else nothing. */
 function tagText(tag: string): string {
@@ -1026,7 +1034,8 @@ export function plainText(html: string): string {
         const code = name[1] === "x" || name[1] === "X" ? Number.parseInt(name.slice(2), 16) : Number(name.slice(1));
         return Number.isInteger(code) && code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : whole;
       }
-      return ENTITIES[name.toLowerCase()] ?? whole;
+      const lower = name.toLowerCase();
+      return (Object.hasOwn(ENTITIES, name) ? ENTITIES[name] : BASIC_ENTITIES.has(lower) ? ENTITIES[lower] : undefined) ?? whole;
     })
     .replace(/[ \t ]+/g, " ")
     .replace(/ *\n */g, "\n")

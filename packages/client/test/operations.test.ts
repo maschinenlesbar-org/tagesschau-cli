@@ -414,6 +414,11 @@ test("plainText: a bare '<' is text, a '>' inside a quoted attribute stays in th
   assert.equal(plainText("a <b"), "a <b", "a tag never closed is text");
 });
 
+test("plainText decodes the named entities of German text: quotes, dashes, ellipsis, euro, umlauts; a soft hyphen goes", () => {
+  assert.equal(plainText("&bdquo;Ja&ldquo; &ndash; 5&nbsp;&euro; &hellip; Stra&szlig;e &Auml;rger &auml;h Ge&shy;setz &raquo;x&laquo; 3&deg;"), "„Ja“ – 5 € … Straße Ärger äh Gesetz »x« 3°");
+  assert.equal(plainText("&AMP; &Bogus;"), "& &Bogus;");
+});
+
 test("the broadcaster comes from the shareURL host; fold spells umlauts out", () => {
   assert.deepEqual(["https://www1.wdr.de/x", "https://www.butenunbinnen.de/y", "https://example.org/", "not a url", null].map((u) => broadcasterOf(u)), ["WDR", "Radio Bremen", undefined, undefined, undefined]);
   assert.equal(fold("Thüringen-Süd Straße"), "thueringensuedstrasse");
