@@ -270,6 +270,10 @@ export const TOOLS: readonly ToolDefinition[] = [
       nextOffset: int,
     }),
     source: (args) => `${articleIdOf(str(args, "article") ?? "") ?? "…"}.json`,
+    // The article's text is what this tool is for: a paragraph comes whole (the longest live one had
+    // 832 characters), not cut at the 2000 characters other upstream text is; --max-result-chars
+    // still caps the result, and the blocks page (offset, limit).
+    maxFieldLength: 20_000,
     paged: (args) => ({ list: "blocks", offset: num(args, "offset") ?? 0 }),
     async run(args, context) {
       const answer = await getArticle(context.client, { article: str(args, "article") ?? "" });

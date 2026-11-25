@@ -87,8 +87,8 @@ left out and counted in a note.
 Every tool only reads. An answer is JSON (`structuredContent` and the same as text), with the
 `source` it came from (whole, never cut like the data; an answer a redirect fetched from another
 host says so there: "… (answered by https://other.example after a redirect)", and a WARN record
-names both) and the data licence. A text over 2000 characters is cut and ends in `…[cut, N
-characters in all]`, and the answer says `truncated`. An answer over `--max-result-chars` first
+names both) and the data licence. A text over 2000 characters (getArticle's text: 20,000) is cut
+and ends in `…[cut, N characters in all]`, and the answer says `truncated`. An answer over `--max-result-chars` first
 loses entries from the end of its page (then `nextOffset` says where to go on), then has its longest
 texts cut further (each with that mark) or, when that isn't enough, its other lists shortened
 (`reason` names them); a list keeps its first entry, `notes` stay whole, and the answer says

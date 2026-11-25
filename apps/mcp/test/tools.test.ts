@@ -14,7 +14,7 @@ import { nodeHttpTransport } from "../src/mcp/api.js";
 import { limitTransport } from "../src/mcp/limiter.js";
 import { listTools } from "../src/mcp/server.js";
 import { connect } from "./harness.js";
-import { HOMEPAGE_NEWS, tagesschauAnswer, tagesschauApi, variant } from "./helpers.js";
+import { ARTICLE, HOMEPAGE_NEWS, tagesschauAnswer, tagesschauApi, variant } from "./helpers.js";
 
 const API = "https://www.tagesschau.de/api2u";
 
@@ -128,6 +128,16 @@ test("getArticle: the text a page of blocks at a time; an id that is gone is emp
   assert.equal(foreign.isError, true);
   assert.equal(transport.calls.length, 2);
   await connection.close();
+});
+
+test("getArticle: a long paragraph arrives whole, not cut at the 2000 characters of other upstream text", async () => {
+  const long = `${"Ein langer Absatz. ".repeat(250)}Ende.`;
+  const article = { ...ARTICLE, content: [{ type: "text", value: long }] };
+  const connection = await connect({ transport: tagesschauApi({ articles: { "inland/lang-100": article } }) });
+  const content = (await connection.call("getArticle", { article: "inland/lang-100" })).structuredContent ?? {};
+  await connection.close();
+  assert.equal((content["blocks"] as { text: string }[])[0]?.text, long.trim());
+  assert.equal(content["truncated"], undefined);
 });
 
 test("getArticle: an offset past the last block is empty, saying how many blocks there are, as getNewsFeed says it", async () => {
