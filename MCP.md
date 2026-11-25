@@ -115,6 +115,11 @@ where the reason is).
 --log-format <text|jsonl>  the log records on stderr (default text)
 ```
 
+`--max-pages` has no effect here: no tool pages through the API. Each call makes a fixed number of
+requests (one per Ressort or state, plus the homepage for a briefing; one search page; the channels;
+one feed page; one article), so it can't save any of the API's 60 requests an hour; the arguments
+that do are the number of ressorts and states.
+
 ## What it does and doesn't do
 
 - **Read-only.** No tool changes anything, here or upstream.
