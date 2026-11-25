@@ -228,6 +228,19 @@ test("the deadline's and the size cap's advice fit every tool: each option named
   }
 });
 
+test("a small size cap still gets an answer: one sport story fits under 1500 characters, one Berlin item under 1650, with their notes", async () => {
+  // Since notes are kept whole, getBriefing sport perRessort 1 (1647 characters) was a size error
+  // at every cap below that, getRegionalNews Berlin perState 1 (1804) too: the one story was
+  // already a list's last entry, and the licence alone has 568 characters.
+  for (const [name, args, cap] of [["getBriefing", { ressorts: ["sport"], perRessort: 1 }, 1500], ["getRegionalNews", { states: ["Berlin"], perState: 1 }, 1650]] as const) {
+    const connection = await connect({ transport: tagesschauApi(), config: { maxResultChars: cap } });
+    const result = await connection.call(name, args);
+    await connection.close();
+    assert.notEqual(result.isError, true, `${name}: ${result.content[0]?.text ?? ""}`);
+    assert.match((result.structuredContent?.["notes"] as string[]).join(" "), /sportschau\.de|come as a pair/, name);
+  }
+});
+
 test("the server's transport keeps to the API's 60 requests an hour", async () => {
   const { serverTransport } = await import("../src/mcp/api.js");
   let sent = 0;

@@ -499,9 +499,10 @@ export async function getBriefing(client: TagesschauClient, input: BriefingInput
     });
   }
   if (ressorts.includes("sport")) {
-    notes.push("The sport feed comes from sportschau.de: its items carry no ressort, are not in date order and repeat; here they are sorted newest first, listed once and grouped under sport.");
+    notes.push("Sport items come from sportschau.de without a ressort, unordered and repeated: sorted newest first, listed once, grouped as sport.");
   }
-  if (ressorts.length > 0) notes.push("Ressort feeds are not editorially ranked: their items are listed newest first; only topStories keep the homepage's ranking.");
+  // Only where a feed lists more than one item: an order to explain (a small size cap keeps notes whole).
+  if (counts.some((c) => c.shown > 1)) notes.push("Ressort feeds are listed newest first, not ranked; only topStories keep the homepage's order.");
   const leftOut = untitledNote(untitled);
   if (leftOut !== undefined) notes.push(leftOut);
   if (notRead.length > 0) notes.push(notReadNote(notRead, why));
@@ -666,12 +667,13 @@ export async function getRegionalNews(client: TagesschauClient, input: RegionalI
   }
   const notes: string[] = [];
   if (resolved.some((r) => r.state.id === "3" || r.state.id === "4")) {
-    notes.push("Berlin and Brandenburg come as a pair: rbb serves them jointly, so either feed carries items tagged with both (regions). Say Berlin/Brandenburg.");
+    notes.push("Berlin and Brandenburg come as a pair (rbb): either feed has items of both. Say Berlin/Brandenburg.");
   }
   if (topic !== undefined) {
     notes.push(`Filtered here for ${quoteValue(topic)} as a word (or a word's start, or from 4 letters a compound's end) on title, topline, teaser and tags: the API can't combine a region with a Ressort (it drops the region). Regional items have no ressort, and MDR items no tags.`);
   }
-  notes.push("firstSentence is missing on most NDR and MDR items: use the topline. Each item links to its broadcaster's site (shareURL).");
+  // Only where an NDR or MDR item without one is listed (a small size cap keeps notes whole).
+  if (stories.some((h) => h.firstSentence === undefined && (h.broadcaster === "NDR" || h.broadcaster === "MDR"))) notes.push("Most NDR and MDR items have no firstSentence: use the topline.");
   const leftOut = untitledNote(untitled);
   if (leftOut !== undefined) notes.push(leftOut);
   if (notRead.length > 0) notes.push(notReadNote(notRead, why));
