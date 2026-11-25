@@ -69,6 +69,28 @@ test("timeoutMs bounds the whole response, not just idle gaps", async () => {
   );
 });
 
+test("a signal a caller aborts stops the request as aborted, not as a timeout it didn't have; the engine's deadline keeps its text", async () => {
+  // The MCP server passes a tool call's signal to each request: a cancelled call or its deadline
+  // read "Request timed out after 30000ms", the request timeout that never fired.
+  await withServer(
+    () => {},
+    async (baseUrl) => {
+      const caller = new AbortController();
+      setTimeout(() => caller.abort(), 50);
+      await assert.rejects(
+        () => nodeHttpTransport({ method: "GET", url: baseUrl, timeoutMs: 30_000, signal: caller.signal }),
+        (err) => err instanceof TagesschauNetworkError && err.message === "Request aborted by its caller before it finished",
+      );
+      const engine = new AbortController();
+      setTimeout(() => engine.abort(new TagesschauNetworkError("Request timed out after 80ms")), 50);
+      await assert.rejects(
+        () => nodeHttpTransport({ method: "GET", url: baseUrl, timeoutMs: 80, signal: engine.signal }),
+        (err) => err instanceof TagesschauNetworkError && /timed out after 80ms/.test(err.message),
+      );
+    },
+  );
+});
+
 test("a timeoutMs beyond Node's timer range is capped, not fired after 1 ms", async () => {
   const warnings: string[] = [];
   const onWarning = (warning: Error) => void warnings.push(warning.name);

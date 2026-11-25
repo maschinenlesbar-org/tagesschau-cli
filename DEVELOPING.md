@@ -358,8 +358,10 @@ library independently of the CLI.
 `http`/`https`; tests inject a mock. This is the only HTTP seam. The engine enforces
 the transport contract itself, so the documented limits hold for a custom transport
 (`fetch`, a `node:http` wrapper) too: it races every call against the `timeoutMs`
-deadline and aborts the request's `signal` then (the built-in transport honours it;
-pass it on as `fetch(url, { signal })`), checks the body against `maxResponseBytes`,
+deadline and aborts the request's `signal` then, with the timeout error as its reason (the
+built-in transport honours it, with that reason, and says "Request aborted by its caller before it
+finished" for a signal some other caller aborted, such as the MCP server's tool call: never a
+timeout it didn't have; pass it on as `fetch(url, { signal })`), checks the body against `maxResponseBytes`,
 reads response headers in any case and from a `Headers` object or a `Map`, accepts any
 ArrayBuffer view (a `Uint8Array` from `fetch`) or ArrayBuffer as the body, and turns a
 thrown value or a malformed response (no status, no headers, a body of another type)
