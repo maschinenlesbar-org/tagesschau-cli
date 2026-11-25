@@ -240,7 +240,7 @@ export const TOOLS: readonly ToolDefinition[] = [
     title: "One article's text",
     description: [
       'One Tagesschau item\'s full text by its articleId (from an answer of the other tools), block by block: paragraphs, subheadings, quotations, teasers of related items with their own articleId. Use it for "worum geht es in dem Artikel?", "fass den Artikel zusammen", "der ganze Text", "summarise this article", "what does the article say?", "read me the full story".',
-      "The text is ARD's, in German, HTML dropped and nothing reworded: summarise or quote briefly with the shareURL, don't reproduce it whole (copyright, licence). Videos, audio and galleries are counted in media, not passed on. Video items have no articleId: they have no text page. An item that is gone (taken offline after a while, Depublizierung) is empty with the reason. Long articles come a page of blocks at a time (offset, limit; nextOffset says where the next page starts).",
+      "The text is ARD's, in German, HTML dropped and nothing reworded: summarise or quote briefly with the shareURL, don't reproduce it whole (copyright, licence). Videos, audio and galleries are counted in media, not passed on. Video items have no articleId: they have no text page. An item that is gone (taken offline after a while, Depublizierung) is empty with the reason; so is one without text (a podcast, a webview): link its shareURL. Long articles come a page of blocks at a time (offset, limit; nextOffset says where the next page starts).",
       RULES,
     ].join("\n\n"),
     inputSchema: input(

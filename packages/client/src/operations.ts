@@ -911,7 +911,16 @@ export type Article =
       /** What the text embeds but this answer leaves out, counted: video, audio, image_gallery, … */
       media: Record<string, number>;
     }
-  | { status: "empty"; articleId: string; reason: string };
+  | {
+      status: "empty";
+      articleId: string;
+      reason: string;
+      /** For an item the API has but without text (a podcast or webview): what it is and its page. */
+      title?: string;
+      type?: string;
+      shareURL?: string | null;
+      media?: Record<string, number>;
+    };
 
 const ENTITIES: Readonly<Record<string, string>> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
 
@@ -978,7 +987,8 @@ function blocksOf(content: JsonValue | undefined): { blocks: ArticleBlock[]; med
  * One item's full text by its article id (an answer's `articleId`, or its details URL): every
  * text block with its type, HTML dropped and nothing reworded, teasers of other items with their
  * ids, and the embedded media counted (videos, galleries; not passed on). An id the API no longer
- * has (depublished, or never there) is `empty` with the reason, never a bare not found.
+ * has (depublished, or never there) is `empty` with the reason, never a bare not found; so is an
+ * item without text (a podcast, a webview, a video), with its title, type and page.
  */
 export async function getArticle(client: TagesschauClient, input: { article: string }): Promise<Article> {
   const problem = articleIdProblem(input.article);
@@ -1002,6 +1012,20 @@ export async function getArticle(client: TagesschauClient, input: { article: str
   const h = headlineOf(item);
   if (h === undefined) throw new TagesschauParseError(`The item ${quoteValue(articleId)} came back with no title: the API's answer is not in the expected shape.`);
   const { blocks, media } = blocksOf(item["content"]);
+  if (blocks.length === 0) {
+    // A podcast or webview item has no content in the API (live: the 11KM podcast), a video item
+    // only its video: "ok" with no blocks read as an empty article to summarise.
+    const embedded = Object.entries(media).map(([kind, n]) => `${kind} ${n}`).join(", ");
+    return {
+      status: "empty",
+      articleId,
+      reason: `${quoteValue(h.title)} has no text in the API${h.type === undefined ? "" : ` (type ${h.type})`}${embedded === "" ? "" : `, only embedded media (${embedded})`}: nothing to summarise; link its page (shareURL) instead.`,
+      title: h.title,
+      ...(h.type === undefined ? {} : { type: h.type }),
+      shareURL: h.shareURL,
+      ...(embedded === "" ? {} : { media }),
+    };
+  }
   return {
     status: "ok",
     articleId,

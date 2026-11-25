@@ -328,6 +328,21 @@ test("article: an id the API no longer has is empty with the reason; a bad id is
   assert.equal(mock.calls.length, 1);
 });
 
+test("article: an item without text (a podcast webview) is empty, saying so and naming its link; one with only a video too", async () => {
+  // Live on 2026-11-23: the 11KM podcast's details answer has no content at all.
+  const podcast = { sophoraId: "podcast-11km-aufruestung-weltall-100", title: "Werden Kriege zukünftig im Weltall entschieden?", type: "webview", date: "2026-11-23T03:00:00.000+01:00", shareURL: "https://www.tagesschau.de/multimedia/podcast/11km/podcast-11km-aufruestung-weltall-100.html" };
+  const onlyVideo = variant(ARTICLE, { content: [{ type: "video", video: { title: "x" } }] });
+  const mock = tagesschauApi({ articles: { "multimedia/podcast/11km/podcast-11km-aufruestung-weltall-100": podcast, "inland/nur-video-100": onlyVideo } });
+  const a = await getArticle(client(mock), { article: "/api2u/multimedia/podcast/11km/podcast-11km-aufruestung-weltall-100.json" });
+  assert.ok(a.status === "empty");
+  assert.match(a.reason, /has no text in the API \(type webview\).*shareURL/);
+  assert.deepEqual([a.title, a.type, a.shareURL], [podcast.title, "webview", podcast.shareURL]);
+  const v = await getArticle(client(mock), { article: "inland/nur-video-100" });
+  assert.ok(v.status === "empty");
+  assert.match(v.reason, /no text in the API.*only embedded media \(video 1\)/);
+  assert.deepEqual(v.media, { video: 1 });
+});
+
 test("article: an answer with a blank title is a parse error naming the shape, not a TypeError", async () => {
   const mock = tagesschauApi({ articles: { "inland/leer-100": variant(ARTICLE, { title: "   " }) } });
   await assert.rejects(getArticle(client(mock), { article: "inland/leer-100" }), (err: unknown) => err instanceof TagesschauParseError && /inland\/leer-100.*no title/.test(err.message));
