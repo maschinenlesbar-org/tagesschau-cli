@@ -261,7 +261,8 @@ export function baseUrlWhitespaceProblem(value: unknown): string | undefined {
  * backslash (WHATWG ends an http(s) host at one, as at a `/`, while text-based code reads
  * on, so `http://u:pw@127.0.0.1\@remote.example` was checked as loopback and its
  * credentials went to remote.example), and the scheme followed by exactly `//` and the host (WHATWG
- * repairs `http:host`, `http:/host` and `http:///host` silently). Userinfo is allowed (sent as Basic auth); a `%` in it must start a valid escape (`%25`
+ * repairs `http:host`, `http:/host` and `http:///host` silently), and no path ending in /api2u
+ * (the client adds it: /api2u/api2u/… is a 404 everywhere). Userinfo is allowed (sent as Basic auth); a `%` in it must start a valid escape (`%25`
  * for a literal one), as it is decoded for the Authorization header. The reasons never
  * echo the URL, so a credential in it cannot leak.
  */
@@ -299,6 +300,10 @@ export function baseUrlProblem(value: unknown): string | undefined {
   // `http:///host` into `http://host` silently: the host requested would not be the one typed,
   // and code that reads the value as text (a userinfo cut after "://") reads another authority.
   if (!/^https?:\/\/[^/]/i.test(value)) return 'Expected an absolute http(s) URL ("https://" and the host).';
+  // The client adds /api2u to every path. A base that already ends in it (the community docs name
+  // https://www.tagesschau.de/api2u as the API's base) requested /api2u/api2u/…: every call a
+  // 404, and an article "taken offline".
+  if (/\/api2u\/*$/i.test(url.pathname)) return "A base URL that ends in /api2u: leave it out, the client adds /api2u to every request (https://www.tagesschau.de).";
   return undefined;
 }
 

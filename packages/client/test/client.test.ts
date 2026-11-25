@@ -210,3 +210,10 @@ test("article: another host, a query, a dot segment, an escape or an empty id is
 test("article: an answer without a title is a parse error naming the request", async () => {
   await assert.rejects(clientWith(constantJson([])).article("a/b"), (e: unknown) => e instanceof TagesschauParseError && /GET .*\/api2u\/a\/b\.json: unexpected response shape/.test(e.message));
 });
+
+test("a base URL that ends in /api2u is refused: the client adds /api2u, and /api2u/api2u/… answers 404 (read as taken offline)", () => {
+  for (const baseUrl of ["http://127.0.0.1:1/api2u", "https://www.tagesschau.de/api2u/", "https://mirror.test/ts/API2U"]) {
+    assert.throws(() => new TagesschauClient({ baseUrl }), (err: unknown) => err instanceof TagesschauError && /ends in \/api2u.*leave it out/.test(err.message), baseUrl);
+  }
+  for (const baseUrl of ["https://www.tagesschau.de", "https://mirror.test/ts/", "https://mirror.test/api2ux"]) assert.doesNotThrow(() => new TagesschauClient({ baseUrl }), baseUrl);
+});

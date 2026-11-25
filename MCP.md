@@ -105,7 +105,7 @@ where the reason is).
 --allowed-hosts <list>     HTTP: Host header names to answer (default localhost,127.0.0.1,[::1])
 --allowed-origins <list>   HTTP: browser origins allowed to call, exactly (https://app.example.org); none by default
 --auth-token-file <path>   HTTP: a file with the bearer token every request must send (mode 600, 32+ characters)
---base-url <url>           API host (default https://www.tagesschau.de; the client adds /api2u)
+--base-url <url>           API host (default https://www.tagesschau.de; the client adds /api2u, so a URL ending in /api2u is refused)
 --timeout <ms>             per upstream request (default 30000)
 --call-timeout <ms>        per tool call, retries included (default 45000)
 --max-result-chars <n>     cap on one tool result's JSON (default 25000)
