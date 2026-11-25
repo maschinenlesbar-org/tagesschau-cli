@@ -14,7 +14,7 @@
 // The call's cancellation reaches every request through the transport.
 
 import { newsDateProblem, type TagesschauClient } from "./client.js";
-import { TagesschauApiError, TagesschauValidationError, quoteValue } from "./errors.js";
+import { TagesschauApiError, TagesschauParseError, TagesschauValidationError, quoteValue } from "./errors.js";
 import type { Region, Ressort } from "./enums.js";
 import type { JsonObject, JsonValue, NewsItem } from "./types.js";
 import { articleIdOf, articleIdProblem, ressortProblem, searchSpellingHint, searchTextProblem, textProblem } from "./validate.js";
@@ -946,7 +946,10 @@ export async function getArticle(client: TagesschauClient, input: { article: str
     }
     throw error;
   }
-  const h = headlineOf(item) as Headline;
+  // The client checks the title is a string; a blank one leaves no headline: an answer of a shape
+  // this code can't read, said as such (a TypeError on it was an internal error).
+  const h = headlineOf(item);
+  if (h === undefined) throw new TagesschauParseError(`The item ${quoteValue(articleId)} came back with no title: the API's answer is not in the expected shape.`);
   const { blocks, media } = blocksOf(item["content"]);
   return {
     status: "ok",

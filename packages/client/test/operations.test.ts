@@ -9,7 +9,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { TagesschauClient } from "../src/client.js";
-import { TagesschauValidationError } from "../src/errors.js";
+import { TagesschauParseError, TagesschauValidationError } from "../src/errors.js";
 import {
   broadcasterOf,
   fold,
@@ -22,7 +22,7 @@ import {
   plainText,
   resolveState,
 } from "../src/operations.js";
-import { CHANNELS, HOMEPAGE_NEWS, SEARCH_RESULTS, tagesschauApi, variant } from "./fixtures.js";
+import { ARTICLE, CHANNELS, HOMEPAGE_NEWS, SEARCH_RESULTS, tagesschauApi, variant } from "./fixtures.js";
 
 const client = (mock: ReturnType<typeof tagesschauApi>) => new TagesschauClient({ transport: mock.transport });
 /** The query of every request the mock saw, as `path?query`. */
@@ -280,6 +280,11 @@ test("article: an id the API no longer has is empty with the reason; a bad id is
     await assert.rejects(getArticle(client(mock), { article: bad }), TagesschauValidationError, bad);
   }
   assert.equal(mock.calls.length, 1);
+});
+
+test("article: an answer with a blank title is a parse error naming the shape, not a TypeError", async () => {
+  const mock = tagesschauApi({ articles: { "inland/leer-100": variant(ARTICLE, { title: "   " }) } });
+  await assert.rejects(getArticle(client(mock), { article: "inland/leer-100" }), (err: unknown) => err instanceof TagesschauParseError && /inland\/leer-100.*no title/.test(err.message));
 });
 
 // ---- helpers ---------------------------------------------------------------------------
