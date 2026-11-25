@@ -29,12 +29,25 @@ test("the request beyond the budget is refused before it is sent, naming when th
   }
   await assert.rejects(limited(request), (err: unknown) => {
     assert.ok(err instanceof TagesschauNetworkError);
-    assert.match(err.message, /^GET https:\/\/www\.tagesschau\.de\/api2u\/homepage\/ not sent: /);
+    assert.match(err.message, /^not sent: /, "the engine puts the request in front");
     assert.match(err.message, /allows 3 requests an hour/);
     assert.match(err.message, /possible at 21:00 UTC \(in 57 min\)/);
     return true;
   });
   assert.equal(sent(), 3, "the refused request never reached the transport");
+});
+
+test("through the client, the refusal names the request once: GET <url> failed: not sent: …", async () => {
+  const { TagesschauClient } = await import("../src/client.js");
+  const { transport } = counting();
+  const client = new TagesschauClient({ transport: hourlyBudget((r) => transport(r).then(() => ({ status: 200, headers: { "content-type": "application/json" }, body: Buffer.from('{"channels":[]}') })), { max: 1 }) });
+  await client.channels();
+  await assert.rejects(client.channels(), (err: unknown) => {
+    assert.ok(err instanceof TagesschauNetworkError);
+    assert.match(err.message, /^GET https:\/\/www\.tagesschau\.de\/api2u\/channels failed: not sent: the Tagesschau API allows 1 requests an hour/);
+    assert.equal(err.message.split("api2u/channels").length - 1, 1, err.message);
+    return true;
+  });
 });
 
 test("the window slides: a request an hour after the oldest goes out again", async () => {

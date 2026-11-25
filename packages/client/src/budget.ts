@@ -1,7 +1,9 @@
 // The Tagesschau API's documented budget: at most 60 requests an hour per client
 // (https://tagesschau.api.bund.dev). A long-running process — the MCP server — keeps to it:
 // `hourlyBudget` wraps a transport and refuses the request that would be one too many in the
-// last hour, before it is sent, naming when the next one is possible. Retries and redirects go
+// last hour, before it is sent, naming when the next one is possible ("not sent: …"; the client's
+// engine puts the request in front, "GET <url> failed: not sent: …", as for the MCP server's
+// limiter, so the URL is named once). Retries and redirects go
 // through the transport too, so each counts. Refused, not delayed: a wait of up to an hour would
 // outlast any caller's deadline, and the caller can decide what to ask instead.
 
@@ -34,7 +36,7 @@ export function hourlyBudget(transport: Transport, options: HourlyBudgetOptions 
       const minutes = Math.max(1, Math.ceil((next - t) / 60_000));
       return Promise.reject(
         new TagesschauNetworkError(
-          `${request.method} ${request.url} not sent: the Tagesschau API allows ${max} requests an hour, and ` +
+          `not sent: the Tagesschau API allows ${max} requests an hour, and ` +
             `${max} were made in the last hour. The next request is possible at ` +
             `${new Date(next).toISOString().slice(11, 16)} UTC (in ${minutes} min).`,
         ),
