@@ -50,9 +50,10 @@ export const DEADLINE_HINT =
   "Ask for fewer ressorts (getBriefing) or states (getRegionalNews), or a smaller pageSize (getTopicCoverage). getLiveStreams, getNewsFeed and getArticle make one request whatever is asked: only a later try helps there.";
 
 /**
- * An answer over the size cap (the result's, or the 16 MiB an upstream answer may have) says what to
- * ask instead: each option with the tools that take it, and that getLiveStreams reads the channels
- * whole whatever is asked.
+ * An answer over this server's result cap (--max-result-chars) says what to ask instead: each option
+ * with the tools that take it, and that getLiveStreams reads the channels whole whatever is asked.
+ * An upstream answer over the 16 MiB the server reads gets the kit's own error, which says that
+ * narrower options don't help.
  */
 export const SIZE_HINT =
   "Ask for less: a smaller perRessort (getBriefing), perState (getRegionalNews), pageSize (getTopicCoverage) or limit (getNewsFeed, getArticle), and go on from nextOffset where given. getLiveStreams reads the channels whole whatever is asked.";
