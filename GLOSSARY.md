@@ -23,7 +23,7 @@ content this API serves.
 
 **Tagesschau API.** The undocumented-but-open REST interface behind
 `tagesschau.de`, served under the path prefix **`/api2u`** (e.g.
-`https://www.tagesschau.de/api2u/homepage/`). It needs no authentication and is
+`https://www.tagesschau.de/api2u/homepage`). It needs no authentication and is
 read-only. Community documentation lives at
 [tagesschau.api.bund.dev](https://tagesschau.api.bund.dev/).
 
@@ -37,17 +37,17 @@ calls is `${baseUrl}/api2u/<resource>/` — the default `baseUrl` is
 
 The CLI mirrors the API resources; each is one top-level command.
 
-**Homepage (`/api2u/homepage/`).** The curated front-page feed: the editorially
+**Homepage (`/api2u/homepage`).** The curated front-page feed: the editorially
 selected top stories plus a regional block. CLI: `homepage`. Returns a
 `HomepageResult` (`news`, `regional`).
 
-**News (`/api2u/news/`).** The general news feed, optionally narrowed by
+**News (`/api2u/news`, with a filter `/api2u/news/?…`).** The general news feed, optionally narrowed by
 **region(s)** or by a **Ressort** — not both: the API applies the Ressort and
 silently ignores the regions, so the CLI and the client refuse the combination
 before any request. CLI: `news`. Returns a `NewsResult`
 (`news`, `regional`, optional `nextPage` cursor).
 
-**Channels (`/api2u/channels/`).** The live and broadcast channels (the
+**Channels (`/api2u/channels`).** The live and broadcast channels (the
 linear/streaming programme feed). CLI: `channels`. Returns a `ChannelsResult`
 (`channels`).
 

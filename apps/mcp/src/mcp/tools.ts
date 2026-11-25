@@ -109,7 +109,7 @@ export const TOOLS: readonly ToolDefinition[] = [
     outputSchema: output({ verdict: str_, breaking: arr, topStories: arr, ressortStories: arr, ressorts: arr, regionalLeftOut: int, notes: arr }),
     source: (args) => {
       const ressorts = [...new Set((list(args, "ressorts") ?? []).map((r) => r.trim().toLowerCase()))];
-      const top = ressorts.length === 0 || args["topStories"] === true ? ["homepage/"] : [];
+      const top = ressorts.length === 0 || args["topStories"] === true ? ["homepage"] : [];
       return paths([...top, ...ressorts.map((r) => `news/?ressort=${encodeURIComponent(r)}`)]);
     },
     async run(args, context) {
@@ -137,7 +137,7 @@ export const TOOLS: readonly ToolDefinition[] = [
       const names = list(args, "states") ?? [];
       const ids = [...new Set(names.map((s) => regionOf(s)))];
       // A state that resolves to none was answered without a request: the feed's path alone.
-      if (ids.length === 0 || ids.includes(undefined)) return "news/";
+      if (ids.length === 0 || ids.includes(undefined)) return "news";
       return ids.length === 1 ? `news/?regions=${ids[0] as string}` : `news/?regions={${ids.join(",")}}`;
     },
     async run(args, context) {
@@ -190,7 +190,7 @@ export const TOOLS: readonly ToolDefinition[] = [
     ].join("\n\n"),
     inputSchema: input({ show: { type: "string", minLength: 1, maxLength: 100, description: "Only channels whose title contains this (tagesschau24, tagesthemen, Gebärdensprache)." } }),
     outputSchema: output({ verdict: str_, channels: arr, notes: arr }),
-    source: "channels/",
+    source: "channels",
     async run(args, context) {
       return { ...(await getLiveStreams(context.client, { show: str(args, "show") })) };
     },
@@ -215,8 +215,8 @@ export const TOOLS: readonly ToolDefinition[] = [
       const r = str(args, "ressort");
       const s = str(args, "state");
       const query = buildQueryString({ date: str(args, "date"), regions: s === undefined ? undefined : regionOf(s), ressort: r });
-      if (s !== undefined && regionOf(s) === undefined) return "news/";
-      return query === "" ? "news/" : `news/?${query}`;
+      if (s !== undefined && regionOf(s) === undefined) return "news";
+      return query === "" ? "news" : `news/?${query}`;
     },
     paged: (args) => ({ list: "items", offset: num(args, "offset") ?? 0 }),
     async run(args, context) {

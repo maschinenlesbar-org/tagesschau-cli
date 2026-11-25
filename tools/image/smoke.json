@@ -6,7 +6,7 @@
   ],
   "networkErrorExit": 1,
   "answers": {
-    "/api2u/channels/": {
+    "/api2u/channels": {
       "channels": [
         {
           "sophoraId": "tagesschau-vierundzwanzig-13690",

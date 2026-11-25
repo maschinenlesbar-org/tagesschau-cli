@@ -25,7 +25,7 @@ die Inhalte dieser API verantwortlich ist.
 
 **Tagesschau-API.** Die nicht dokumentierte, aber offene REST-Schnittstelle hinter
 `tagesschau.de`, bereitgestellt unter dem Pfadpräfix **`/api2u`** (z. B.
-`https://www.tagesschau.de/api2u/homepage/`). Sie braucht keine Authentifizierung und ist
+`https://www.tagesschau.de/api2u/homepage`). Sie braucht keine Authentifizierung und ist
 nur lesbar. Eine Dokumentation der Community gibt es unter
 [tagesschau.api.bund.dev](https://tagesschau.api.bund.dev/).
 
@@ -39,17 +39,17 @@ aufruft, lautet `${baseUrl}/api2u/<resource>/` – die Standard-`baseUrl` ist
 
 Die CLI bildet die Ressourcen der API ab; jede ist ein eigener Befehl auf oberster Ebene.
 
-**Startseite (`/api2u/homepage/`).** Der redaktionell zusammengestellte Feed der
+**Startseite (`/api2u/homepage`).** Der redaktionell zusammengestellte Feed der
 Startseite: die ausgewählten Top-Meldungen plus ein Regionalblock. CLI: `homepage`.
 Liefert ein `HomepageResult` (`news`, `regional`).
 
-**Nachrichten (`/api2u/news/`).** Der allgemeine Nachrichten-Feed, optional eingeschränkt
+**Nachrichten (`/api2u/news`, mit Filter `/api2u/news/?…`).** Der allgemeine Nachrichten-Feed, optional eingeschränkt
 nach **Region(en)** oder nach einem **Ressort** – nicht beidem: Die API wendet dann das
 Ressort an und ignoriert die Regionen stillschweigend, deshalb lehnen CLI und Client die
 Kombination vor jeder Anfrage ab. CLI: `news`. Liefert ein `NewsResult`
 (`news`, `regional`, optional den Cursor `nextPage`).
 
-**Kanäle (`/api2u/channels/`).** Die Live- und Sendekanäle (der Programm-Feed für
+**Kanäle (`/api2u/channels`).** Die Live- und Sendekanäle (der Programm-Feed für
 lineares Fernsehen und Streaming). CLI: `channels`. Liefert ein `ChannelsResult`
 (`channels`).
 

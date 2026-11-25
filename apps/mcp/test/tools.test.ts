@@ -27,7 +27,7 @@ test("getBriefing: breaking news first, the top stories as ranked; the source an
   assert.equal(content["status"], "ok", result.content[0]?.text);
   assert.deepEqual((content["breaking"] as { sophoraId: string }[]).map((h) => h.sophoraId), ["gipfel-trump-putin-xi-shenzhen-100"]);
   assert.equal((content["topStories"] as unknown[]).length, 9);
-  assert.equal(content["source"], `${API}/homepage/`);
+  assert.equal(content["source"], `${API}/homepage`);
   assert.match(String(content["licence"]), /^Quelle: tagesschau\.de \(ARD-aktuell \/ NDR\).*private, non-commercial.*https:\/\/www\.tagesschau\.de\/nutzungsbedingungen$/);
   await connection.close();
 });
@@ -38,7 +38,7 @@ test("getBriefing: the sport feed newest first, each item once, filed under spor
   const content = (await connection.call("getBriefing", { ressorts: ["sport"], topStories: true, perRessort: 4 })).structuredContent ?? {};
   assert.deepEqual(content["ressorts"], [{ ressort: "sport", items: 12, repeatsDropped: 2, alreadyListed: 0, unique: 10, shown: 4, more: 6 }]);
   assert.ok((content["ressortStories"] as { group: string }[]).every((h) => h.group === "sport"));
-  assert.equal(content["source"], `${API}/{homepage/,news/?ressort=sport}`);
+  assert.equal(content["source"], `${API}/{homepage,news/?ressort=sport}`);
   assert.equal(transport.calls.length, 2);
   const tooMany = await connection.call("getBriefing", { ressorts: ["inland", "ausland", "wirtschaft", "wissen"] });
   assert.equal(tooMany.isError, true);
@@ -61,7 +61,7 @@ test("getRegionalNews: a state by city, one request each; Frankfurt is ambiguous
   const frankfurt = (await connection.call("getRegionalNews", { states: ["Frankfurt"] })).structuredContent ?? {};
   assert.equal(frankfurt["status"], "ambiguous");
   assert.equal((frankfurt["candidates"] as unknown[]).length, 2);
-  assert.equal(frankfurt["source"], `${API}/news/`, "no request was made for an ambiguous name");
+  assert.equal(frankfurt["source"], `${API}/news`, "no request was made for an ambiguous name");
   assert.equal(transport.calls.length, before);
   const topic = (await connection.call("getRegionalNews", { states: ["Berlin"], topic: "Sperrmüll" })).structuredContent ?? {};
   assert.deepEqual((topic["stories"] as { sophoraId: string }[]).map((s) => s.sophoraId), ["rbb-bsr-dementiert-kostenlose-sperrmuell-abholung-102"]);
@@ -89,7 +89,7 @@ test("getLiveStreams: the livestream first with its HLS link; a show not offered
   const all = (await connection.call("getLiveStreams", {})).structuredContent ?? {};
   const first = (all["channels"] as { kind: string; hls: string }[])[0];
   assert.deepEqual([first?.kind, first?.hls], ["live", "https://tagesschau-live.ard-mcdn.de/tagesschau/live/hls/de/master.m3u8"]);
-  assert.equal(all["source"], `${API}/channels/`);
+  assert.equal(all["source"], `${API}/channels`);
   const none = (await connection.call("getLiveStreams", { show: "Sportschau" })).structuredContent ?? {};
   assert.equal(none["status"], "empty");
   assert.match(String(none["reason"]), /tagesthemen/);

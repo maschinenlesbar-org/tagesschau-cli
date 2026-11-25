@@ -36,6 +36,10 @@ import type {
 
 const API = "/api2u";
 
+// The API answers /api2u/homepage/, /channels/ and /news/ without a query with a 308 to the path
+// without the slash (seen live on 2026-11-23): each call cost two of the 60 requests an hour. So
+// these paths go out without it. /news/ and /search/ with a query answered at once, and keep it.
+
 /** The keys `news()` takes; any other key is a TagesschauValidationError. */
 const NEWS_KEYS = ["regions", "ressort", "date"] as const;
 /** The keys `search()` takes; any other key is a TagesschauValidationError. */
@@ -98,7 +102,7 @@ export class TagesschauClient {
 
   /** The curated homepage feed (top news + regional). */
   async homepage(): Promise<HomepageResult> {
-    const path = `${API}/homepage/`;
+    const path = `${API}/homepage`;
     const body = await this.engine.getJson<unknown>(path);
     assertEnvelope(body, this.engine.describeUrl(path), "news", ["regional"]);
     return body as HomepageResult;
@@ -142,7 +146,7 @@ export class TagesschauClient {
     if (params.date !== undefined) query["date"] = normalizeToken(params.date);
     if (regions.length > 0) query["regions"] = regions.map((region) => normalizeToken(region as string)).join(",");
     if (params.ressort !== undefined) query["ressort"] = normalizeToken(params.ressort);
-    const path = `${API}/news/`;
+    const path = Object.keys(query).length === 0 ? `${API}/news` : `${API}/news/`;
     const body = await this.engine.getJson<unknown>(path, query);
     assertEnvelope(body, this.engine.describeUrl(path, query), "news", ["regional"]);
     return body as NewsResult;
@@ -168,7 +172,7 @@ export class TagesschauClient {
 
   /** The live/broadcast channels. */
   async channels(): Promise<ChannelsResult> {
-    const path = `${API}/channels/`;
+    const path = `${API}/channels`;
     const body = await this.engine.getJson<unknown>(path);
     assertEnvelope(body, this.engine.describeUrl(path), "channels");
     return body as ChannelsResult;

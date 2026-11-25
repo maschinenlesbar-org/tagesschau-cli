@@ -9,10 +9,13 @@ function clientWith(mt: ReturnType<typeof makeMockTransport>): TagesschauClient 
   return new TagesschauClient({ transport: mt.transport });
 }
 
-test("homepage hits /api2u/homepage/", async () => {
+// The API answers /api2u/homepage/, /channels/ and /news/ (without a query) with a 308 to the path
+// without the slash (live, 2026-11-23): two of the 60 requests an hour. With a query, /news/?… and
+// /search/?… answer at once.
+test("homepage hits /api2u/homepage, without the slash the API redirects", async () => {
   const mt = constantJson({ news: [], regional: [] });
   await clientWith(mt).homepage();
-  assert.equal(new URL(mt.last().url).pathname, "/api2u/homepage/");
+  assert.equal(new URL(mt.last().url).pathname, "/api2u/homepage");
 });
 
 test("news joins regions with commas", async () => {
@@ -41,16 +44,16 @@ test("news rejects ressort + regions (the API drops the regions) before any requ
   assert.equal(mt.calls.length, 0);
 });
 
-test("news with no params sends no query", async () => {
+test("news with no params sends no query, to /api2u/news without the slash", async () => {
   const mt = constantJson({ news: [], regional: [] });
   await clientWith(mt).news();
-  assert.equal(new URL(mt.last().url).search, "");
+  assert.equal(mt.last().url, "https://www.tagesschau.de/api2u/news");
 });
 
-test("channels hits /api2u/channels/", async () => {
+test("channels hits /api2u/channels, without the slash the API redirects", async () => {
   const mt = constantJson({ channels: [] });
   await clientWith(mt).channels();
-  assert.equal(new URL(mt.last().url).pathname, "/api2u/channels/");
+  assert.equal(new URL(mt.last().url).pathname, "/api2u/channels");
 });
 
 test("search passes searchText and paging", async () => {
@@ -105,11 +108,11 @@ test("a 404 raises TagesschauApiError with status 404", async () => {
 
 test("a 2xx body without the documented envelope is a TagesschauParseError", async () => {
   const cases: Array<[(c: TagesschauClient) => Promise<unknown>, unknown, string]> = [
-    [(c) => c.homepage(), null, 'GET https://www.tagesschau.de/api2u/homepage/: unexpected response shape: expected a JSON object with a "news" array.'],
-    [(c) => c.homepage(), [], 'GET https://www.tagesschau.de/api2u/homepage/: unexpected response shape: expected a JSON object with a "news" array.'],
-    [(c) => c.news(), {}, 'GET https://www.tagesschau.de/api2u/news/: unexpected response shape: expected a JSON object with a "news" array.'],
-    [(c) => c.news(), { news: [], regional: "x" }, 'GET https://www.tagesschau.de/api2u/news/: unexpected response shape: expected "regional" to be an array.'],
-    [(c) => c.channels(), { channels: {} }, 'GET https://www.tagesschau.de/api2u/channels/: unexpected response shape: expected a JSON object with a "channels" array.'],
+    [(c) => c.homepage(), null, 'GET https://www.tagesschau.de/api2u/homepage: unexpected response shape: expected a JSON object with a "news" array.'],
+    [(c) => c.homepage(), [], 'GET https://www.tagesschau.de/api2u/homepage: unexpected response shape: expected a JSON object with a "news" array.'],
+    [(c) => c.news(), {}, 'GET https://www.tagesschau.de/api2u/news: unexpected response shape: expected a JSON object with a "news" array.'],
+    [(c) => c.news(), { news: [], regional: "x" }, 'GET https://www.tagesschau.de/api2u/news: unexpected response shape: expected "regional" to be an array.'],
+    [(c) => c.channels(), { channels: {} }, 'GET https://www.tagesschau.de/api2u/channels: unexpected response shape: expected a JSON object with a "channels" array.'],
     [(c) => c.search({ searchText: "x" }), "text", 'GET https://www.tagesschau.de/api2u/search/?searchText=x: unexpected response shape: expected a JSON object with a "searchResults" array.'],
     [(c) => c.search({ searchText: "x" }), { searchResults: [], totalItemCount: -1 }, "GET https://www.tagesschau.de/api2u/search/?searchText=x: unexpected response shape: expected a non-negative integer totalItemCount."],
   ];

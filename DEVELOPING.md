@@ -393,7 +393,7 @@ heap before the cut), `TagesschauNetworkError` (transport failure/timeout),
 double's range like `1e400`, past 2^53 and printed differently like `12345678901234567890`,
 non-zero and too small like `1e-400`, or a subnormal that would print changed like `3e-324`,
 which became `5e-324` (`5e-324` and `1e-310` print as written and pass): `GET
-https://www.tagesschau.de/api2u/news/: the number 12345678901234567890 cannot be represented
+https://www.tagesschau.de/api2u/news: the number 12345678901234567890 cannot be represented
 exactly.`, never a changed value — a library caller
 whose server sends a member past 2^53 (a 64-bit id) declares it with the engine option
 `bigIntegerKeys` (a set of member names, none by default), and the value of a declared member is
@@ -401,7 +401,7 @@ then delivered as its exact literal, a string (`"1858054135406919680"`), whateve
 every other number keeps the rule; `scanNumbers` does both in one linear pass that skips strings,
 with no reviver, and builds its copy in batches (`TextBuilder`), never one append per member; tagesschau declares none —; an empty body; a compressed one, named by its
 Content-Encoding, since the client does not decompress; or a 2xx body without the documented
-envelope: `GET https://www.tagesschau.de/api2u/news/: unexpected response shape: expected a JSON
+envelope: `GET https://www.tagesschau.de/api2u/news: unexpected response shape: expected a JSON
 object with a "news" array.` — each method checks its top-level array, `news`/`regional`,
 `channels`, `searchResults` and a non-negative `totalItemCount`; items are not checked. Every
 error about an answer names the request, method and URL (`describeUrl`: absolute, userinfo
@@ -487,7 +487,7 @@ of 1000 bytes (maxResponseBytes; --max-response-bytes on the CLI)`.
 timeout (the transport's or the engine's deadline), the size cap, a refused connection, a
 DNS failure, a reset, whatever a custom transport throws — reads `<METHOD> <url> failed:
 <reason>` (userinfo redacted), with the original as `cause`: `GET
-https://www.tagesschau.de/api2u/news/ failed: connect ECONNREFUSED 127.0.0.1:443`. The
+https://www.tagesschau.de/api2u/news failed: connect ECONNREFUSED 127.0.0.1:443`. The
 built-in transport's own reason is Node's text, with the error code added when the text
 doesn't name it (`socket hang up (ECONNRESET)`).
 

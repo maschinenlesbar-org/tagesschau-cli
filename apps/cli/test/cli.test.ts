@@ -28,7 +28,7 @@ test("homepage hits the right path", async () => {
   const cli = makeCli(() => jsonResponse({ news: [], regional: [] }));
   const code = await run(["homepage"], cli.deps);
   assert.equal(code, 0);
-  assert.equal(new URL(cli.mt.last().url).pathname, "/api2u/homepage/");
+  assert.equal(new URL(cli.mt.last().url).pathname, "/api2u/homepage");
 });
 
 test("news: repeatable --region builds the query; --ressort alone too", async () => {
@@ -177,7 +177,7 @@ test("--base-url with a query, fragment or surrounding whitespace is a usage err
   }
   const prefix = makeCli(() => jsonResponse({ news: [], regional: [] }));
   assert.equal(await run(["--base-url", "https://mirror.test/ts/", "news"], prefix.deps), 0);
-  assert.equal(prefix.mt.last().url, "https://mirror.test/ts/api2u/news/");
+  assert.equal(prefix.mt.last().url, "https://mirror.test/ts/api2u/news");
 });
 
 test("--base-url rejects a non-http(s) or malformed URL at parse time, before any request", async () => {
@@ -214,11 +214,11 @@ test("userinfo in --base-url is sent as Basic auth and kept out of error message
   const cli = makeCli(() => jsonResponse({ detail: "nicht gefunden" }, 404));
   const code = await run(["--base-url", "http://user:s3cret@127.0.0.1:1", "news"], cli.deps);
   assert.equal(code, 4);
-  assert.equal(cli.mt.last().url, "http://127.0.0.1:1/api2u/news/");
+  assert.equal(cli.mt.last().url, "http://127.0.0.1:1/api2u/news");
   assert.equal(cli.mt.last().headers?.["Authorization"], `Basic ${Buffer.from("user:s3cret").toString("base64")}`);
   const text = cli.err.join("\n");
   assert.doesNotMatch(text, /s3cret/);
-  assert.equal(untimed(text), "ERROR [tagesschau.api] HTTP 404 for GET http://127.0.0.1:1/api2u/news/: nicht gefunden");
+  assert.equal(untimed(text), "ERROR [tagesschau.api] HTTP 404 for GET http://127.0.0.1:1/api2u/news: nicht gefunden");
 });
 
 test("--user-agent: blank, control characters and non-Latin-1 are usage errors before any request", async () => {
@@ -309,7 +309,7 @@ test("a null 2xx body is an error (exit 1), not `null` with exit 0", async () =>
   const cli = makeCli(() => jsonResponse(null));
   assert.equal(await run(["--compact", "news"], cli.deps), 1);
   assert.deepEqual(cli.out, []);
-  assert.deepEqual(cli.err.map(untimed), ['ERROR [tagesschau.api] GET https://www.tagesschau.de/api2u/news/: unexpected response shape: expected a JSON object with a "news" array.']);
+  assert.deepEqual(cli.err.map(untimed), ['ERROR [tagesschau.api] GET https://www.tagesschau.de/api2u/news: unexpected response shape: expected a JSON object with a "news" array.']);
 });
 
 test("bidi formatting characters in server data are escaped in the JSON output", async () => {

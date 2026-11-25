@@ -156,9 +156,9 @@ export function tagesschauAnswer(request: HttpRequest, data: ApiData = API_DATA)
   const url = new URL(request.url);
   const path = url.pathname;
   const q = url.searchParams;
-  if (path === "/api2u/homepage/") return jsonResponse({ news: data.homepage, regional: data.regional, newStoriesCountLink: "https://www.tagesschau.de/api2u/newStoriesCount", type: "news" });
-  if (path === "/api2u/channels/") return jsonResponse({ channels: data.channels, type: "channels" });
-  if (path === "/api2u/news/") {
+  if (path === "/api2u/homepage") return jsonResponse({ news: data.homepage, regional: data.regional, newStoriesCountLink: "https://www.tagesschau.de/api2u/newStoriesCount", type: "news" });
+  if (path === "/api2u/channels") return jsonResponse({ channels: data.channels, type: "channels" });
+  if (path === "/api2u/news/" || (path === "/api2u/news" && url.search === "")) {
     const ressort = q.get("ressort");
     const regions = q.get("regions")?.split(",") ?? [];
     const date = q.get("date");

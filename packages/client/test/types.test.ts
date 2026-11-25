@@ -84,7 +84,7 @@ test("an option given as undefined means its default, as an omitted one does", a
   await client.news({ regions: undefined, ressort: undefined, date: undefined });
   await client.search({ searchText: "Wahl", pageSize: undefined, resultPage: undefined });
   const [news, search] = mt.calls;
-  assert.equal(news!.url, "https://www.tagesschau.de/api2u/news/");
+  assert.equal(news!.url, "https://www.tagesschau.de/api2u/news");
   assert.equal(search!.url, "https://www.tagesschau.de/api2u/search/?searchText=Wahl");
   assert.equal(news!.headers?.["User-Agent"], "tagesschau-cli");
   assert.equal(news!.timeoutMs, 30_000);

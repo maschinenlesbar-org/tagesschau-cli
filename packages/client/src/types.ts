@@ -18,7 +18,7 @@ export type JsonObject = { [key: string]: JsonValue };
 /** A single news item / story. Shape varies; exposed as a raw object. */
 export type NewsItem = JsonObject;
 
-/** Response of `/api2u/homepage/`. */
+/** Response of `/api2u/homepage`. */
 export interface HomepageResult {
   news: NewsItem[];
   regional: NewsItem[];
@@ -40,7 +40,7 @@ export interface NewsResult {
   nextPage?: string;
 }
 
-/** Response of `/api2u/channels/`. */
+/** Response of `/api2u/channels`. */
 export interface ChannelsResult {
   channels: JsonObject[];
   type?: string;

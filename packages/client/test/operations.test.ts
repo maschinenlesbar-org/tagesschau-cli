@@ -35,7 +35,7 @@ test("briefing: the homepage's top stories in its editorial order, one request; 
   const mock = tagesschauApi();
   const b = await getBriefing(client(mock));
   assert.equal(b.status, "ok");
-  assert.deepEqual(requests(mock), ["/api2u/homepage/"]);
+  assert.deepEqual(requests(mock), ["/api2u/homepage"]);
   assert.equal(b.topStories.length, 10);
   assert.equal(b.topStories[0]?.sophoraId, "gipfel-koalition-willige-ukraine-100");
   assert.equal(b.topStories[0]?.firstSentence?.startsWith("Die \"Koalition der Willigen\""), true);
@@ -73,7 +73,7 @@ test("briefing: the sport feed is sorted newest first, its repeats dropped, its 
 test("briefing: a Ressort feed's stories already among the top stories are not listed twice; perRessort cuts with a count", async () => {
   const mock = tagesschauApi();
   const b = await getBriefing(client(mock), { ressorts: ["wirtschaft", "sport"], topStories: true, perRessort: 3 });
-  assert.deepEqual(requests(mock), ["/api2u/homepage/", "/api2u/news/?ressort=wirtschaft", "/api2u/news/?ressort=sport"]);
+  assert.deepEqual(requests(mock), ["/api2u/homepage", "/api2u/news/?ressort=wirtschaft", "/api2u/news/?ressort=sport"]);
   assert.deepEqual(b.ressorts[0], { ressort: "wirtschaft", items: 3, repeatsDropped: 0, alreadyListed: 3, unique: 0, shown: 0, more: 0 });
   assert.deepEqual([b.ressorts[1]?.shown, b.ressorts[1]?.more], [3, 7]);
   assert.equal(b.ressortStories.length, 3);
