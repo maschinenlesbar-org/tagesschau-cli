@@ -276,7 +276,8 @@ export const TOOLS: readonly ToolDefinition[] = [
       const from = num(args, "offset") ?? 0;
       const page = answer.blocks.slice(from, from + (num(args, "limit") ?? 40));
       const next = from + page.length;
-      return { ...answer, blocks: page, blockCount: answer.blocks.length, ...(next < answer.blocks.length ? { nextOffset: next } : {}) };
+      const past = page.length === 0 ? { status: "empty", reason: `The article holds ${answer.blocks.length} blocks; offset ${from} is past its end.` } : {};
+      return { ...answer, ...past, blocks: page, blockCount: answer.blocks.length, ...(next < answer.blocks.length ? { nextOffset: next } : {}) };
     },
   },
 ];

@@ -127,6 +127,17 @@ test("getArticle: the text a page of blocks at a time; an id that is gone is emp
   await connection.close();
 });
 
+test("getArticle: an offset past the last block is empty, saying how many blocks there are, as getNewsFeed says it", async () => {
+  const connection = await connect({ transport: tagesschauApi() });
+  for (const offset of [9, 5000]) {
+    const past = (await connection.call("getArticle", { article: "inland/innenpolitik/gipfel-koalition-willige-ukraine-100", offset })).structuredContent ?? {};
+    assert.equal(past["status"], "empty", String(offset));
+    assert.match(String(past["reason"]), new RegExp(`holds 9 blocks; offset ${offset} is past its end`));
+    assert.equal(past["blockCount"], 9);
+  }
+  await connection.close();
+});
+
 test("the server's transport keeps to the API's 60 requests an hour", async () => {
   const { serverTransport } = await import("../src/mcp/api.js");
   let sent = 0;
