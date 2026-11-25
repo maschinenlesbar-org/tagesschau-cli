@@ -103,6 +103,9 @@ test("states are resolved by name, code, region id, English name and city; Sachs
     ["10", "2", "16", "16", "14", "13", "10", "10", "10", "8", "9", "7", "4"],
   );
   assert.equal(ids("Frankfurt"), "ambiguous");
+  // Halle's written forms: the city on the Saale is Sachsen-Anhalt (the bare name too, the big
+  // city), Halle (Westf.) is in Nordrhein-Westfalen.
+  assert.deepEqual(["Halle (Saale)", "Halle/Saale", "Halle an der Saale", "Halle", "Halle (Westf.)", "Halle Westfalen"].map(ids), ["14", "14", "14", "14", "10", "10"]);
   assert.equal(ids("Atlantis"), "unknown");
   assert.equal(ids("constructor"), "unknown");
   assert.equal(ids("17"), "unknown");

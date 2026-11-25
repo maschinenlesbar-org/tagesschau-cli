@@ -204,7 +204,11 @@ export interface State {
   aliases: readonly string[];
 }
 
-/** The 16 Bundesländer, ids alphabetical as the API documents them (the regional skill's table). */
+/**
+ * The 16 Bundesländer, ids alphabetical as the API documents them (the regional skill's table).
+ * A city's written forms resolve like its name (Frankfurt (Oder), Halle (Saale)); the bare
+ * "Halle" is the city on the Saale, and Halle (Westf.) is named as such.
+ */
 export const STATES: readonly State[] = [
   { id: "1", name: "Baden-Württemberg", aliases: ["BW", "Ländle", "Stuttgart", "Karlsruhe", "Mannheim", "Freiburg"] },
   { id: "2", name: "Bayern", aliases: ["BY", "Bavaria", "München", "Munich", "Nürnberg", "Augsburg"] },
@@ -215,11 +219,11 @@ export const STATES: readonly State[] = [
   { id: "7", name: "Hessen", aliases: ["HE", "Hesse", "Wiesbaden", "Frankfurt am Main", "Frankfurt/Main", "Frankfurt a. M.", "Kassel"] },
   { id: "8", name: "Mecklenburg-Vorpommern", aliases: ["MV", "Meck-Pomm", "Mecklenburg-Western Pomerania", "Schwerin", "Rostock"] },
   { id: "9", name: "Niedersachsen", aliases: ["NI", "NDS", "Lower Saxony", "Hannover", "Hanover", "Braunschweig", "Osnabrück"] },
-  { id: "10", name: "Nordrhein-Westfalen", aliases: ["NRW", "NW", "North Rhine-Westphalia", "Köln", "Cologne", "Düsseldorf", "Ruhrgebiet", "Dortmund", "Essen", "Bonn"] },
+  { id: "10", name: "Nordrhein-Westfalen", aliases: ["NRW", "NW", "North Rhine-Westphalia", "Köln", "Cologne", "Düsseldorf", "Ruhrgebiet", "Dortmund", "Essen", "Bonn", "Halle (Westf.)", "Halle (Westfalen)"] },
   { id: "11", name: "Rheinland-Pfalz", aliases: ["RP", "RLP", "Rhineland-Palatinate", "Mainz", "Koblenz", "Trier"] },
   { id: "12", name: "Saarland", aliases: ["SL", "Saarbrücken"] },
   { id: "13", name: "Sachsen", aliases: ["SN", "Saxony", "Dresden", "Leipzig", "Chemnitz"] },
-  { id: "14", name: "Sachsen-Anhalt", aliases: ["ST", "LSA", "Saxony-Anhalt", "Magdeburg", "Halle"] },
+  { id: "14", name: "Sachsen-Anhalt", aliases: ["ST", "LSA", "Saxony-Anhalt", "Magdeburg", "Halle", "Halle (Saale)", "Halle an der Saale"] },
   { id: "15", name: "Schleswig-Holstein", aliases: ["SH", "Kiel", "Lübeck", "Flensburg"] },
   { id: "16", name: "Thüringen", aliases: ["TH", "Thuringia", "Erfurt", "Jena", "Gera"] },
 ];
