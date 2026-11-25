@@ -60,7 +60,8 @@ try {
 
 // The skills' use cases, with their traps built in (see "MCP server" below): breaking news first,
 // the top stories as ranked, the sport feed sorted and listed once; a state by name, one request
-// per state, a topic filtered here because the API drops the region when a Ressort is sent.
+// per state, a topic filtered here (as a word, never inside one) because the API drops the region
+// when a Ressort is sent.
 const briefing = await getBriefing(client, { ressorts: ["sport"], topStories: true });
 const bavaria = await getRegionalNews(client, { states: ["Bayern"], topic: "Wirtschaft" });
 const article = await client.article(briefing.topStories[0]?.articleId ?? ""); // an item's content[]

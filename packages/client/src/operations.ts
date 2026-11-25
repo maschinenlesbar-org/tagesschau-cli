@@ -162,8 +162,8 @@ function dedup(items: readonly Headline[], seen = new Set<string>()): { items: H
   return { items: out, dropped };
 }
 
-/** Lowercase, umlauts and ß spelled out (ä -> ae), other accents dropped, only letters and digits kept. */
-export function fold(value: string): string {
+/** Lowercase, umlauts and ß spelled out (ä -> ae), other accents dropped; other characters kept. */
+function spelled(value: string): string {
   return value
     .normalize("NFC")
     .toLowerCase()
@@ -172,8 +172,41 @@ export function fold(value: string): string {
     .replace(/ü/g, "ue")
     .replace(/ß/g, "ss")
     .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .replace(/[^a-z0-9]+/g, "");
+    .replace(/\p{M}/gu, "");
+}
+
+/** Lowercase, umlauts and ß spelled out (ä -> ae), other accents dropped, only letters and digits kept. */
+export function fold(value: string): string {
+  return spelled(value).replace(/[^a-z0-9]+/g, "");
+}
+
+/** The words of `value`, each spelled as `fold` does, in their order. */
+function wordsOf(value: string): string[] {
+  return spelled(value).split(/[^a-z0-9]+/).filter((w) => w !== "");
+}
+
+/** `word` without one German inflection ending (Wahlen -> wahl, einfacher -> einfach) when 4 letters stay. */
+function stem(word: string): string {
+  const bare = word.replace(/(?:en|er|es|em|e|n)$/, "");
+  return bare.length >= 4 ? bare : word;
+}
+
+/**
+ * True when `field` mentions the words of `topic`, in their order, each as a word of its own: a
+ * topic word matches a field word that starts with it (Eis: Eishockey), with an inflection ending
+ * left aside (Wahlen: Wahlkampf), or, from 4 letters, the end of a compound (Wahl: Landtagswahl).
+ * Never inside a word (Eis isn't in Preise or Bahnreisende) or across two (sus isn't in "Kreis
+ * Usedom"): a short word inside others matched most items of a feed.
+ */
+export function mentionsWords(field: string, topic: string): boolean {
+  const want = wordsOf(topic).map(stem);
+  if (want.length === 0) return false;
+  const words = wordsOf(field);
+  const matches = (word: string, t: string): boolean => word.startsWith(t) || (t.length >= 4 && (word.endsWith(t) || stem(word).endsWith(t)));
+  for (let i = 0; i + want.length <= words.length; i++) {
+    if (want.every((t, j) => matches(words[i + j] as string, t))) return true;
+  }
+  return false;
 }
 
 /** `value` as a 1-based count within `min`..`max`, else the default; a non-integer is refused. */
@@ -473,10 +506,9 @@ function nextDateOf(nextPage: unknown): string | undefined {
   }
 }
 
-/** True when `h` mentions `topic` (folded) in its title, topline, teaser or tags. */
+/** True when `h` mentions `topic`'s words (`mentionsWords`) in its title, topline, teaser or tags. */
 function mentions(h: Headline, topic: string): boolean {
-  const key = fold(topic);
-  return [h.title, h.topline, h.firstSentence, ...(h.tags ?? [])].some((field) => field !== undefined && fold(field).includes(key));
+  return [h.title, h.topline, h.firstSentence, ...(h.tags ?? [])].some((field) => field !== undefined && mentionsWords(field, topic));
 }
 
 /**
@@ -540,7 +572,7 @@ export async function getRegionalNews(client: TagesschauClient, input: RegionalI
     notes.push("Berlin and Brandenburg come as a pair: rbb serves them jointly, so either feed carries items tagged with both (regions). Say Berlin/Brandenburg.");
   }
   if (topic !== undefined) {
-    notes.push(`Filtered here for ${quoteValue(topic)} on title, topline, teaser and tags: the API can't combine a region with a Ressort (it drops the region). Regional items have no ressort, and MDR items no tags.`);
+    notes.push(`Filtered here for ${quoteValue(topic)} as a word (or a word's start, or from 4 letters a compound's end) on title, topline, teaser and tags: the API can't combine a region with a Ressort (it drops the region). Regional items have no ressort, and MDR items no tags.`);
   }
   notes.push("firstSentence is missing on most NDR and MDR items: use the topline. Each item links to its broadcaster's site (shareURL).");
   const empty = states.filter((s) => s.shown === 0 && s.alsoUnder === 0);

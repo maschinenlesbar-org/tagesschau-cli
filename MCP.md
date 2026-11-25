@@ -76,7 +76,8 @@ The tools carry the API's traps so a model doesn't have to: the Ressort feeds ar
 and the sport feed (from sportschau.de, without a ressort) repeats items, so they are sorted and
 listed once; states asked together share one page of the API, so each state is a request of its
 own; Berlin and Brandenburg come as a pair (rbb); the API drops the region when a Ressort is sent,
-so a topic within a state is filtered here; "Frankfurt" alone is ambiguous (am Main or Oder) and
+so a topic within a state is filtered here, as a word (a word's start, or from 4 letters a
+compound's end: "Eis" finds Eishockey, never Preise; "Wahl" finds Landtagswahl); "Frankfurt" alone is ambiguous (am Main or Oder) and
 asked back, never guessed; the search page is 1-based (the API's is 0-based) and matches spellings
 literally (a note says when to try ä, ö, ü or ß); an article that is gone (taken offline after a
 while, Depublizierung) says so.

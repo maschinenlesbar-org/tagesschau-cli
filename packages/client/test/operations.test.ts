@@ -147,6 +147,31 @@ test("regional: a topic is filtered here, said in a note; nothing matching is em
   assert.match(none.status === "empty" ? (none.reason ?? "") : "", /None of Berlin's 10 current items mentions "Hafen"/);
 });
 
+test("regional: a topic matches words, never inside another word or across two", async () => {
+  // The planted titles of the exploratory round and words of a live Berlin feed: "Eis" found
+  // Bahnreisende and Preise, "Ost" found "kostet", "sus" found "Kreis Usedom".
+  const titles = [
+    "Eishockey: Straubing gewinnt", "Glatteis auf der A9", "Eis-Saison beginnt", "Preise steigen", "Reisewelle zu Ostern", "Bahnreisende warten",
+    "Ameisenart entdeckt", "Bezirksbürgermeister gewählt", "Kreis Usedom", "Frau in Straubing", "Autobahn gesperrt", "Studienrente kommt",
+    "Was kostet der Winter?", "Auswahl der Woche", "Wahlkampf in Bayern", "Landtagswahlen 2026", "Die Wahl ist vorbei", "Deutschen Bahn streikt",
+  ];
+  const feed = titles.map((title, i) => variant(HOMEPAGE_NEWS[0], { sophoraId: `t-${i}`, title, topline: "", firstSentence: "", tags: [], regionIds: [2], shareURL: `https://www.br.de/${i}` }));
+  const mock = tagesschauApi({ regions: { "2": feed } });
+  const matching = async (topic: string): Promise<string[]> => {
+    const r = await getRegionalNews(client(mock), { states: ["Bayern"], topic, perState: 30 });
+    return r.status === "ambiguous" ? [] : r.stories.map((s) => s.title).sort();
+  };
+  assert.deepEqual(await matching("Eis"), ["Eis-Saison beginnt", "Eishockey: Straubing gewinnt"]);
+  assert.deepEqual(await matching("Ost"), ["Reisewelle zu Ostern"], "a word's start, never kostet");
+  assert.deepEqual(await matching("Rau"), []);
+  assert.deepEqual(await matching("sus"), []);
+  assert.deepEqual(await matching("Rente"), ["Studienrente kommt"]);
+  assert.deepEqual(await matching("Wahl"), ["Auswahl der Woche", "Die Wahl ist vorbei", "Landtagswahlen 2026", "Wahlkampf in Bayern"]);
+  assert.deepEqual(await matching("Wahlen"), ["Auswahl der Woche", "Die Wahl ist vorbei", "Landtagswahlen 2026", "Wahlkampf in Bayern"]);
+  assert.deepEqual(await matching("Deutsche Bahn"), ["Deutschen Bahn streikt"]);
+  assert.deepEqual(await matching("Straubing"), ["Eishockey: Straubing gewinnt", "Frau in Straubing"]);
+});
+
 test("regional: a quiet state is empty with the German sentence; Frankfurt is ambiguous and nothing is requested", async () => {
   const mock = tagesschauApi();
   const bremen = await getRegionalNews(client(mock), { states: ["Bremen"] });
