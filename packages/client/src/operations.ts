@@ -167,9 +167,13 @@ function untitledNote(counts: readonly (readonly [string, number])[]): string | 
   return total === 0 ? undefined : `${total} items without a title left out (${some.map(([what, n]) => (some.length === 1 ? what : `${what} ${n}`)).join(", ")}).`;
 }
 
-/** The key two copies of one item share: the sophoraId, else the shareURL, else the title. */
-function keyOf(h: Headline): string {
-  return h.sophoraId !== "" ? `id:${h.sophoraId}` : h.shareURL !== null ? `url:${h.shareURL}` : `title:${fold(h.title)}`;
+/**
+ * The keys two copies of one item share: its sophoraId and its shareURL (one page is one story,
+ * whatever ids its copies carry), the title when it has neither.
+ */
+function keysOf(h: Headline): string[] {
+  const keys = [...(h.sophoraId !== "" ? [`id:${h.sophoraId}`] : []), ...(h.shareURL !== null ? [`url:${h.shareURL}`] : [])];
+  return keys.length > 0 ? keys : [`title:${fold(h.title)}`];
 }
 
 /** The time of an ISO date, or -Infinity without one (sorted last). */
@@ -188,12 +192,12 @@ function dedup(items: readonly Headline[], seen = new Set<string>()): { items: H
   const out: Headline[] = [];
   let dropped = 0;
   for (const h of items) {
-    const key = keyOf(h);
-    if (seen.has(key)) {
+    const keys = keysOf(h);
+    if (keys.some((key) => seen.has(key))) {
       dropped++;
       continue;
     }
-    seen.add(key);
+    for (const key of keys) seen.add(key);
     out.push(h);
   }
   return { items: out, dropped };

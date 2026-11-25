@@ -83,6 +83,13 @@ test("briefing: a Ressort feed's stories already among the top stories are not l
   assert.match(b.verdict, /3 of 10 sport \(7 more\)/);
 });
 
+test("briefing: two copies of a story with different sophoraIds and one shareURL are listed once", async () => {
+  const story = HOMEPAGE_NEWS[1] as JsonObject;
+  const homepage = [...HOMEPAGE_NEWS, variant(story, { sophoraId: "copy-of-it-102" })];
+  const b = await getBriefing(client(tagesschauApi({ homepage })), {});
+  assert.equal(b.topStories.filter((h) => h.shareURL === story["shareURL"]).length, 1);
+});
+
 test("briefing: more than three Ressorts, an unknown one or a bad perRessort is refused before any request", async () => {
   const mock = tagesschauApi();
   await assert.rejects(getBriefing(client(mock), { ressorts: ["inland", "ausland", "wirtschaft", "sport"] }), /At most 3 Ressorts/);

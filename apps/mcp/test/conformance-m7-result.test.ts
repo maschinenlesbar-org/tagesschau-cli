@@ -29,7 +29,7 @@ const HOSTILE_CALL = { name: "getNewsFeed", arguments: {} };
 /** That string in the call's structuredContent. */
 const hostileValue = (result: Record<string, unknown>): unknown => (result["items"] as { topline: string }[])[0]?.topline;
 /** A mock upstream with 100 or more long list entries for PAGED_CALL. */
-const MANY = tagesschauApi({ homepage: Array.from({ length: 120 }, (_, i) => variant(HOMEPAGE_NEWS[0], { sophoraId: `item-${i}`, title: `Meldung ${i} ${"x".repeat(80)}` })) });
+const MANY = tagesschauApi({ homepage: Array.from({ length: 120 }, (_, i) => variant(HOMEPAGE_NEWS[0], { sophoraId: `item-${i}`, shareURL: `https://www.tagesschau.de/item-${i}.html`, title: `Meldung ${i} ${"x".repeat(80)}` })) });
 /** A paged list call from offset 10, its list's name and that offset. */
 const PAGED_CALL = { name: "getNewsFeed", arguments: { offset: 10, limit: 100 } };
 const PAGED_LIST = "items";
