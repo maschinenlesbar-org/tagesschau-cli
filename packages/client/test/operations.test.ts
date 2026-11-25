@@ -281,6 +281,18 @@ test("live streams: tagesschau24 or the livestream asked by name finds the lives
   assert.equal((await getLiveStreams(client(mock), { show: "tagesthemen" })).channels.length, 1, "another show is no livestream");
 });
 
+test("live streams: a link that isn't http(s) is never handed out as playable; the note counts it", async () => {
+  const channels = CHANNELS.map((c, i) => (i === 0 ? variant(c, { streams: { adaptivestreaming: "javascript:alert(1)", h264s: "https://ok.example/a.mp4" } }) : i === 1 ? variant(c, { streams: { adaptivestreaming: "file:///etc/passwd" } }) : c));
+  const s = await getLiveStreams(client(tagesschauApi({ channels })));
+  assert.deepEqual([s.channels[0]?.hls, s.channels[0]?.streams], [undefined, { h264s: "https://ok.example/a.mp4" }]);
+  const second = s.channels.find((c) => c.sophoraId === "video-1686628");
+  assert.deepEqual([second?.available, second?.streams], [false, {}]);
+  assert.match(s.notes.join(" "), /2 links that aren't http\(s\) left out/);
+  const video = variant(SEARCH_RESULTS.find((h) => h["type"] === "video"), { streams: { adaptivestreaming: "javascript:x" } });
+  const c = await getTopicCoverage(client(tagesschauApi({ search: [video] })), { query: "Bundestag" });
+  assert.equal(c.videos[0]?.stream, undefined);
+});
+
 test("live streams: a show narrows by title; one not offered is empty naming those there are; a channel without streams is unavailable", async () => {
   const channels = [...CHANNELS, { sophoraId: "x-1", title: "tagesschau extra", date: "2026-11-19T22:00:00.000+01:00", type: "video" }];
   const mock = tagesschauApi({ channels });

@@ -63,6 +63,18 @@ function text(item: JsonObject, key: string): string | undefined {
   return trimmed === "" ? undefined : trimmed;
 }
 
+/** `value` trimmed when it is an absolute http(s) URL, else undefined: a stream link a player opens is never `javascript:` or `file:`. */
+function httpUrl(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  try {
+    const { protocol } = new URL(trimmed);
+    return protocol === "http:" || protocol === "https:" ? trimmed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** The ARD broadcasters by the host of a regional item's shareURL (the skill's table). */
 const BROADCASTERS: readonly [RegExp, string][] = [
   [/(^|\.)swr\.de$/, "SWR"],
@@ -105,7 +117,7 @@ export function headlineOf(item: NewsItem, options: { group?: string; teaser?: b
   });
   const tags = Array.isArray(item["tags"]) ? item["tags"].flatMap((t) => (isObject(t) && typeof t["tag"] === "string" && t["tag"].trim() !== "" ? [t["tag"].trim()] : [])) : [];
   const streams = isObject(item["streams"]) ? item["streams"] : undefined;
-  const stream = streams === undefined ? undefined : text(streams, "adaptivestreaming");
+  const stream = streams === undefined ? undefined : httpUrl(streams["adaptivestreaming"]);
   const topline = text(item, "topline");
   const firstSentence = options.teaser === false ? undefined : text(item, "firstSentence");
   const date = text(item, "date");
@@ -809,6 +821,7 @@ export async function getLiveStreams(client: TagesschauClient, input: { show?: s
   const show = input.show === undefined ? undefined : freeText("show", input.show, 100);
   const answer = await client.channels();
   const order = { live: 0, edition: 1, accessible: 2 } as const;
+  let notHttp = 0;
   // Every channel without a title: the answer's shape changed (readFeed's rule), not "no channel".
   readFeed(answer.channels.map((item) => (isObject(item) ? { title: item["title"] } : item)), "the channels");
   const all = answer.channels
@@ -818,7 +831,12 @@ export async function getLiveStreams(client: TagesschauClient, input: { show?: s
       const date = text(item, "date");
       const streams: Record<string, string> = {};
       if (isObject(item["streams"])) {
-        for (const [protocol, url] of Object.entries(item["streams"])) if (typeof url === "string" && url.trim() !== "") streams[protocol] = url.trim();
+        for (const [protocol, url] of Object.entries(item["streams"])) {
+          if (typeof url !== "string" || url.trim() === "") continue;
+          const link = httpUrl(url);
+          if (link === undefined) notHttp++;
+          else streams[protocol] = link;
+        }
       }
       const hls = streams["adaptivestreaming"];
       return [{ title, sophoraId: text(item, "sophoraId") ?? "", kind: kindOf(title, date), ...(date === undefined ? {} : { date }), ...(hls === undefined ? {} : { hls }), streams, available: Object.keys(streams).length > 0 }];
@@ -831,6 +849,7 @@ export async function getLiveStreams(client: TagesschauClient, input: { show?: s
   const live = show !== undefined && asksForLivestream(show);
   const channels = show === undefined ? all : all.filter((c) => (live && c.kind === "live") || fold(c.title).includes(fold(show)) || mentionsWords(c.title, show));
   const notes = ["HLS links (.m3u8) play in VLC, mpv, Safari or any HLS player; h264 links are MP4 files of a dated edition."];
+  if (notHttp > 0) notes.push(`${notHttp} links that aren't http(s) left out: never hand one out as playable.`);
   const renamed = channels.find((c) => c.kind === "live" && !fold(c.title).includes("tagesschau24"));
   if (renamed !== undefined) notes.push(`The livestream is tagesschau24's, the same link all day; its title names the programme running now (${quoteValue(renamed.title)}).`);
   const titles = all.map((c) => c.title);
