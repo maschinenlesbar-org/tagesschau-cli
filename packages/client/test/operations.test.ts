@@ -24,6 +24,7 @@ import {
   resolveState,
 } from "../src/operations.js";
 import { ARTICLE, CHANNELS, HOMEPAGE_NEWS, SEARCH_RESULTS, tagesschauApi, variant } from "./fixtures.js";
+import { jsonResponse, makeMockTransport } from "./helpers.js";
 
 const client = (mock: ReturnType<typeof tagesschauApi>) => new TagesschauClient({ transport: mock.transport });
 /** The query of every request the mock saw, as `path?query`. */
@@ -214,6 +215,27 @@ test("coverage: near-identical hits (one title the same day) are listed once and
   const c = await getTopicCoverage(client(tagesschauApi({ search })), { query: "Bundestag", pageSize: 25, now: NOW });
   assert.equal(c.duplicatesDropped, 2);
   assert.deepEqual([c.stories.length, c.videos.length], [4, 6]);
+});
+
+test("coverage: an empty page inside the count says the two disagree, with no nextPage; an answer without a total says it has none", async () => {
+  // The recording has 109 hits but no hits on page 2: "past the last page (11 pages)" contradicted itself.
+  const mock = tagesschauApi();
+  const inside = await getTopicCoverage(client(mock), { query: "Bundestag", pageSize: 10, page: 2 });
+  assert.equal(inside.status, "empty");
+  assert.match(inside.reason ?? "", /Page 2 came back without hits, though the search counts 109 hits \(11 pages of 10\)/);
+  assert.doesNotMatch(inside.reason ?? "", /past the last page/);
+  assert.equal(inside.nextPage, undefined, "no next page after an empty one");
+  // Without totalItemCount, an empty page 3 is no "No Tagesschau coverage", and a full page says total is the page's.
+  const noTotal = makeMockTransport((request) => {
+    const page = Number(new URL(request.url).searchParams.get("resultPage"));
+    return jsonResponse({ searchText: "Merz", searchResults: page === 0 ? SEARCH_RESULTS.slice(0, 3) : [] });
+  });
+  const later = await getTopicCoverage(new TagesschauClient({ transport: noTotal.transport }), { query: "Merz", page: 3 });
+  assert.equal(later.status, "empty");
+  assert.match(later.reason ?? "", /Page 3 has no hits, and the API's answer gave no total hit count/);
+  assert.doesNotMatch(later.reason ?? "", /No Tagesschau coverage/);
+  const first = await getTopicCoverage(new TagesschauClient({ transport: noTotal.transport }), { query: "Merz" });
+  assert.match((first.notes ?? []).join(" "), /gave no total hit count: total counts this page's hits only/);
 });
 
 test("coverage: a page past the last says how many there are; no hits is empty with a broader word; ASCII umlauts get a note", async () => {

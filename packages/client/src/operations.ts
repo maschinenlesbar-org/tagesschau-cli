@@ -656,7 +656,7 @@ export interface Coverage {
   /** This page's hits by age (Europe/Berlin calendar days): is coverage rising or fading? */
   timeline: { today: number; lastSevenDays: number; older: number; newest?: string; oldest?: string };
   spellingNote?: string;
-  /** Hits left out (without a title). */
+  /** A total missing from the answer; hits left out (without a title). */
   notes?: string[];
 }
 
@@ -685,6 +685,8 @@ export async function getTopicCoverage(client: TagesschauClient, input: Coverage
   const page = countOf("page", input.page, 1, 10_000, 1);
   const answer = await client.search({ searchText: input.query, pageSize, resultPage: page - 1 });
   const query = answer.searchText ?? input.query.normalize("NFKC").trim();
+  // Without totalItemCount the total is this page's hits only, and said so.
+  const counted = answer.totalItemCount !== undefined;
   const total = answer.totalItemCount ?? answer.searchResults.length;
   const pages = Math.ceil(total / pageSize);
   const read = readFeed(answer.searchResults, "the search", { teaser: true });
@@ -720,11 +722,20 @@ export async function getTopicCoverage(client: TagesschauClient, input: Coverage
   }
   const spellingNote = searchSpellingHint(input.query);
   let reason: string | undefined;
-  if (total === 0) {
+  if (!counted && sorted.length === 0 && page > 1) {
+    reason = `Page ${page} has no hits, and the API's answer gave no total hit count, so how many there are is unknown: try page 1.`;
+  } else if (total === 0) {
     reason = `No Tagesschau coverage of ${quoteValue(query)} right now (0 hits): the topic isn't covered, or try a broader word or a synonym${spellingNote === undefined ? "" : ", or the spelling with ä, ö, ü or ß"}.`;
+  } else if (sorted.length === 0 && page <= pages) {
+    // The search counts more hits than its pages hold (the recording: 109 hits, none on page 2).
+    reason = `Page ${page} came back without hits, though the search counts ${total} hits (${pages} pages of ${pageSize}): the count and the pages disagree. Try page 1 or a larger pageSize.`;
   } else if (sorted.length === 0) {
     reason = `Page ${page} is past the last page (${pages} pages of ${pageSize} for ${total} hits).`;
   }
+  const notes = [
+    ...(counted ? [] : ["The API's answer gave no total hit count: total counts this page's hits only."]),
+    ...(read.untitled === 0 ? [] : [untitledNote([["search", read.untitled]]) as string]),
+  ];
   return {
     status: reason === undefined ? "ok" : "empty",
     ...(reason === undefined ? {} : { reason }),
@@ -734,13 +745,13 @@ export async function getTopicCoverage(client: TagesschauClient, input: Coverage
     page,
     pages,
     pageSize,
-    ...(page < pages ? { nextPage: page + 1 } : {}),
+    ...(page < pages && sorted.length > 0 ? { nextPage: page + 1 } : {}),
     stories,
     videos,
     duplicatesDropped,
     timeline,
     ...(spellingNote === undefined ? {} : { spellingNote }),
-    ...(read.untitled === 0 ? {} : { notes: [untitledNote([["search", read.untitled]]) as string] }),
+    ...(notes.length === 0 ? {} : { notes }),
   };
 }
 
