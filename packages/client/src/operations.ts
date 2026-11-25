@@ -964,13 +964,63 @@ export type Article =
 
 const ENTITIES: Readonly<Record<string, string>> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
 
+/** What a tag (the text between "<" and ">") becomes: a bullet for li, a line break for br and a closed block, else nothing. */
+function tagText(tag: string): string {
+  const m = /^(\/?)([a-z][a-z0-9]*)/i.exec(tag);
+  if (m === null) return "";
+  const name = (m[2] as string).toLowerCase();
+  if (m[1] === "") return name === "li" ? "\n• " : name === "br" ? "\n" : "";
+  return /^(?:p|li|ul|ol|h\d)$/.test(name) ? "\n" : "";
+}
+
+/** Where the tag opened at `from` ends: the next ">" outside a quoted attribute value, or -1. */
+function quotedTagEnd(html: string, from: number): number {
+  let quote: string | undefined;
+  for (let i = from; i < html.length; i++) {
+    const c = html[i];
+    if (quote !== undefined) {
+      if (c === quote) quote = undefined;
+    } else if (c === '"' || c === "'") quote = c;
+    else if (c === ">") return i;
+  }
+  return -1;
+}
+
+/**
+ * `html` with its tags replaced (tagText), in one pass: linear. A tag starts at "<" followed by a
+ * letter, "/", "!" or "?" (a bare "3 < 5" is text) and ends at the next ">" outside a quoted
+ * attribute value (title="a > b"); a "<" with no ">" after it is text. The regular expressions
+ * of before, tried at every "<", ran to the end of a text without ">" each time: 80,000 "<" took
+ * 11 s, holding the MCP server's event loop. Once a quoted value runs to the end of the text,
+ * the rest is read without quotes, so no stretch is scanned twice.
+ */
+function withoutTags(html: string): string {
+  const out: string[] = [];
+  let at = 0;
+  let quotes = true;
+  let open = html.indexOf("<");
+  while (open !== -1) {
+    if (!/^[a-z/!?]/i.test(html[open + 1] ?? "")) {
+      open = html.indexOf("<", open + 1);
+      continue;
+    }
+    let close = quotes ? quotedTagEnd(html, open + 1) : -1;
+    if (close === -1) {
+      quotes = false;
+      close = html.indexOf(">", open + 1);
+    }
+    if (close === -1) break;
+    out.push(html.slice(at, open), tagText(html.slice(open + 1, close)));
+    at = close + 1;
+    open = html.indexOf("<", at);
+  }
+  out.push(html.slice(at));
+  return out.join("");
+}
+
 /** `html` as plain text: tags dropped (a line break for br, a bullet for li), entities decoded, spaces collapsed. */
 export function plainText(html: string): string {
-  return html
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<li[^>]*>/gi, "\n• ")
-    .replace(/<\/(?:p|li|ul|ol|h\d)>/gi, "\n")
-    .replace(/<[^>]*>/g, "")
+  return withoutTags(html)
     .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (whole, name: string) => {
       if (name[0] === "#") {
         const code = name[1] === "x" || name[1] === "X" ? Number.parseInt(name.slice(2), 16) : Number(name.slice(1));

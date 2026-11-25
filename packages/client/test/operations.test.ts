@@ -398,6 +398,22 @@ test("plainText drops tags, decodes entities, keeps list items and line breaks",
   assert.equal(plainText("&bogus; &#0;"), "&bogus; &#0;");
 });
 
+test("plainText takes linear time on text with many '<' and no '>'", () => {
+  // Each regular expression tried at every "<" and ran to the end: 80 000 "<" took 11 s.
+  for (const hostile of ["<".repeat(400_000), "<li".repeat(150_000), "<br".repeat(150_000), "a<b".repeat(150_000), '<a title="'.repeat(50_000)]) {
+    const started = performance.now();
+    plainText(hostile);
+    assert.ok(performance.now() - started < 1000, `${hostile.slice(0, 10)}… took ${Math.round(performance.now() - started)} ms`);
+  }
+});
+
+test("plainText: a bare '<' is text, a '>' inside a quoted attribute stays in the tag, <link> is no list item", () => {
+  assert.equal(plainText("3 < 5 und 7 > 4"), "3 < 5 und 7 > 4");
+  assert.equal(plainText('<a href="x" title="a > b">Link</a> danach'), "Link danach");
+  assert.equal(plainText("<link rel=x>Text"), "Text");
+  assert.equal(plainText("a <b"), "a <b", "a tag never closed is text");
+});
+
 test("the broadcaster comes from the shareURL host; fold spells umlauts out", () => {
   assert.deepEqual(["https://www1.wdr.de/x", "https://www.butenunbinnen.de/y", "https://example.org/", "not a url", null].map((u) => broadcasterOf(u)), ["WDR", "Radio Bremen", undefined, undefined, undefined]);
   assert.equal(fold("Thüringen-Süd Straße"), "thueringensuedstrasse");
